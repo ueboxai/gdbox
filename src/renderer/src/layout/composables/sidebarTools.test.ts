@@ -25,16 +25,9 @@ function makeItem(key: string): MenuItem {
   return { key, icon: null, label: key, path: `/${key.toLowerCase()}` }
 }
 
-// 侧边栏工具的全集：路由 isShowInMenu = true 的那六个，
+// 侧边栏工具的全集：路由 isShowInMenu = true 的那四个，
 // 顺序模拟 generateMenuFromRoutes 按 meta.sort 排出的样子
-const KNOWN_KEYS = [
-  'Home',
-  'AssetManagement',
-  'BlueprintLibrary',
-  'MaterialLibrary',
-  'Notebooks',
-  'AIGCStudio'
-]
+const KNOWN_KEYS = ['Home', 'AssetManagement', 'Notebooks', 'AIGCStudio']
 
 const ITEMS = KNOWN_KEYS.map(makeItem)
 
@@ -43,16 +36,11 @@ describe('sidebarTools', () => {
     localStorage.clear()
   })
 
-  it('默认偏好：四个库常驻，知识库与 AI 创作收进「更多」', () => {
+  it('默认偏好：项目库、资产库、AI 创作常驻，知识库收进「更多」', () => {
     const { pinned, more } = resolveSidebarTools(ITEMS, DEFAULT_SIDEBAR_TOOLS_PREFS)
 
-    expect(pinned.map((i) => i.key)).toEqual([
-      'Home',
-      'AssetManagement',
-      'BlueprintLibrary',
-      'MaterialLibrary'
-    ])
-    expect(more.map((i) => i.key)).toEqual(['Notebooks', 'AIGCStudio'])
+    expect(pinned.map((i) => i.key)).toEqual(['Home', 'AssetManagement', 'AIGCStudio'])
+    expect(more.map((i) => i.key)).toEqual(['Notebooks'])
   })
 
   it('真实路由默认也满足这条产品规则（isShowInMenu 守卫）', () => {
@@ -72,7 +60,7 @@ describe('sidebarTools', () => {
     expect(featureItems.map((i) => i.key).sort()).toEqual([...KNOWN_KEYS].sort())
 
     const { pinned, more } = resolveSidebarTools(featureItems, DEFAULT_SIDEBAR_TOOLS_PREFS)
-    expect(more.map((i) => i.key)).toEqual(['Notebooks', 'AIGCStudio'])
+    expect(more.map((i) => i.key)).toEqual(['Notebooks'])
     expect(pinned.map((i) => i.key)).toContain('Home')
   })
 
@@ -96,23 +84,18 @@ describe('sidebarTools', () => {
     expect(sanitizePinnedTools([], KNOWN_KEYS)).toEqual([])
     expect(sanitizePinnedTools(undefined, KNOWN_KEYS)).toEqual([...DEFAULT_PINNED_TOOLS])
     // 默认名单里若有工具已下线，落地时剔除
-    expect(sanitizePinnedTools(undefined, ['Home', 'AIGCStudio'])).toEqual(['Home'])
+    expect(sanitizePinnedTools(undefined, ['Home', 'Notebooks'])).toEqual(['Home'])
   })
 
   it('自定义顺序对常驻和「更多」两组同时生效', () => {
     const prefs = {
-      order: ['Notebooks', 'AIGCStudio', 'Home', 'AssetManagement', 'BlueprintLibrary'],
+      order: ['Notebooks', 'AIGCStudio', 'Home'],
       pinned: ['AIGCStudio', 'Home']
     }
     const { pinned, more } = resolveSidebarTools(ITEMS, prefs)
 
     expect(pinned.map((i) => i.key)).toEqual(['AIGCStudio', 'Home'])
-    expect(more.map((i) => i.key)).toEqual([
-      'Notebooks',
-      'AssetManagement',
-      'BlueprintLibrary',
-      'MaterialLibrary'
-    ])
+    expect(more.map((i) => i.key)).toEqual(['Notebooks', 'AssetManagement'])
   })
 
   it('偏好读写走 localStorage 往返，损坏数据落回默认', () => {

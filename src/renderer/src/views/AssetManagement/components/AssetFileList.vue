@@ -453,14 +453,6 @@
                       weight="fill"
                       class="favorite-icon"
                     />
-                    <!-- 🔌 插件引擎版本标签 -->
-                    <div
-                      v-if="file.fileExtension === 'uplugin' && file.engineVersion"
-                      class="engine-version-tag"
-                      :title="t('assetFileList.engineVersion', { version: file.engineVersion })"
-                    >
-                      {{ file.engineVersion }}
-                    </div>
                   </div>
                   <div class="file-info">
                     <div
@@ -730,7 +722,6 @@ import {
   PhTrashSimple,
   PhExport
 } from '@phosphor-icons/vue'
-import defaultBlueprintThumb from '@renderer/assets/imgs/ue/ue-item-blueprint.png'
 import icPluginsIcon from '@renderer/assets/icon/ic_plugins.svg'
 import { ContextMenu, type MenuItem } from '@renderer/components/ContextMenu'
 import AddFolderModal from './modals/AddFolderModal.vue'
@@ -2727,13 +2718,6 @@ const getThumbnailSourceUrl = (file: Record<string, string | undefined>): string
     return buildThumbnailUrl(basePath, file.imgLocalPath, isNetworkVault)
   }
 
-  // 📝 如果是蓝图资产且没有缩略图，使用默认占位图
-  // 注意：C++ 端已针对 Blueprint 类型跳过缩略图生成
-  // 包含所有蓝图类型：Blueprint、WidgetBlueprint、AnimBlueprint、BlueprintFunctionLibrary 等
-  if (file?.className?.includes('Blueprint') || fileName.startsWith('BP_')) {
-    return defaultBlueprintThumb
-  }
-
   // 图片文件:如果没有 imgLocalPath,则使用原始文件路径作为缩略图
   // 🔧 使用 buildDirectFileUrl：图片文件本身就是预览资源，不在 .thumbnails 目录下
   if (isImageFile(fileName, file?.fileExtension || file?.ext)) {
@@ -3664,15 +3648,6 @@ const currentContextMenuItems = computed(() => {
       ? [...favoriteFolderMenuItems.value]
       : [...folderMenuItems.value]
 
-    // 如果是插件文件夹，修改"导入项目"为"导入插件到项目"
-    const folderType = (currentRightClickAsset.value as any).folderType
-    if (folderType === 'plugin') {
-      const importItem = baseFolderMenu.find((item) => item.key === 'import-to-project')
-      if (importItem) {
-        importItem.label = t('assetLib.contextMenu.importPluginToProject')
-      }
-    }
-
     if (currentVault.value?.vaultType === 'network') {
       baseFolderMenu.splice(1, 0, {
         key: 'open-local-path-folder',
@@ -3742,15 +3717,6 @@ const currentContextMenuItems = computed(() => {
         label: t('assetLib.contextMenu.captureThumbnail', '捕获缩略图'),
         icon: PhCamera
       })
-    }
-  }
-
-  // 如果是 .uplugin 文件，修改"导入项目"为"导入插件到项目"
-  const fileExtension = (currentRightClickAsset.value as any)?.fileExtension?.toLowerCase()
-  if (fileExtension === 'uplugin') {
-    const importItem = menuItems.find((item) => item.key === 'import-to-project')
-    if (importItem) {
-      importItem.label = t('assetLib.contextMenu.importPluginToProject')
     }
   }
 
@@ -4141,8 +4107,11 @@ const getIconColor = (file: any): string => {
     'ps1',
     'cmd',
     'sql',
-    'uproject',
-    'uplugin',
+    'gd',
+    'gdshader',
+    'tscn',
+    'tres',
+    'godot',
     'lock',
     'gitignore'
   ]
@@ -6970,24 +6939,6 @@ async function handleAssetDragEnd(event: DragEvent): Promise<void> {
                 0 2px 8px var(--shadow-color),
                 0 1px 2px var(--shadow-color);
             }
-          }
-
-          // 🔌 插件引擎版本标签
-          .engine-version-tag {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            padding: 2px 6px;
-            background: var(--color-accent-solid);
-            color: var(--color-text-on-solid);
-            font-size: 10px;
-            font-weight: 600;
-            border-radius: 4px;
-            z-index: 3;
-            white-space: nowrap;
-            box-shadow: 0 1px 3px var(--shadow-color);
-            backdrop-filter: blur(4px);
-            letter-spacing: 0.3px;
           }
 
           // 缩略图容器

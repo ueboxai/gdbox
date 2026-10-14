@@ -142,6 +142,29 @@ function scan(leaves: Leaf[], terms: BannedTerm[], whitelist: Map<string, string
   return failures
 }
 
+/**
+ * GDBox 是 Godot 的盒子：渲染层文案里不再出现虚幻引擎的说法。
+ *
+ * 只扫渲染层两份语言包 —— 主进程 `MAIN_STRINGS` 另由主进程那边清理。
+ * 「材质」「编辑器」「引擎」这类 Godot 里同样成立的词不在表里。
+ */
+const UE_TERMS: BannedTerm[] = [
+  { word: '虚幻', suggestion: 'Godot / GDBox' },
+  { word: 'Unreal', suggestion: 'Godot / GDBox' },
+  { word: 'UE', suggestion: 'Godot' },
+  { word: '蓝图', suggestion: '脚本 / 场景' },
+  { word: 'Blueprint', suggestion: 'script / scene' },
+  { word: 'Blueprints', suggestion: 'scripts / scenes' },
+  { word: 'uproject', suggestion: 'project.godot' },
+  { word: 'uasset', suggestion: '资源文件（.tres / .tscn）' },
+  { word: 'uebox', suggestion: 'gdbox' }
+]
+
+const RENDERER_SOURCES: Array<{ label: string; pack: unknown }> = [
+  { label: 'zh-CN', pack: zhCN },
+  { label: 'en-US', pack: enUS }
+]
+
 const SOURCES: Array<{ label: string; pack: unknown }> = [
   { label: 'zh-CN', pack: zhCN },
   { label: 'en-US', pack: enUS },
@@ -173,6 +196,18 @@ describe('术语守卫', () => {
         expect(suggestion).toContain(expected)
       }
     }
+  })
+})
+
+describe('术语守卫 · 不提虚幻引擎', () => {
+  it('渲染层两份语言包不出现虚幻引擎的说法', () => {
+    const failures: string[] = []
+    for (const { label, pack } of RENDERER_SOURCES) {
+      for (const line of scan(collectLeaves(pack), UE_TERMS, new Map())) {
+        failures.push(`${label} ${line}`)
+      }
+    }
+    expect(failures).toEqual([])
   })
 })
 

@@ -16,15 +16,6 @@ import { useI18n } from 'vue-i18n'
 import type { DependencyEdgeKind, DependencyNodeKind } from '@core/shared/assetDependency'
 
 // 导入UE图标资源
-import iconAi from '@renderer/assets/imgs/ue/ue-item-ai.png'
-import iconAnimation from '@renderer/assets/imgs/ue/ue-item-animation.png'
-import iconBlueprint from '@renderer/assets/imgs/ue/ue-item-blueprint.png'
-import iconDefault from '@renderer/assets/imgs/ue/ue-item-default.png'
-import iconMaterial from '@renderer/assets/imgs/ue/ue-item-material.png'
-import iconMetasound from '@renderer/assets/imgs/ue/ue-item-metasound.png'
-import iconNiagara from '@renderer/assets/imgs/ue/ue-item-niagara.png'
-import iconPcg from '@renderer/assets/imgs/ue/ue-item-pcg.png'
-import iconWeight from '@renderer/assets/imgs/ue/ue-item-weight.png'
 
 // 主进程只给语义字段，颜色和文案都在这一层决定 —— 它既不知道用户开的是
 // 深色还是浅色主题，也不知道界面语言
@@ -203,6 +194,10 @@ const getAssetTypeColor = (type: string): string => {
 // 加载图片辅助函数
 const loadImage = (url: string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
+    if (!url) {
+      reject(new Error('empty image url'))
+      return
+    }
     const img = new Image()
     img.crossOrigin = 'Anonymous'
     img.onload = () => resolve(img)
@@ -211,35 +206,8 @@ const loadImage = (url: string): Promise<HTMLImageElement> => {
   })
 }
 
-// 获取资产类型对应的图标
-const getAssetTypeIcon = (type: string): string => {
-  if (!type) return iconDefault
-
-  const lowerType = type.toLowerCase()
-
-  if (lowerType.includes('material')) return iconMaterial
-  if (lowerType.includes('texture')) return iconDefault // 纹理通常显示自身预览，如果没有则使用默认
-  if (lowerType.includes('blueprint')) return iconBlueprint
-  if (
-    lowerType.includes('animation') ||
-    lowerType.includes('animsequence') ||
-    lowerType.includes('skeleton')
-  )
-    return iconAnimation
-  if (lowerType.includes('sound') || lowerType.includes('audio') || lowerType.includes('metasound'))
-    return iconMetasound
-  if (lowerType.includes('particle') || lowerType.includes('niagara')) return iconNiagara
-  if (
-    lowerType.includes('ai') ||
-    lowerType.includes('behavior') ||
-    lowerType.includes('blackboard')
-  )
-    return iconAi
-  if (lowerType.includes('pcg')) return iconPcg
-  if (lowerType.includes('weight')) return iconWeight
-
-  return iconDefault
-}
+// 资产类型图标：暂无通用图标，返回空串让绘制走首字母 / 占位文本的回退
+const getAssetTypeIcon = (_type: string): string => ''
 
 // 生成圆角矩形路径
 const roundRect = (

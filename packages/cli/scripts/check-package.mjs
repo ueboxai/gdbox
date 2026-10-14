@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * 发布包体检 / uebox package guard.
+ * 发布包体检 / gdbox package guard.
  *
  * ## 为什么需要它
  *
  * 这个 CLI 住在一个 Electron 桌面应用的仓库里。仓库根上有主进程、
- * `better-sqlite3` 原生绑定、用户凭据、几百 MB 的插件分发包 —— 而
+ * `better-sqlite3` 原生绑定、用户凭据、Godot 编辑器插件 —— 而
  * `npm pack` 的默认行为是「把目录里的东西都装进去」。夹带任何一样都不是
  * 「文件大了点」：
  *
@@ -17,7 +17,7 @@
  * 这些都不会在开发机上暴露 —— 本地跑 `node dist/index.js` 一切正常，
  * 问题只在别人安装的那一刻出现。所以由脚本守。
  *
- * 用法：`pnpm --filter uebox-cli run verify:package`（或在本目录 `node scripts/check-package.mjs`）
+ * 用法：`pnpm --filter gdbox-cli run verify:package`（或在本目录 `node scripts/check-package.mjs`）
  */
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
@@ -34,18 +34,18 @@ const FORBIDDEN = [
   { pattern: /(^|\/)src\/main\//i, why: '盒子主进程源码' },
   { pattern: /\.test\.(ts|js)$/i, why: '测试文件' },
   { pattern: /testServer\.(ts|js)$/i, why: '测试脚手架（能起 HTTP 服务）' },
-  { pattern: /\.uplugin$|(^|\/)plugin\//i, why: 'UE 插件分发包' },
+  { pattern: /(^|\/)addons\/|(^|\/)gdbox_link\//i, why: 'Godot 编辑器插件（GDBox Link）' },
   { pattern: /\.map$/i, why: 'source map（体积大且泄露源码结构）' }
 ]
 
 /** 这些必须在，缺了说明打包配置写错了 */
-const REQUIRED = ['package/dist/index.js', 'package/README.md', 'package/skills/uebox/SKILL.md']
+const REQUIRED = ['package/dist/index.js', 'package/README.md', 'package/skills/gdbox/SKILL.md']
 
 function packedFiles() {
   // `--dry-run` 不产出文件，只报会打进去什么。
   //
   // `--ignore-scripts` 是必须的：不加的话 `prepack` 会跑一遍 tsc，
-  // 而它那句 `> uebox-cli@0.1.0 build …` 也走 stdout，把 JSON 冲坏。
+  // 而它那句 `> gdbox-cli@0.1.0 build …` 也走 stdout，把 JSON 冲坏。
   // 体检本来就该看**当前 dist 的样子**，构建是另一步的事。
   const raw = execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
     cwd: ROOT,
@@ -82,11 +82,11 @@ function main() {
   }
 
   if (problems.length === 0) {
-    console.log(`✓ uebox 发布包干净：${files.length} 个文件，运行时依赖 ${deps.length} 个。`)
+    console.log(`✓ gdbox 发布包干净：${files.length} 个文件，运行时依赖 ${deps.length} 个。`)
     process.exit(0)
   }
 
-  console.error('✖ uebox 发布包体检失败：\n')
+  console.error('✖ gdbox 发布包体检失败：\n')
   for (const problem of problems) console.error(`  · ${problem}`)
   console.error('\n包里的东西由 package.json 的 `files` 字段决定。')
   process.exit(1)

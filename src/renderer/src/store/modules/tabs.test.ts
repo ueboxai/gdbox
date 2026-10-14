@@ -94,7 +94,7 @@ describe('项目库标签页', () => {
     store.historyTabs = [
       createTab({ key: '/notebooks', title: 'menu.notebooks', path: '/notebooks', sort: 14 })
     ]
-    store.activeTab = '/material-library'
+    store.activeTab = '/gone-page'
 
     expect(store.resolveStartupTab()).toBe('/notebooks')
   })
@@ -143,64 +143,6 @@ describe('tabs store library cleanup', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
-  })
-
-  it('normalizes a misplaced material library tab to the canonical route', () => {
-    const store = useTabsStore()
-
-    store.historyTabs = [
-      createTab({
-        key: '/blueprint-manager',
-        title: 'menu.materialLib',
-        path: '/blueprint-manager',
-        sort: 10
-      })
-    ]
-    store.activeTab = '/blueprint-manager'
-
-    const changed = store.cleanupLibraryTabs()
-    const materialTab = store.historyTabs.find((tab) => tab.title === 'menu.materialLib')
-
-    expect(changed).toBe(true)
-    expect(materialTab?.key).toBe('/material-library')
-    expect(materialTab?.path).toBe('/material-library')
-    expect(store.activeTab).toBe('/material-library')
-  })
-
-  it('deduplicates library tabs when the canonical tab already exists', () => {
-    const store = useTabsStore()
-
-    store.historyTabs = [
-      createTab({
-        key: '/material-library',
-        title: 'menu.materialLib',
-        path: '/material-library',
-        sort: 10
-      }),
-      createTab({
-        key: '/blueprint-library',
-        title: 'menu.materialLib',
-        path: '/blueprint-library',
-        sort: 11
-      }),
-      createTab({
-        key: '/blueprint-manager',
-        title: 'menu.blueprintLib',
-        path: '/blueprint-manager',
-        sort: 12
-      })
-    ]
-    store.activeTab = '/blueprint-manager'
-
-    const changed = store.cleanupLibraryTabs()
-    const materialTabs = store.historyTabs.filter((tab) => tab.title === 'menu.materialLib')
-    const blueprintTab = store.historyTabs.find((tab) => tab.title === 'menu.blueprintLib')
-
-    expect(changed).toBe(true)
-    expect(materialTabs).toHaveLength(1)
-    expect(materialTabs[0]?.key).toBe('/material-library')
-    expect(blueprintTab?.key).toBe('/blueprint-library')
-    expect(blueprintTab?.path).toBe('/blueprint-library')
   })
 
   it('keeps dedicated notebook detail tabs with _tab_id intact during nested cleanup', () => {

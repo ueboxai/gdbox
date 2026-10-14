@@ -79,7 +79,7 @@ export function exitCodeFor(code: ErrorCode): number {
  *
  * 一律带 `hint`：只说「工程有歧义」而不说下一步该敲什么，等于把用户扔在原地。
  */
-export class UeboxError extends Error {
+export class GdboxError extends Error {
   readonly execution: ExecutionState
 
   constructor(
@@ -89,16 +89,16 @@ export class UeboxError extends Error {
     execution: ExecutionState = 'not_started'
   ) {
     super(message)
-    this.name = 'UeboxError'
+    this.name = 'GdboxError'
     this.execution = execution
   }
 }
 
 /** 任何异常都要能变成一条有码的失败，不能让未知异常裸奔到退出码 1 */
-export function toUeboxError(error: unknown): UeboxError {
-  if (error instanceof UeboxError) return error
+export function toGdboxError(error: unknown): GdboxError {
+  if (error instanceof GdboxError) return error
 
   const message = error instanceof Error ? error.message : String(error)
   // 归到 TOOL_FAILED 并保留真实诊断，不按中文字符串猜精细类别（§6.2）
-  return new UeboxError('TOOL_FAILED', message, undefined, 'unknown')
+  return new GdboxError('TOOL_FAILED', message, undefined, 'unknown')
 }

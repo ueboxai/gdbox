@@ -17,7 +17,7 @@ import type { SkillLearningMode } from '../capabilities/skills'
 import { effectiveRisk, type ToolMeta } from '../tools/defineTool'
 import { engineMinor } from './experienceFile'
 import { createExperienceRuntime, type ExperienceRuntime } from './runtime'
-import { STRICT_TOOLS } from './specificity'
+import { GODOT_EDIT_TOOLS, isGodotTextPath } from './godotTools'
 import { ExperienceStore, experienceDir } from './store'
 import { TRAIL_SUBDIR, TrailWriter } from './trail'
 
@@ -35,21 +35,23 @@ export interface SessionExperienceOptions {
 }
 
 /**
- * 引擎工具，且这一次不是破坏性操作。
+ * 要记账的工具：Godot 引擎工具（且这一次不是破坏性操作），以及改 Godot 文本文件的那两次本地写。
  *
  * 删除这类操作不学：「删不掉就换个法子删」不是该沉淀的知识，
  * 而设计稿里「权限、删除、安全相关的规则永远不自动产生」正是这条的来由。
- * 跑任意代码的那几个（Python、控制台命令）在注册表里也记成 destructive，
- * 但它们正是设计稿里最该学的那类，按 `STRICT_TOOLS` 放行。
+ *
+ * 本地写文件按路径放行：GDBox 里模型修 GDScript 报错靠的就是它（见 `godotTools.ts` 文件头），
+ * 不记它，两次 `godot_check` 之间改了什么就丢了。只认 `local` 命名空间里的那两个名字，
+ * 外接的 MCP 工具碰巧同名也不算。
  */
 export function isLearnableMeta(meta: ToolMeta | undefined, args: unknown, tool?: string): boolean {
   if (!meta) return false
   const ns = meta.namespace
-  const engine = ns === 'ue' || ns.startsWith('ue.') || ns === 'ue-system'
-  if (!engine) return false
-  return (
-    (tool !== undefined && STRICT_TOOLS.has(tool)) || effectiveRisk(meta, args) !== 'destructive'
-  )
+  if (ns === 'local' && tool !== undefined && GODOT_EDIT_TOOLS.has(tool)) {
+    return isGodotTextPath((args as { path?: unknown } | undefined)?.path)
+  }
+  const engine = ns === 'godot' || ns.startsWith('godot.')
+  return engine && effectiveRisk(meta, args) !== 'destructive'
 }
 
 /** 工程的指纹：升级登记只需要分清是不是同一个工程，不需要知道它在哪 */

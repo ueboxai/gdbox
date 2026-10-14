@@ -4,19 +4,20 @@ import { createSessionExperience, isLearnableMeta } from './session'
 import { assertNotWritingExperience } from './writeGuard'
 
 describe('isLearnableMeta', () => {
-  it('只学引擎工具，破坏性的不学', () => {
-    expect(isLearnableMeta({ namespace: 'ue.blueprint', risk: 'mutating' }, {})).toBe(true)
-    expect(isLearnableMeta({ namespace: 'ue', risk: 'safe' }, {})).toBe(true)
+  it('只学 Godot 引擎工具，破坏性的不学', () => {
+    expect(isLearnableMeta({ namespace: 'godot.editor', risk: 'mutating' }, {})).toBe(true)
+    expect(isLearnableMeta({ namespace: 'godot', risk: 'safe' }, {}, 'godot_check')).toBe(true)
     expect(isLearnableMeta({ namespace: 'local', risk: 'safe' }, {})).toBe(false)
-    expect(isLearnableMeta({ namespace: 'ue.content', risk: 'destructive' }, {})).toBe(false)
+    expect(isLearnableMeta({ namespace: 'ue', risk: 'safe' }, {})).toBe(false)
+    expect(isLearnableMeta({ namespace: 'godot.editor', risk: 'destructive' }, {})).toBe(false)
     expect(isLearnableMeta(undefined, {})).toBe(false)
   })
 
-  it('跑任意代码的工具注册成 destructive，也照样学', () => {
-    const meta = { namespace: 'ue.system', risk: 'destructive' as const }
-    expect(isLearnableMeta(meta, {}, 'ue_run_python_script')).toBe(true)
-    expect(isLearnableMeta(meta, {}, 'ue_run_console_command')).toBe(true)
-    expect(isLearnableMeta(meta, {}, 'ue_manage_plugin')).toBe(false)
+  it('本地写文件只在改 Godot 文本文件时记账', () => {
+    const meta = { namespace: 'local', risk: 'mutating' as const }
+    expect(isLearnableMeta(meta, { path: 'H:/G/player.gd' }, 'edit_local_file')).toBe(true)
+    expect(isLearnableMeta(meta, { path: 'H:/G/notes.txt' }, 'edit_local_file')).toBe(false)
+    expect(isLearnableMeta(meta, {}, 'write_local_file')).toBe(false)
   })
 })
 
@@ -34,10 +35,12 @@ describe('createSessionExperience', () => {
 })
 
 describe('assertNotWritingExperience', () => {
-  it('挡住写经验目录，别的 .uebox 子目录照常', () => {
-    expect(assertNotWritingExperience('H:\\P\\Game\\.uebox\\experience\\ue_save.md')).toBeDefined()
-    expect(assertNotWritingExperience('H:/P/Game/.uebox/EXPERIENCE/.ledger.json')).toBeDefined()
-    expect(assertNotWritingExperience('H:/P/Game/.uebox/skills/my/SKILL.md')).toBeUndefined()
-    expect(assertNotWritingExperience('H:/P/Game/.uebox/experience-notes.md')).toBeUndefined()
+  it('挡住写经验目录，别的 .gdbox 子目录照常', () => {
+    expect(
+      assertNotWritingExperience('H:\\P\\Game\\.gdbox\\experience\\godot_check.md')
+    ).toBeDefined()
+    expect(assertNotWritingExperience('H:/P/Game/.gdbox/EXPERIENCE/.ledger.json')).toBeDefined()
+    expect(assertNotWritingExperience('H:/P/Game/.gdbox/skills/my/SKILL.md')).toBeUndefined()
+    expect(assertNotWritingExperience('H:/P/Game/.gdbox/experience-notes.md')).toBeUndefined()
   })
 })

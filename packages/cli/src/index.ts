@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * `uebox` 的入口。
+ * `gdbox` 的入口。
  *
  * 这一层只做三件事：把 argv 交给 `cli.run`、把结果写到真实的流上、退出。
  * 逻辑全在 `cli.ts` 里，那边返回字符串而不是直接写流 —— 于是测试能断言
@@ -36,7 +36,7 @@ function onInterrupt(): void {
   try {
     writeSync(
       2,
-      '\n已中断等待。注意：已经发出去的请求可能仍在引擎里执行，结果无法确认 —— ' +
+      '\n已中断等待。注意：已经发出去的请求可能仍在执行，结果无法确认 —— ' +
         '请去现场核实，不要直接重发。\n'
     )
   } catch {
@@ -74,6 +74,6 @@ async function main(): Promise<void> {
 main().catch((error) => {
   // 走到这里说明 `run` 自己漏了一个异常 —— 它本该把所有异常都变成信封。
   // 兜底也要给个非零退出码，不能让一次崩溃看起来像成功。
-  process.stderr.write(`uebox 内部错误：${error instanceof Error ? error.stack : String(error)}\n`)
+  process.stderr.write(`gdbox 内部错误：${error instanceof Error ? error.stack : String(error)}\n`)
   process.exitCode = 8
 })

@@ -9,7 +9,8 @@
  *
  * ## 先读契约再干活
  *
- * 旧盒子没有 `capabilities.experimental.unrealBox`。这时候连通性是好的，
+ * 不认这套契约的服务没有 `capabilities.experimental.unrealBox`（协议字段名沿用
+ * 虚幻盒子时期的命名，两边一致即可）。这时候连通性是好的，
  * 但 `--project` 发过去会被**静默忽略** —— 命令看起来成功了，只是发给了
  * 另一个工程。所以除了纯连通性检查（doctor 的第一段），任何要干活的命令
  * 都必须先确认契约在。
@@ -19,7 +20,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 
 import type { HostConnection } from './config.js'
-import { UeboxError } from './errors.js'
+import { GdboxError } from './errors.js'
 
 /** 本 CLI 实现的契约版本。和服务端 `externalTarget.ts` 的常量必须一致 */
 export const CLI_CONTRACT_VERSION = 1
@@ -27,10 +28,15 @@ export const CLI_CONTRACT_VERSION = 1
 /** 连接阶段的期限。本机回环连不上就是连不上，等再久也一样 */
 export const CONNECT_TIMEOUT_MS = 5_000
 
+/** 服务连不上时的下一步。服务默认开着，只有用户自己关过才需要去开 */
+const SERVICE_HINT =
+  '确认 GDBox 正在运行。对外服务默认开着，' +
+  '只有你自己在「设置 → MCP → 共享引擎能力」里关过才需要重新打开。'
+
 /** 整条命令的默认期限（秒）。`--timeout` 覆盖它 */
 export const DEFAULT_TIMEOUT_SECONDS = 120
 
-export interface UnrealBoxCapability {
+export interface GDBoxCapability {
   cliContractVersion: number
   projectTargeting: boolean
   publicResults: boolean
@@ -39,18 +45,18 @@ export interface UnrealBoxCapability {
 export interface Session {
   client: Client
   /** 服务端声明的能力。旧盒子上是 undefined */
-  capability?: UnrealBoxCapability
+  capability?: GDBoxCapability
   close(): Promise<void>
 }
 
 /**
  * 连上去。
  *
- * 失败一律翻成带码的 `UeboxError`：调用方要靠退出码区分「服务没开」和
+ * 失败一律翻成带码的 `GdboxError`：调用方要靠退出码区分「服务没开」和
  * 「令牌不对」，这两件事的下一步完全不同。
  */
 export async function connect(host: HostConnection): Promise<Session> {
-  const client = new Client({ name: 'uebox-cli', version: '0.1.0' }, { capabilities: {} })
+  const client = new Client({ name: 'gdbox-cli', version: '0.1.0' }, { capabilities: {} })
   const transport = new StreamableHTTPClientTransport(new URL(host.url), {
     requestInit: { headers: { Authorization: `Bearer ${host.token}` } }
   })
@@ -59,13 +65,7 @@ export async function connect(host: HostConnection): Promise<Session> {
     await withDeadline(
       client.connect(transport),
       CONNECT_TIMEOUT_MS,
-      () =>
-        new UeboxError(
-          'SERVICE_UNAVAILABLE',
-          `连接虚幻盒子超时（${host.url}）。`,
-          '确认虚幻盒子正在运行。对外服务默认开着，' +
-            '只有你自己在「MCP → 对外暴露虚幻引擎能力」里关过才需要重新打开。'
-        )
+      () => new GdboxError('SERVICE_UNAVAILABLE', `连接 GDBox 超时（${host.url}）。`, SERVICE_HINT)
     )
   } catch (error) {
     await transport.close().catch(() => undefined)
@@ -89,30 +89,30 @@ export async function connect(host: HostConnection): Promise<Session> {
 /**
  * 干活之前确认契约在。
  *
- * @throws {UeboxError} `INCOMPATIBLE_SERVER` —— 旧盒子，或者版本对不上
+ * @throws {GdboxError} `INCOMPATIBLE_SERVER` —— 旧盒子，或者版本对不上
  */
-export function requireContract(session: Session): UnrealBoxCapability {
+export function requireContract(session: Session): GDBoxCapability {
   if (!session.capability) {
-    throw new UeboxError(
+    throw new GdboxError(
       'INCOMPATIBLE_SERVER',
-      '这个虚幻盒子还不支持 CLI 契约（没有声明 unrealBox 能力）。',
-      '升级虚幻盒子。当前版本能连上，但它会忽略 --project —— 命令会看起来成功，' +
+      '这个 GDBox 还不支持 CLI 契约（没有声明 unrealBox 能力）。',
+      '升级 GDBox。当前版本能连上，但它会忽略 --project —— 命令会看起来成功，' +
         '实际可能发给了别的工程。'
     )
   }
 
   if (session.capability.cliContractVersion !== CLI_CONTRACT_VERSION) {
-    throw new UeboxError(
+    throw new GdboxError(
       'INCOMPATIBLE_SERVER',
       `契约版本不匹配：盒子是 ${session.capability.cliContractVersion}，本 CLI 是 ${CLI_CONTRACT_VERSION}。`,
-      '把虚幻盒子和 uebox 升到同一批版本。'
+      '把 GDBox 和 gdbox 升到同一批版本。'
     )
   }
 
   return session.capability
 }
 
-function parseCapability(raw: unknown): UnrealBoxCapability | undefined {
+function parseCapability(raw: unknown): GDBoxCapability | undefined {
   if (!raw || typeof raw !== 'object') return undefined
   const value = raw as Record<string, unknown>
   if (typeof value.cliContractVersion !== 'number') return undefined
@@ -130,30 +130,29 @@ function parseCapability(raw: unknown): UnrealBoxCapability | undefined {
  * 401 和「端口没人监听」都会以 `Error` 的形式冒出来，但它们是两件事：
  * 前者是令牌对不上（手里那把过期了，或者连错了盒子），后者要去把服务打开。
  */
-function describeConnectError(error: unknown, host: HostConnection): UeboxError {
-  if (error instanceof UeboxError) return error
+function describeConnectError(error: unknown, host: HostConnection): GdboxError {
+  if (error instanceof GdboxError) return error
 
   const message = error instanceof Error ? error.message : String(error)
 
   if (/\b401\b|unauthorized/i.test(message)) {
-    return new UeboxError(
+    return new GdboxError(
       'AUTH_FAILED',
-      `虚幻盒子拒绝了这个访问令牌（${host.url}）。`,
-      '用 UEBOX_TOKEN 的话，换成盒子里现在的令牌；否则多半是连错了盒子 —— ' +
-        'uebox doctor 会显示这次读的是哪份配置。'
+      `GDBox 拒绝了这个访问令牌（${host.url}）。`,
+      '用 GDBOX_TOKEN 的话，换成 GDBox 里现在的令牌；否则多半是连错了盒子 —— ' +
+        'gdbox doctor 会显示这次读的是哪份配置。'
     )
   }
 
   if (/ECONNREFUSED|ECONNRESET|EHOSTUNREACH|fetch failed|socket hang up/i.test(message)) {
-    return new UeboxError(
+    return new GdboxError(
       'SERVICE_UNAVAILABLE',
-      `连不上虚幻盒子（${host.url}）：${message}`,
-      '确认虚幻盒子正在运行。对外服务默认开着，' +
-        '只有你自己在「MCP → 对外暴露虚幻引擎能力」里关过才需要重新打开。'
+      `连不上 GDBox（${host.url}）：${message}`,
+      SERVICE_HINT
     )
   }
 
-  return new UeboxError('SERVICE_UNAVAILABLE', `连接虚幻盒子失败：${message}`)
+  return new GdboxError('SERVICE_UNAVAILABLE', `连接 GDBox 失败：${message}`)
 }
 
 /**
@@ -165,7 +164,7 @@ function describeConnectError(error: unknown, host: HostConnection): UeboxError 
 export async function withDeadline<T>(
   promise: Promise<T>,
   ms: number,
-  onTimeout: () => UeboxError
+  onTimeout: () => GdboxError
 ): Promise<T> {
   let timer: NodeJS.Timeout | undefined
   try {

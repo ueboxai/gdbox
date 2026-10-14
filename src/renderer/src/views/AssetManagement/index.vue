@@ -2905,7 +2905,7 @@ const handleAssetTreeRefresh = async (
     }
   }
   await loadCurrentFolderAssets()
-  message.success(t('assetManagement.import.unrealImportDone', { count: payload.createdCount }))
+  message.success(t('assetManagement.import.agentImportDone', { count: payload.createdCount }))
   // 已经就地刷新过了，清掉 MainLayout 同时记下的待刷新标记，
   // 否则下次切回本页会再刷一次树、再弹一次同样的提示
   assetViewStore.clearTreeRefresh()
@@ -3043,7 +3043,7 @@ onActivated(async () => {
     await loadCurrentFolderAssets()
 
     // 显示成功消息
-    message.success(t('assetManagement.import.unrealImportDone', { count: payload.createdCount }))
+    message.success(t('assetManagement.import.agentImportDone', { count: payload.createdCount }))
 
     // 清除刷新标记
     assetViewStore.clearTreeRefresh()

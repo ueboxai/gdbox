@@ -8,13 +8,13 @@ import PreferencesSidebar from './PreferencesSidebar.vue'
  * （打开工程后隐藏主界面）。这条测试守的是「入口在」，不是「入口不在」。
  */
 describe('PreferencesSidebar', () => {
-  it('列出项目与插件两个入口', () => {
+  it('列出项目入口，不再有引擎插件入口', () => {
     const wrapper = mount(PreferencesSidebar, {
       props: { activeKey: 'general' }
     })
 
     expect(wrapper.text()).toContain('项目')
-    expect(wrapper.text()).toContain('插件')
+    expect(wrapper.findAll('.nav-item').some((item) => item.text() === '插件')).toBe(false)
   })
 
   it('点项目会把 key 交给外面', async () => {

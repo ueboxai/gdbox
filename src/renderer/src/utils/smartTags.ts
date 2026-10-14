@@ -7,14 +7,7 @@
 import { smartTagNameKey, smartTagPatternHits } from '@core/shared/smartTagMatch'
 
 /** 智能标签的分类 */
-export type SmartTagCategory =
-  | 'texture'
-  | 'mesh'
-  | 'blueprint'
-  | 'animation'
-  | 'audio'
-  | 'material'
-  | 'other'
+export type SmartTagCategory = 'texture' | 'mesh' | 'animation' | 'audio' | 'material' | 'other'
 
 /**
  * 智能标签规则定义
@@ -43,7 +36,6 @@ export interface SmartTagRule {
 export const SMART_TAG_CATEGORY_COLOR: Record<SmartTagCategory, string> = {
   texture: 'var(--color-uetype-texture)',
   mesh: 'var(--color-uetype-static-mesh)',
-  blueprint: 'var(--color-uetype-blueprint)',
   animation: 'var(--color-uetype-anim-sequence)',
   audio: 'var(--color-uetype-sound)',
   material: 'var(--color-uetype-material)',
@@ -61,7 +53,7 @@ export function getSmartTagColor(rule: SmartTagRule): string {
 
 /**
  * 默认智能标签规则库
- * 基于 UE 资产命名规范，零成本自动分类
+ * 基于常见美术资产命名约定（前缀 / 通道后缀），零成本自动分类
  */
 export const DEFAULT_SMART_TAG_RULES: SmartTagRule[] = [
   // ========== 纹理类型 ==========
@@ -106,26 +98,6 @@ export const DEFAULT_SMART_TAG_RULES: SmartTagRule[] = [
     patterns: ['_ORM', '_ARM', '_RMA'],
     tag: 'ORM',
     category: 'texture'
-  },
-
-  // ========== 蓝图类型 ==========
-  {
-    name: 'Blueprint Actor',
-    patterns: ['BP_'],
-    tag: 'Blueprint',
-    category: 'blueprint'
-  },
-  {
-    name: 'Widget Blueprint',
-    patterns: ['WBP_', 'W_', 'Widget_'],
-    tag: 'Widget',
-    category: 'blueprint'
-  },
-  {
-    name: 'Animation Blueprint',
-    patterns: ['ABP_', 'AnimBP_'],
-    tag: 'AnimBlueprint',
-    category: 'blueprint'
   },
 
   // ========== 网格体类型 ==========

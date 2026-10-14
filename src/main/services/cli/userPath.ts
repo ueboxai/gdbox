@@ -121,7 +121,7 @@ export async function writeUserPath(value: string): Promise<void> {
   // 值通过环境变量传进去，不拼进脚本 —— PATH 里有分号、引号、括号，
   // 拼字符串迟早会撞上一个能改变脚本语义的字符
   const script = [
-    '$value = $env:UEBOX_NEW_PATH',
+    '$value = $env:GDBOX_NEW_PATH',
     "$key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $true)",
     "if ($null -eq $key) { $key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Environment') }",
     '$kind = [Microsoft.Win32.RegistryValueKind]::ExpandString',
@@ -137,6 +137,6 @@ export async function writeUserPath(value: string): Promise<void> {
   await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
     timeout: TIMEOUT_MS,
     windowsHide: true,
-    env: { ...process.env, UEBOX_NEW_PATH: value }
+    env: { ...process.env, GDBOX_NEW_PATH: value }
   })
 }

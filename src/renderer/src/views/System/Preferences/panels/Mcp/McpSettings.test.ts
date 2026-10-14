@@ -22,7 +22,6 @@ const rotateToken = vi.fn()
 const saveConfig = vi.fn()
 const writeText = vi.fn().mockResolvedValue(undefined)
 const getSettings = vi.fn()
-const epicStatus = vi.fn()
 const reconnect = vi.fn()
 const blenderStatus = vi.fn()
 const blenderSetup = vi.fn()
@@ -96,7 +95,6 @@ beforeEach(() => {
     path: 'C:/fake/mcp.json',
     statuses: []
   })
-  epicStatus.mockResolvedValue({ success: true, projects: [] })
   reconnect.mockResolvedValue({ success: true, statuses: [] })
   // 默认这台机器什么都没装：一键块该给出「缺什么」而不是按钮
   blenderStatus.mockResolvedValue({
@@ -133,8 +131,6 @@ beforeEach(() => {
         getSettings,
         saveSettings: vi.fn(),
         reconnect,
-        epicStatus,
-        epicSetup: vi.fn(),
         blenderStatus,
         blenderSetup,
         removeServer: removeServerIpc,
@@ -318,14 +314,14 @@ describe('渐进披露', () => {
   /**
    * 面板标题和页面 Header 是同一句，重复两遍是上一版最刺眼的地方。
    *
-   * 三个小标题：内置 / 手动配置 / 共享虚幻引擎能力。前两个把「盒子自己装的」
+   * 三个小标题：内置 / 手动配置 / 共享引擎能力。前两个把「盒子自己装的」
    * 和「用户自己加的」分开 —— 责任人不同，混在一张表里用户分不清哪条归谁管。
    */
   it('三组各有小标题，且都不重复页面 Header 那句', async () => {
     const wrapper = await mountPanel()
     const titles = wrapper.findAll('.section-title').map((n) => n.text())
 
-    expect(titles).toEqual(['内置', '手动配置', '共享虚幻引擎能力'])
+    expect(titles).toEqual(['内置', '手动配置', '共享引擎能力'])
     for (const title of titles) expect(title).not.toContain('接入外部 MCP 服务')
   })
 
@@ -339,7 +335,7 @@ describe('渐进披露', () => {
   /**
    * 空组要说一句话。
    *
-   * 这一页栽过一次同样的跟头（见 `hideEpicSetup`）：什么都不渲染时，
+   * 什么都不渲染时，
    * 「这里本来就没有」和「坏了」长得一模一样。
    */
   it('手动配置一条都没有时给一句话，不是一片空白', async () => {
@@ -593,86 +589,7 @@ describe('第三方 server 的状态胶囊', () => {
   })
 })
 
-/**
- * 引擎内置工具集那一块。
- *
- * 跑得好好的时候用户什么都不用做，摊开五行只是占地方；一旦连不上，
- * 里面就有原因要看、有按钮要点 —— 那时候藏起来等于没有。
- */
-describe('引擎块：好的时候一行，坏的时候摊开', () => {
-  function withEngine(status: Record<string, unknown>): void {
-    getSettings.mockResolvedValue({
-      settings: { version: 1, mcpServers: {} },
-      path: 'C:/fake/mcp.json',
-      statuses: [status]
-    })
-  }
-
-  it('连上时收成一行，说明和提示都不出现', async () => {
-    withEngine({ id: 'ue-official', connected: true, toolCount: 3 })
-    const wrapper = await mountPanel()
-
-    expect(wrapper.find('.builtin.engine').text()).toContain('虚幻引擎')
-    expect(wrapper.find('.builtin.engine .status.ok').text()).toContain('3')
-    expect(wrapper.find('.builtin.engine .category-body .engine-desc').exists()).toBe(false)
-    expect(wrapper.find('.builtin.engine .engine-hint').exists()).toBe(false)
-  })
-
-  it('点一下摊开，才有说明和条目', async () => {
-    withEngine({ id: 'ue-official', connected: true, toolCount: 3 })
-    const wrapper = await mountPanel()
-
-    await wrapper.find('.builtin.engine .category-open').trigger('click')
-    await flushPromises()
-
-    expect(wrapper.find('.builtin.engine .category-body .engine-desc').exists()).toBe(true)
-    expect(wrapper.find('.builtin.engine .category-body .engine-row').text()).toContain(
-      'ue-official'
-    )
-  })
-
-  /**
-   * 「连接失败」四个字不带原因，用户能做的只有瞪着它。
-   * 原因原来只塞在 title 里 —— 这个文件自己写过：会去排查的人不会想到悬停。
-   */
-  it('连不上时强制摊开，把原因原样写出来', async () => {
-    withEngine({
-      id: 'ue-official',
-      connected: false,
-      toolCount: 0,
-      error: 'connect ECONNREFUSED 127.0.0.1:30069'
-    })
-    const wrapper = await mountPanel()
-
-    expect(wrapper.find('.builtin.engine .status.bad').exists()).toBe(true)
-    expect(wrapper.find('.builtin.engine .row-error').text()).toBe(
-      'connect ECONNREFUSED 127.0.0.1:30069'
-    )
-  })
-
-  it('连不上时给「重试连接」，点了就真去重连', async () => {
-    withEngine({ id: 'ue-official', connected: false, toolCount: 0, error: 'boom' })
-    const wrapper = await mountPanel()
-
-    const retry = wrapper.find('.builtin.engine .category-body .actions button')
-    expect(retry.text()).toBe('重试连接')
-    await retry.trigger('click')
-    await flushPromises()
-
-    expect(reconnect).toHaveBeenCalled()
-  })
-
-  // 好好跑着的时候没什么可重试的
-  it('连上时不给重试按钮', async () => {
-    withEngine({ id: 'ue-official', connected: true, toolCount: 3 })
-    const wrapper = await mountPanel()
-    await wrapper.find('.builtin.engine .category-open').trigger('click')
-    await flushPromises()
-
-    expect(wrapper.find('.builtin.engine .category-body .actions').exists()).toBe(false)
-  })
-
-  // 同一条毛病，手配的那几条也犯 —— 不能只修一半
+describe('手配服务的错误原因', () => {
   it('手配的服务连不上时，原因也写在行下面', async () => {
     getSettings.mockResolvedValue({
       settings: { version: 1, mcpServers: { filesystem: { type: 'stdio', command: 'npx' } } },
@@ -1147,94 +1064,6 @@ describe('新增行不该立刻报错、更不该挡住别的行', () => {
     await clickAdd(wrapper)
 
     expect(wrapper.findAll('.category.manual')[1].find('button.save-row').exists()).toBe(false)
-  })
-})
-
-/**
- * 用户报的：「打开了 5.8 工程、也开了 MCP 插件，顶部那块反而不见了」。
- *
- * 根因是两块的判据来自两份不同步的数据：一键块看的是**每次实时探端口**的
- * `epicStatus`，自动发现块看的是 MCP manager **上次连接时的快照** `statuses`。
- * 用户开着盒子再去打开工程时两者必然错位 —— 一键块因为「已经好了」收起，
- * 自动发现块因为「还不知道好了」不出现，中间一片没有任何解释的空白。
- */
-describe('一键块和自动发现块的交接', () => {
-  const READY_PROJECT = {
-    connectionId: 'c1',
-    projectName: 'BIKEOUT',
-    state: 'ready' as const,
-    missingPlugins: [],
-    autoStartEnabled: true,
-    url: 'http://127.0.0.1:30069/mcp'
-  }
-
-  it('引擎已开启但盒子还没连上时，一键块不许消失', async () => {
-    epicStatus.mockResolvedValue({ success: true, projects: [READY_PROJECT] })
-    const wrapper = await mountPanel()
-
-    // 至少要有一处在说话，否则用户看到的就是「坏了」
-    expect(wrapper.find('.builtin.engine').exists()).toBe(true)
-    expect(wrapper.find('.builtin.engine .category-body').text()).toContain('BIKEOUT')
-  })
-
-  /**
-   * 两块合成一行之后，「收起来」的含义变了：行永远在，收起的是摊开的内容。
-   * 判据还是同一条 —— 真连上了就没有要办的事，行右端报连接状态即可。
-   */
-  it('真连上之后那一行收起来，只报连接状态', async () => {
-    epicStatus.mockResolvedValue({ success: true, projects: [READY_PROJECT] })
-    getSettings.mockResolvedValue({
-      settings: { version: 1, mcpServers: {} },
-      path: 'C:/fake/mcp.json',
-      statuses: [{ id: 'ue-official', connected: true, toolCount: 3 }]
-    })
-    const wrapper = await mountPanel()
-
-    expect(wrapper.find('.builtin.engine .category-body').exists()).toBe(false)
-    expect(wrapper.find('.builtin.engine .status.ok').text()).toContain('3')
-  })
-
-  /**
-   * `currentStatuses()` 只在 agent 跑过或用户手点「重新连接」时更新，没有任何东西
-   * 会因为「用户刚打开了工程」去重新发现。不自动补的话，用户得自己猜到去点那个
-   * 跟引擎看起来毫无关系的按钮。
-   */
-  it('探到已开启、缓存里却没有引擎 server 时自动补一次重连', async () => {
-    epicStatus.mockResolvedValue({ success: true, projects: [READY_PROJECT] })
-    reconnect.mockResolvedValue({
-      success: true,
-      statuses: [{ id: 'ue-official', connected: true, toolCount: 3 }]
-    })
-    const wrapper = await mountPanel()
-
-    expect(reconnect).toHaveBeenCalled()
-    // 补上之后行右端就报「已连接」，摊开的内容随之收起
-    expect(wrapper.find('.builtin.engine .category-body').exists()).toBe(false)
-    expect(wrapper.find('.builtin.engine .status.ok').exists()).toBe(true)
-  })
-
-  it('缓存里已经有引擎 server 就不多此一举地重连', async () => {
-    epicStatus.mockResolvedValue({ success: true, projects: [READY_PROJECT] })
-    getSettings.mockResolvedValue({
-      settings: { version: 1, mcpServers: {} },
-      path: 'C:/fake/mcp.json',
-      statuses: [{ id: 'ue-official', connected: true, toolCount: 3 }]
-    })
-    await mountPanel()
-
-    expect(reconnect).not.toHaveBeenCalled()
-  })
-
-  it('还没开好的项目照旧给按钮，不受影响', async () => {
-    epicStatus.mockResolvedValue({
-      success: true,
-      projects: [{ ...READY_PROJECT, state: 'needs-plugins' }]
-    })
-    const wrapper = await mountPanel()
-
-    // 只有一个项目可操作时，按钮就摆在行右端 —— 藏进摊开的里面等于它不存在
-    expect(wrapper.find('.builtin.engine .row-action').exists()).toBe(true)
-    expect(reconnect).not.toHaveBeenCalled()
   })
 })
 

@@ -87,27 +87,6 @@
                 </div>
               </div>
 
-              <!-- 蓝图类型分组 -->
-              <div v-if="blueprintAssetTypes.length > 0" class="type-group">
-                <div class="group-header">
-                  <span class="group-title">{{ t('assetFilterBar.typeGroups.blueprint') }}</span>
-                </div>
-                <div class="group-items">
-                  <label
-                    v-for="opt in blueprintAssetTypes"
-                    :key="opt.classNameCn"
-                    class="type-item"
-                    :class="{ checked: assetTypesProxy.includes(opt.classNameCn) }"
-                  >
-                    <AppCheckbox
-                      :checked="assetTypesProxy.includes(opt.classNameCn)"
-                      @change="toggleAssetType(opt.classNameCn)"
-                    />
-                    <span class="type-label">{{ opt.displayName }}</span>
-                  </label>
-                </div>
-              </div>
-
               <!-- 材质类型分组 -->
               <div v-if="materialAssetTypes.length > 0" class="type-group">
                 <div class="group-header">
@@ -895,49 +874,18 @@ const tagNameMap = computed(() => {
 
 // ========== 显示标签计算属性 ==========
 
-/** 文件格式分类列表 - UE 资产排在第一位，支持国际化 */
-const fileCategories = computed(() => {
-  const categories = [...ASSET_CATEGORIES]
-  // 找到 UE 资产的索引
-  const uassetIndex = categories.findIndex((cat) => cat.key === 'uasset')
-  if (uassetIndex > 0) {
-    // 将 UE 资产移到第一位
-    const uassetCategory = categories.splice(uassetIndex, 1)[0]
-    categories.unshift(uassetCategory)
-  }
-  // 为每个分类添加国际化标签
-  return categories.map((cat) => {
-    // 特殊处理 uasset -> UAsset（U 和 A 都要大写）
-    let i18nKey: string
-    if (cat.key === 'uasset') {
-      i18nKey = 'assetLib.filter.formatUAsset'
-    } else {
-      i18nKey = `assetLib.filter.format${cat.key.charAt(0).toUpperCase() + cat.key.slice(1)}`
-    }
-    return {
-      ...cat,
-      label: t(i18nKey)
-    }
-  })
-})
+/** 文件格式分类列表（标签按 key 查 `assetLib.filter.format*`） */
+const formatLabelKey = (key: string): string =>
+  `assetLib.filter.format${key.charAt(0).toUpperCase() + key.slice(1)}`
+
+const fileCategories = computed(() =>
+  ASSET_CATEGORIES.map((cat) => ({ ...cat, label: t(formatLabelKey(cat.key)) }))
+)
 
 /** 文件格式显示文本 */
 const fileCategoryLabel = computed((): string => {
-  if (!fileCategoryProxy.value) return t('assetLib.filter.allFormats')
   const category = ASSET_CATEGORIES.find((cat) => cat.key === fileCategoryProxy.value)
-  if (category) {
-    // 特殊处理 uasset -> UAsset（U 和 A 都要大写）
-    let i18nKey: string
-    if (category.key === 'uasset') {
-      i18nKey = 'assetLib.filter.formatUAsset'
-    } else {
-      i18nKey = `assetLib.filter.format${
-        category.key.charAt(0).toUpperCase() + category.key.slice(1)
-      }`
-    }
-    return t(i18nKey)
-  }
-  return t('assetLib.filter.allFormats')
+  return category ? t(formatLabelKey(category.key)) : t('assetLib.filter.allFormats')
 })
 
 /** 文件大小显示文本 */
@@ -1006,10 +954,6 @@ const hasActiveFilters = computed((): boolean => {
 /** 文件格式选择 */
 const handleFileCategorySelect = ({ key }: { key: string }): void => {
   fileCategoryProxy.value = key || undefined
-  // 如果选择了非 UE 资产类别，自动清空资产类型筛选
-  if (key && key !== 'uasset') {
-    assetTypesProxy.value = []
-  }
 }
 
 /** 资产类型下拉菜单可见性变化处理 */
@@ -1077,17 +1021,6 @@ const handleResetFilter = (): void => {
 }
 
 // ========== 即时响应：监听筛选条件变化自动触发筛选 ==========
-// 当资产类型变化时，如果有选择，自动切换到 UE 资产格式
-watch(
-  assetTypesProxy,
-  (newTypes) => {
-    if (newTypes.length > 0 && fileCategoryProxy.value !== 'uasset') {
-      fileCategoryProxy.value = 'uasset'
-    }
-  },
-  { deep: true }
-)
-
 watch(
   [
     fileCategoryProxy,
@@ -1144,13 +1077,11 @@ const classOptionsLoading = ref(false)
 const assetTypeI18nMap: Record<string, string> = {
   材质实例: 'assetTypeMaterialInstance',
   静态网格体: 'assetTypeStaticMesh',
-  蓝图: 'assetTypeBlueprint',
   纹理2D: 'assetTypeTexture2D',
   主材质: 'assetTypeMaterial',
   骨骼网格体: 'assetTypeSkeletalMesh',
   动画: 'assetTypeAnimation',
   音效: 'assetTypeSound',
-  关卡: 'assetTypeWorld',
   数据表: 'assetTypeDataTable',
   曲线: 'assetTypeCurve',
   字体: 'assetTypeFont'
@@ -1215,9 +1146,6 @@ const commonTypeKeywords = [
   '动画序列',
   '主材质'
 ]
-
-/** 蓝图类型关键词 */
-const blueprintTypeKeywords = ['蓝图', 'Blueprint', '控件', 'Widget']
 
 /** 材质类型关键词 */
 const materialTypeKeywords = ['材质', 'Material', '着色器', 'Shader']
@@ -1300,11 +1228,6 @@ const commonAssetTypes = computed((): ClassOption[] => {
   return classOptions.value.filter((opt) => commonTypeKeywords.includes(opt.classNameCn))
 })
 
-/** 蓝图类型分组 */
-const blueprintAssetTypes = computed((): ClassOption[] => {
-  return classOptions.value.filter((opt) => matchesKeywords(opt.classNameCn, blueprintTypeKeywords))
-})
-
 /** 材质类型分组 */
 const materialAssetTypes = computed((): ClassOption[] => {
   return classOptions.value.filter((opt) => matchesKeywords(opt.classNameCn, materialTypeKeywords))
@@ -1371,7 +1294,6 @@ const inputAssetTypes = computed((): ClassOption[] => {
 const otherAssetTypes = computed((): ClassOption[] => {
   const categorizedTypes = new Set([
     ...commonAssetTypes.value.map((o) => o.classNameCn),
-    ...blueprintAssetTypes.value.map((o) => o.classNameCn),
     ...materialAssetTypes.value.map((o) => o.classNameCn),
     ...meshAssetTypes.value.map((o) => o.classNameCn),
     ...animationAssetTypes.value.map((o) => o.classNameCn),

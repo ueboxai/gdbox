@@ -1,7 +1,7 @@
 /**
  * 会话里的经验运行时：挂在 `afterToolCall` 上，做三件事。
  *
- * 1. **记原始账**：每次引擎工具调用写一行（见 `trail.ts`），给会话结束后的整理员。
+ * 1. **记原始账**：每次引擎工具调用、每次改 Godot 文件写一行（见 `trail.ts`），给会话结束后的整理员。
  * 2. **报错时出场**：本工程和通用两层里对得上的经验挂在错误结果后面（见 `recall.ts`），
  *    一部分随机留作对照组。
  * 3. **记功**：出场（或对照）之后盯住接下来几步，看有没有照着做、随后成没成，
@@ -16,7 +16,15 @@
 import { errorFingerprint, isEnvironmentalError, normalizeError } from './errorSignature'
 import type { ExpectedAction, ExperienceEntry } from './experienceFile'
 import { applyOutcome, emptyStats, type Outcome } from './lifecycle'
-import { codeDigest, codeOf, findAvoided, formatPrecheck } from './precheck'
+import {
+  editOf,
+  GODOT_EDIT_TOOLS,
+  isGdScriptPath,
+  readBeforeWrite,
+  VERIFY_TOOLS,
+  verifyOutcome
+} from './godotTools'
+import { codeDigest, findAvoided, formatPrecheck } from './precheck'
 import { recordProvenInProject } from './promotion'
 import {
   formatExperienceNote,
@@ -25,7 +33,7 @@ import {
   type ExperienceLayer,
   type LayeredEntry
 } from './recall'
-import { STRICT_TOOLS, symbolOf } from './specificity'
+import { symbolOf } from './specificity'
 import type { ExperienceStore } from './store'
 import { CODE_LIMIT, digestArgs, type TrailWriter } from './trail'
 
@@ -70,8 +78,8 @@ export interface ToolCallReport {
 
 export interface ExperienceRuntime {
   /**
-   * 执行前提醒（只对上帝工具）：代码里用了已验证的错误写法，回拦下的理由；放行回 undefined。
-   * 见 `precheck.ts`
+   * 执行前提醒（只对往 `.gd` 里写的那两个工具）：新写的脚本里用了已验证的错误写法，
+   * 回拦下的理由；放行回 undefined。见 `precheck.ts`
    */
   before: (call: { tool: string; args: unknown }) => Promise<string | undefined>
   /** 回要挂在工具结果后面的文字；没有就回 undefined */
@@ -91,7 +99,10 @@ function paramValue(argsDigest: string, param: string): unknown {
 /** 这一步算不算照着经验做了 */
 function followsExpect(pending: Pending, tool: string, argsDigest: string): boolean {
   const { expect } = pending
-  if (expect.tool && expect.tool !== pending.tool && tool === expect.tool) return true
+  // 改文件的两个工具算同一个动作：经验说「去改脚本」，模型用整文件写还是局部改都算照做了
+  const same =
+    tool === expect.tool || (GODOT_EDIT_TOOLS.has(tool) && GODOT_EDIT_TOOLS.has(expect.tool ?? ''))
+  if (expect.tool && expect.tool !== pending.tool && same) return true
   if (tool !== pending.tool) return false
   if (expect.param) {
     return (
@@ -142,8 +153,15 @@ export function createExperienceRuntime(deps: ExperienceRuntimeDeps): Experience
   const now = deps.now ?? ((): string => new Date().toISOString())
   let step = 0
   let pending: Pending[] = []
-  /** 执行前拦过的代码（指纹 → 拦它的经验）。同一段再发一次就放行，跑成了说明拦错了 */
+  /** 执行前拦过的写入（指纹 → 拦它的经验）。同一次写入再发一遍就放行 */
   const blocked = new Map<string, LayeredEntry[]>()
+  /**
+   * 拦过、又被原样再发放行了的经验。写文件本身总会成功，说明不了拦得对不对；
+   * 要看下一次验证：过了，说明这次拦错了，降回试用。
+   */
+  let overridden: LayeredEntry[] = []
+  /** 整文件写之前读到的旧内容（路径 → 内容）。写完在 after 里取走，记进原始账给整理员比对 */
+  const beforeWrite = new Map<string, string>()
   const writes = new Set<Promise<void>>()
 
   const storeOf = (layer: ExperienceLayer): ExperienceStore | undefined =>
@@ -244,9 +262,11 @@ export function createExperienceRuntime(deps: ExperienceRuntimeDeps): Experience
     return [...own, ...shared]
   }
 
-  const after = async (call: ToolCallReport): Promise<string | undefined> => {
+  const after = async (raw: ToolCallReport): Promise<string | undefined> => {
     try {
-      if (!deps.isLearnableTool(call.tool, call.args)) return undefined
+      if (!deps.isLearnableTool(raw.tool, raw.args)) return undefined
+      // `godot_check` 查出脚本错误时工具本身算成功，这里改判成失败（见 `verifyOutcome`）
+      const call = { ...raw, ...verifyOutcome(raw) }
       step += 1
       const argsDigest = digestArgs(call.args)
       const environmental = call.isError && isEnvironmentalError(call.text)
@@ -255,24 +275,32 @@ export function createExperienceRuntime(deps: ExperienceRuntimeDeps): Experience
 
       observe(call, argsDigest, fingerprint)
 
-      const code = STRICT_TOOLS.has(call.tool) ? codeOf(call.tool, call.args) : undefined
-      const resent = code ? blocked.get(codeDigest(code)) : undefined
-      if (code && resent) {
-        blocked.delete(codeDigest(code))
-        // 拦下后原样再发、真跑成了：这次拦错了。从已验证降回试用，它就不再拦路
-        if (!call.isError) for (const entry of resent) demote(entry)
+      // 拦下后原样再发、下一次验证真过了：这次拦错了。从已验证降回试用，它就不再拦路。
+      // 验证又报错（不管是不是同一个）就不追究 —— 说不清是谁的错
+      if (VERIFY_TOOLS.has(call.tool) && !environmental && overridden.length) {
+        if (!call.isError) for (const entry of overridden) demote(entry)
+        overridden = []
       }
+
+      // 改 Godot 文件：记下改了哪个文件、换上了什么、换掉了什么，整理员拿它比对
+      const edit = editOf(call.tool, call.args)
+      const old =
+        edit &&
+        (edit.oldText ??
+          (call.tool === 'write_local_file' ? beforeWrite.get(edit.path) : undefined))
+      if (edit) beforeWrite.delete(edit.path)
 
       const shown: LayeredEntry[] = []
       const held: LayeredEntry[] = []
-      if (call.isError && !environmental && normalized) {
+      // 改文件失败（oldText 对不上之类）不挂经验：那是工具用法，不是 Godot 的规矩
+      if (call.isError && !environmental && normalized && !GODOT_EDIT_TOOLS.has(call.tool)) {
         const alreadyWatching = new Set(pending.map((item) => item.entry.id))
         const matches = matchEntries(
           await readLayers(call.tool),
           call.tool,
           normalized,
           deps.engine,
-          symbolOf(call.tool, normalized, call.args)
+          symbolOf(call.tool, normalized)
         )
         for (const entry of matches) {
           if (alreadyWatching.has(entry.id)) continue
@@ -306,7 +334,13 @@ export function createExperienceRuntime(deps: ExperienceRuntimeDeps): Experience
             ...(environmental ? { env: true } : {}),
             ...(shown.length ? { shown: shown.map((e) => e.id) } : {}),
             ...(held.length ? { held: held.map((e) => e.id) } : {}),
-            ...(code ? { code: code.slice(0, CODE_LIMIT) } : {})
+            ...(edit
+              ? {
+                  path: edit.path,
+                  code: edit.newText.slice(0, CODE_LIMIT),
+                  ...(old !== undefined ? { old: old.slice(0, CODE_LIMIT) } : {})
+                }
+              : {})
           })
         )
       }
@@ -333,18 +367,35 @@ export function createExperienceRuntime(deps: ExperienceRuntimeDeps): Experience
 
   const before = async (call: { tool: string; args: unknown }): Promise<string | undefined> => {
     try {
-      if (!STRICT_TOOLS.has(call.tool) || !deps.isLearnableTool(call.tool, call.args))
+      const edit = editOf(call.tool, call.args)
+      if (!edit || !deps.isLearnableTool(call.tool, call.args)) return undefined
+      let previous = edit.oldText
+      if (call.tool === 'write_local_file') {
+        previous = await readBeforeWrite(edit.path)
+        if (previous === undefined) beforeWrite.delete(edit.path)
+        else beforeWrite.set(edit.path, previous)
+      }
+      if (!isGdScriptPath(edit.path)) return undefined
+
+      const digest = codeDigest(`${edit.path}\0${edit.newText}`)
+      const again = blocked.get(digest)
+      if (again) {
+        // 拦过一次的原样再发：放行。这次不记采纳，对错留给下一次验证（见 `overridden`）
+        blocked.delete(digest)
+        overridden.push(...again)
+        const ids = new Set(again.map((e) => e.id))
+        pending = pending.filter(
+          (item) => !(item.arm === 'shown' && ids.has(item.entry.id) && !item.fingerprint)
+        )
         return undefined
-      const code = codeOf(call.tool, call.args)
-      if (!code) return undefined
-      const digest = codeDigest(code)
-      // 拦过一次的原样再发：放行，结果在 after 里看
-      if (blocked.has(digest)) return undefined
-      const hits = findAvoided(code, await readLayers(call.tool), deps.engine)
+      }
+      // 错误写法记在验证工具的经验里（报错是 godot_check / godot_run 报的）
+      const entries = (await Promise.all([...VERIFY_TOOLS].map(readLayers))).flat()
+      const hits = findAvoided(edit.newText, entries, deps.engine, previous)
       if (hits.length === 0) return undefined
 
       blocked.set(digest, hits)
-      // 拦下也算一次出场：之后改了代码并且成了，记一次采纳成功
+      // 拦下也算一次出场：之后改了脚本、验证也过了，记一次采纳成功
       step += 1
       const watching = new Set(pending.map((item) => item.entry.id))
       for (const entry of hits) {
@@ -352,10 +403,10 @@ export function createExperienceRuntime(deps: ExperienceRuntimeDeps): Experience
         pending.push({
           entry,
           arm: 'shown',
-          tool: call.tool,
+          tool: entry.tool,
           fingerprint: '',
-          failArgs: digestArgs(call.args),
-          expect: { param: call.tool === 'ue_run_python_script' ? 'script' : 'command' },
+          failArgs: '',
+          expect: { tool: call.tool },
           startStep: step,
           adopted: false
         })

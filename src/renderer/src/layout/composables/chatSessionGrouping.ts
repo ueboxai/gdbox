@@ -463,10 +463,10 @@ export interface ProjectChoice {
   detail?: string
 }
 
-/** 和主进程 `core/projectPathKey.ts` 同一把尺子：大小写、斜杠、结尾斜杠、削 `.uproject` */
+/** 和主进程 `core/projectPathKey.ts` 同一把尺子：大小写、斜杠、结尾斜杠、削 `project.godot` */
 export function projectPathKey(value: string | null | undefined): string {
   const raw = (value || '').trim().toLowerCase().replace(/\\/g, '/').replace(/\/+$/, '')
-  if (!raw.endsWith('.uproject')) return raw
+  if (!raw.endsWith('/project.godot')) return raw
   const cut = raw.lastIndexOf('/')
   return cut > 0 ? raw.slice(0, cut) : raw
 }

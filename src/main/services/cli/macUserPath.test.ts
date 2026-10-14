@@ -15,7 +15,7 @@ import { macShellProfile, macPathBlock, macPathEnabled, setMacPath } from './mac
 
 let home: string
 beforeEach(() => {
-  home = mkdtempSync(join(tmpdir(), 'uebox-path-'))
+  home = mkdtempSync(join(tmpdir(), 'gdbox-path-'))
 })
 afterEach(() => rmSync(home, { recursive: true, force: true }))
 
@@ -29,7 +29,7 @@ it('adds once and removes only its own block, preserving every original byte', a
   const profile = join(home, '.zprofile')
   const original = '# My settings\nexport CUSTOM="preserve me"'
   writeFileSync(profile, original)
-  const directory = "/Applications/Unreal Box's App/cli/bin"
+  const directory = "/Applications/GDBox's App/cli/bin"
   await setMacPath(profile, directory, true)
   expect(await macPathEnabled(profile, directory)).toBe(true)
   const added = readFileSync(profile, 'utf8')
@@ -62,7 +62,7 @@ it('preserves symlinked dotfiles', async () => {
 
 it('refuses damaged blocks and leaves the file untouched', async () => {
   const profile = join(home, '.zprofile')
-  const damaged = '\n# >>> Unreal Box CLI >>>\nuser edited content\n'
+  const damaged = '\n# >>> GDBox CLI >>>\nuser edited content\n'
   writeFileSync(profile, damaged)
   await expect(setMacPath(profile, '/app/bin', true)).rejects.toThrow()
   expect(readFileSync(profile, 'utf8')).toBe(damaged)

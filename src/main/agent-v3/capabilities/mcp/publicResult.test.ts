@@ -24,7 +24,8 @@ describe('toStructuredContent', () => {
       'editor_scene_tree',
       'godot_check',
       'godot_run',
-      'godot_screenshot'
+      'godot_screenshot',
+      'project_list'
     ])
   })
 

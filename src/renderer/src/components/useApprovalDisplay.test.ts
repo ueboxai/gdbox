@@ -4,7 +4,7 @@
  * 红灯用例：模型要删一批资产，卡片上写的是
  *
  *     操作类型：其他操作
- *     即将执行不可撤销的操作：ue_content_delete
+ *     即将执行不可撤销的操作：delete_assets
  *
  * 「操作类型」那一行恒为「其他操作」（非上网的全归 other），一个字的信息量都没有；
  * 而第二行里用户唯一需要判断的那部分（到底要删什么）恰好是他读不懂的那部分。
@@ -36,10 +36,10 @@ function enqueue(
   usePendingApprovalsStore().enqueue({
     sessionId: 's1',
     toolCallId: 'tc1',
-    toolName: 'ue_content_delete',
-    namespace: 'ue.content',
+    toolName: 'delete_assets',
+    namespace: 'assets',
     risk: 'destructive',
-    args: { paths: ['/Game/Old'] },
+    args: { assetKeys: ['old'] },
     allowAlways: true,
     ...partial
   })
@@ -70,12 +70,12 @@ describe('useApprovalDisplay', () => {
     setActivePinia(createPinia())
   })
 
-  it('工具名翻成人话 —— 用户批的是「删除资产」，不是 ue_content_delete', () => {
+  it('工具名翻成人话 —— 用户批的是「删除素材库资产」，不是 delete_assets', () => {
     enqueue({})
     const { current } = display()
 
-    expect(current.value?.description).toContain('删除资产')
-    expect(current.value?.description).not.toContain('ue_content_delete')
+    expect(current.value?.description).toContain('删除素材库资产')
+    expect(current.value?.description).not.toContain('delete_assets')
   })
 
   it('「操作类型」那一行说的是危险程度，不是恒定的「其他操作」', () => {
@@ -84,45 +84,32 @@ describe('useApprovalDisplay', () => {
   })
 
   it('会改动但能撤销的，和不可撤销的要分得开', () => {
-    enqueue({ toolName: 'ue_spawn_actor', risk: 'mutating' })
+    enqueue({ toolName: 'move_assets', risk: 'mutating' })
     const current = display().current
 
     expect(current.value?.typeLabel).toBe('会改动工程')
-    expect(current.value?.description).toContain('创建 Actor')
+    expect(current.value?.description).toContain('移动素材库资产')
   })
 
   /*
-   * MCP 工具名是全仓最难读的一批（`mcp_ue-official_call_tool`），而表里永远不会有
+   * MCP 工具名是全仓最难读的一批（`mcp_godot_call_tool`），而表里永远不会有
    * 它们的 key —— server 名是用户自己配的。不归一的话，审批卡正文就是
-   * 「即将执行写入操作：mcp_ue-official_call_tool」，正是这张卡片要消灭的句子。
+   * 「即将执行写入操作：mcp_godot_call_tool」，正是这张卡片要消灭的句子。
    * 「本轮改动」那一栏早就这么干了（`AIBubble.changeLabel` 第一句）。
    */
   it('MCP 工具归一成「通过引擎工具集操作」，不露原始工具名', () => {
-    enqueue({ toolName: 'mcp_ue-official_call_tool', risk: 'mutating' })
+    enqueue({ toolName: 'mcp_godot_call_tool', risk: 'mutating' })
     const description = display().current.value?.description ?? ''
 
     expect(description).toContain('引擎工具集')
-    expect(description).not.toContain('mcp_ue-official_call_tool')
-  })
-
-  /* 用户要判断的正是方向：「启用/停用插件」这句含糊话等于没说 */
-  it('插件管理说清是启还是停', () => {
-    enqueue({ toolName: 'ue_manage_plugin', risk: 'mutating', args: { action: 'Disable' } })
-    const disabling = display().current.value?.description ?? ''
-
-    setActivePinia(createPinia())
-    enqueue({ toolName: 'ue_manage_plugin', risk: 'mutating', args: { action: 'Enable' } })
-    const enabling = display().current.value?.description ?? ''
-
-    expect(disabling).not.toBe(enabling)
-    expect(disabling).not.toContain('ue_manage_plugin')
+    expect(description).not.toContain('mcp_godot_call_tool')
   })
 
   it('没配文案的新工具退回工具名，而不是显示 undefined', () => {
-    enqueue({ toolName: 'ue_brand_new_thing', risk: 'mutating' })
+    enqueue({ toolName: 'brand_new_thing', risk: 'mutating' })
     const description = display().current.value?.description ?? ''
 
-    expect(description).toContain('ue_brand_new_thing')
+    expect(description).toContain('brand_new_thing')
     expect(description).not.toContain('undefined')
   })
 

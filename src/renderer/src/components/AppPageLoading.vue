@@ -3,9 +3,6 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppPageSkeleton from './AppPageSkeleton.vue'
 import AssetLoadingContent from '@renderer/views/AssetManagement/components/AssetLoadingContent.vue'
-import LibraryBrowser from '@renderer/views/library-common/browser/LibraryBrowser.vue'
-import type { BrowserScope } from '@renderer/views/library-common/browser/types'
-import banner from '@renderer/assets/imgs/header-image.png'
 
 const props = defineProps<{ path: string }>()
 const { t } = useI18n()
@@ -13,26 +10,9 @@ const page = computed(() => {
   if (props.path === '/') return 'projects'
   if (props.path === '/aigc-studio') return 'studio'
   if (props.path.startsWith('/asset-management')) return 'assets'
-  if (props.path === '/blueprint-library') return 'blueprint'
-  if (props.path === '/material-library') return 'material'
   if (props.path === '/notebooks') return 'notebooks'
   return 'editor'
 })
-const scope = computed<BrowserScope>(() => ({
-  id: page.value,
-  title: `${page.value}Gallery.header.title`,
-  kinds: [page.value],
-  density: 'light',
-  facets:
-    page.value === 'material'
-      ? [
-          { key: 'entryType', label: 'materialGallery.list.colType', options: [] },
-          { key: 'blendMode', label: 'libraryBrowser.facetBlendMode', options: [] },
-          { key: 'shadingModel', label: 'libraryBrowser.facetShadingModel', options: [] }
-        ]
-      : [{ key: 'blueprintType', label: 'blueprintGallery.list.colType', options: [] }]
-}))
-
 // Read the same existing UI preferences as the destination. Never persist preview state.
 const dimensions = computed(() => {
   // Reread when switching destinations, including consecutive pending navigations.
@@ -67,14 +47,6 @@ const dimensions = computed(() => {
     aria-busy="true"
   >
     <template v-if="page === 'projects'">
-      <div class="project-banner"><img :src="banner" alt="" /></div>
-      <section class="project-section">
-        <header>
-          <h2>{{ t('page.home.engine.title') }}</h2>
-          <span class="control"></span><span class="control"></span>
-        </header>
-        <AppPageSkeleton variant="engines" :count="10" />
-      </section>
       <section class="project-section">
         <header>
           <h2>{{ t('page.home.project.title') }}</h2>
@@ -84,16 +56,6 @@ const dimensions = computed(() => {
         <AppPageSkeleton variant="projects" :count="24" />
       </section>
     </template>
-
-    <!-- Use the actual gallery shell, with its persisted width, search, sort and view mode. -->
-    <div v-else-if="page === 'blueprint' || page === 'material'" class="gallery-shell" inert>
-      <LibraryBrowser :key="page" :scope="scope" :items="[]" :folders="[]" loading>
-        <template #toolbar
-          ><span class="control"></span><span class="control"></span
-          ><span class="create-placeholder control"></span
-        ></template>
-      </LibraryBrowser>
-    </div>
 
     <template v-else-if="page === 'assets'">
       <aside class="asset-tree" :style="{ width: `${dimensions.tree}px` }" aria-hidden="true">
@@ -224,25 +186,9 @@ h2 {
   flex-direction: column;
   gap: var(--space-4);
 }
-.project-banner {
-  padding: var(--space-7) var(--space-7) 0;
-}
-.project-banner img {
-  display: block;
-  width: 100%;
-  height: calc(var(--space-9) * 4 + var(--space-5));
-  object-fit: cover;
-  border-radius: var(--radius-xl);
-}
 .project-section {
   padding: var(--section-padding, var(--space-7));
   background: var(--color-bg-surface);
-}
-.gallery-shell {
-  display: flex;
-  height: 100%;
-  box-sizing: border-box;
-  padding: var(--space-4) var(--space-1);
 }
 .page-loading.assets,
 .page-loading.studio,
@@ -368,9 +314,6 @@ footer {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(calc(var(--space-9) * 6), 1fr));
   gap: var(--space-3);
-}
-.gallery-shell :deep(.tree-count) {
-  visibility: hidden;
 }
 .page-loading.editor .workspace-input {
   width: calc(var(--space-9) * 7);

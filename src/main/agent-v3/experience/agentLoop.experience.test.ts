@@ -2,8 +2,8 @@
  * 端到端：经验挂在错误结果后面，真的进了模型上下文。
  *
  * 单测证明了 `runtime.after` 会回一段话，但那段话要靠 `afterToolCall` 的
- * `content` 覆盖才进得了上下文 —— 而工具是**抛异常**失败的，覆盖对异常结果
- * 是否生效，只有跑一遍 pi 的循环才知道。挂法照抄 `createAgent.ts`。
+ * `content` 覆盖才进得了上下文 —— 而 `godot_check` 查出脚本错误时**不算工具失败**，
+ * 只是返回的文字里写着几条错误。经验系统要自己认出这是一次失败，挂法照抄 `createAgent.ts`。
  */
 
 import { mkdtemp, rm } from 'fs/promises'
@@ -36,33 +36,31 @@ afterEach(async () => {
 })
 
 describe('经验进上下文', () => {
-  it('引擎工具报了本工程见过的错，模型下一轮看得到上次怎么过的', async () => {
+  it('检查报了本工程见过的错，模型下一轮看得到上次怎么过的', async () => {
     const store = new ExperienceStore(experienceDir(root)!)
-    await store.updateTool('ue_run_python_script', () => [
+    await store.updateTool('godot_check', () => [
       {
         id: 'e-1',
-        title: '角色没有 is_hidden',
-        tool: 'ue_run_python_script',
-        errorPattern: "has no attribute 'is_hidden'",
-        advice: '改用 is_hidden_ed() 读隐藏状态',
-        expect: { param: 'script' },
+        title: 'PackedScene 用 instantiate()',
+        tool: 'godot_check',
+        errorPattern: "nonexistent function 'instance' in base 'packedscene'",
+        advice: 'Godot 4 里改用 instantiate()',
+        expect: { tool: 'edit_local_file' },
         source: 'test',
         status: 'proven'
       }
     ])
 
     const tool = defineTool({
-      name: 'ue_run_python_script',
-      namespace: 'ue.system',
-      // 和注册表一致：跑任意代码的工具记成 destructive，也得照样学
-      risk: 'destructive',
-      description: '跑脚本',
-      input: z.object({ script: z.string() }),
-      execute: async () => {
-        throw new Error(
-          "Traceback (most recent call last): AttributeError: 'Character' object has no attribute 'is_hidden'"
-        )
-      }
+      name: 'godot_check',
+      namespace: 'godot',
+      risk: 'safe',
+      description: '检查工程',
+      input: z.object({ frames: z.number().optional() }),
+      // 和真的 godot_check 一样：查出错误照常返回，不抛
+      execute: async () => ({
+        text: "1 error(s):\n\nSCRIPT ERROR: Invalid call. Nonexistent function 'instance' in base 'PackedScene'.\nat: _ready (res://main.gd:5)"
+      })
     }) as unknown as UnrealAgentTool<never>
 
     const experience = createSessionExperience({
@@ -99,16 +97,14 @@ describe('经验进上下文', () => {
     })
 
     faux.setResponses([
-      fauxAssistantMessage([
-        fauxToolCall('ue_run_python_script', { script: 'a.is_hidden' }, { id: 'c1' })
-      ]),
+      fauxAssistantMessage([fauxToolCall('godot_check', {}, { id: 'c1' })]),
       fauxAssistantMessage('好的')
     ])
-    await agent.prompt('隐藏角色')
+    await agent.prompt('生成敌人')
     const text = JSON.stringify(agent.state.messages)
-    expect(text).toContain("has no attribute 'is_hidden'")
+    expect(text).toContain("Nonexistent function 'instance'")
     expect(text).toContain('Experience from earlier runs')
-    expect(text).toContain('is_hidden_ed()')
+    expect(text).toContain('instantiate()')
     await experience.flush()
   })
 })

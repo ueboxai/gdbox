@@ -81,7 +81,7 @@ function learningLabel(mode: AgentV3SkillLearning): string {
 /**
  * 这条技能此刻是不是「开关开着、但模型其实看不见」。
  *
- * 关档时 `applySkillLearningMode` 会把 `ue-skill-creator` 从清单里真的删掉，
+ * 关档时 `applySkillLearningMode` 会把 `skill-creator` 从清单里真的删掉，
  * 而它的开关仍然显示开着 —— 用户看到的和模型拿到的对不上，正是开关最不该
  * 出现的失效方向。这里不去动开关本身（开关记的是另一件事，改它等于让用户
  * 点了没反应），只把这一行标出来。

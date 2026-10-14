@@ -1,8 +1,8 @@
 /**
- * `uebox doctor` —— 逐层往下查，卡在哪一层就说哪一层该怎么办。
+ * `gdbox doctor` —— 逐层往下查，卡在哪一层就说哪一层该怎么办。
  *
  * 四层：连接（配置与认证都在这一层暴露，靠 error.code 区分）→ 接口契约 →
- * 工具范围 → 工程注册。
+ * 工具范围 → 工程。
  *
  * ## 为什么要逐层而不是「能不能用」一句话
  *
@@ -10,18 +10,18 @@
  * 「连接失败」，用户（或 Agent）只能挨个试。逐层报出来之后，卡住的那一层
  * 自带解法。
  *
- * ## 端口开着不等于能干活
+ * ## 编辑器没连着不算体检失败
  *
- * 最后一层单独查工程注册：盒子在跑、令牌也对，但没有任何 UE 编辑器连上来时，
- * 引擎命令一条都发不出去。这时候必须报「UE 还没就绪」，而不是「一切正常」。
+ * GDBox 的检查、试玩、截图都是起一个无头 Godot 跑的，不需要编辑器开着。
+ * 所以最后一层只报「登记了几个工程、几个编辑器连着」，零个编辑器时提示
+ * editor_* 工具暂时用不了，但不把整次体检判成失败 —— 那会让一个完全能干活
+ * 的环境在脚本里看起来是坏的。
  */
 
 import { failure, success, type Envelope } from '../envelope.js'
-import { UeboxError, type ErrorCode } from '../errors.js'
+import { GdboxError, type ErrorCode } from '../errors.js'
 import { requireContract } from '../connection.js'
 import * as runtime from '../runtime.js'
-import { resolveProject } from '../project.js'
-import { describeLoopbackProxyRisk, detectLoopbackProxy } from '../proxy.js'
 import { supportedTools } from '../tools.js'
 
 export interface DoctorOptions {
@@ -53,7 +53,7 @@ export async function runDoctor(options: DoctorOptions): Promise<Envelope> {
   } catch (error) {
     // 连不上就到此为止：后面几层全都依赖这一层，硬跑只会得到一串
     // 互相重复的失败，把真正的原因埋掉。
-    const failed = error as UeboxError
+    const failed = error as GdboxError
     checks.push({
       name: 'connection',
       status: 'failed',
@@ -79,7 +79,7 @@ export async function runDoctor(options: DoctorOptions): Promise<Envelope> {
         detail: `CLI 契约版本 ${capability.cliContractVersion}；支持指定工程：${capability.projectTargeting ? '是' : '否'}`
       })
     } catch (error) {
-      const failed = error as UeboxError
+      const failed = error as GdboxError
       checks.push({
         name: 'contract',
         status: 'failed',
@@ -112,66 +112,69 @@ export async function runDoctor(options: DoctorOptions): Promise<Envelope> {
           ? `服务开放 ${all.length} 个工具，${usable.length} 个只读，${writable.length} 个要 --allow-write。`
           : `服务开放 ${all.length} 个工具，但没有一个是 CLI 能调的。`,
       ...(usable.length === 0
-        ? { hint: '在虚幻盒子的 MCP 设置里确认暴露范围没有被命名空间白名单收得太窄。' }
+        ? { hint: '在 GDBox 的「设置 → MCP」里确认暴露范围没有被命名空间白名单收得太窄。' }
         : writable.length === 0
           ? {
               hint:
-                '清单里没有会改动东西的工具 —— 多半是盒子的 MCP 设置里没勾' +
-                '「同时开放写操作工具」。只读的活不受影响。'
+                '清单里没有会改动东西的工具 —— 多半是 GDBox 的「设置 → MCP → 外部客户端的权限」' +
+                '设成了只读。只读的活不受影响。'
             }
           : {})
     })
 
-    // ── 工程注册 ────────────────────────────────────────────────────────
-    const projects = await runtime.registeredProjects(rt)
-    if (projects.length === 0) {
-      // 能打开端口不足以判定 UE 可操作（§4）
-      //
-      // 工程数为 0 有两种常见原因，给的解法完全不同：工程还没开（等握手），
-      // 或者工程开着、插件也加载了，但它连不进来。后者里最常见的一种是代理 ——
-      // 而它有个要命的特点：CLI 自己不认代理变量，所以上面几层全是绿的。
-      // 见 ../proxy.ts。
-      const proxyRisk = detectLoopbackProxy(options.env ?? process.env)
+    // ── 工程 ────────────────────────────────────────────────────────────
+    const projects = await runtime.listProjects(rt, all)
+    const warnings: string[] = []
+    if (!projects) {
+      const unavailable = runtime.projectListUnavailable()
       checks.push({
         name: 'projects',
-        status: 'failed',
-        detail: '没有已连接的虚幻引擎工程 —— 引擎命令现在发不出去。',
-        hint:
-          '打开一个装了 UnrealAgentLink 插件的 UE 工程，等插件握手完成（大工程 30–90 秒）。' +
-          (proxyRisk ? `\n  ${describeLoopbackProxyRisk(proxyRisk)}` : '')
+        status: 'skipped',
+        detail: `${unavailable.message}用 --project 指定工程的命令不受影响。`
       })
-      return report(checks, 'PROJECT_NOT_CONNECTED', { projects: [] })
+    } else {
+      const connected = projects.filter((p) => p.editorConnected)
+      checks.push({
+        name: 'projects',
+        status: 'ok',
+        detail:
+          `「我的项目」登记了 ${projects.length} 个工程，${connected.length} 个 Godot 编辑器连着` +
+          (connected.length ? `：${connected.map((p) => p.name).join('、')}` : '。')
+      })
+      if (connected.length === 0) {
+        warnings.push(
+          '没有连着的 Godot 编辑器：editor_* 工具现在用不了。用 Godot 编辑器打开工程，' +
+            '并在「项目设置 → 插件」里启用 GDBox Link；godot_check / godot_run / godot_screenshot 不需要编辑器。'
+        )
+      }
     }
-
-    checks.push({
-      name: 'projects',
-      status: 'ok',
-      detail: `${projects.length} 个可操作的 UE 工程：${projects.map((p) => p.name).join('、')}`
-    })
 
     // ── 这一次会发给谁 ──────────────────────────────────────────────────
     //
-    // 只在能定下来的时候报。定不下来（多工程且没给 --project）不算 doctor 失败：
-    // 那是「你下条命令要带 --project」，不是「环境有问题」。
+    // 只在能定下来的时候报。定不下来（没给 --project、不在工程目录、编辑器不止一个）
+    // 不算 doctor 失败：那是「你下条命令要带 --project」，不是「环境有问题」。
     let target: { name: string; path: string; source: string } | null = null
-    let targetNote: string | undefined
     try {
-      target = await resolveProject(options.project, projects)
+      target = (await runtime.targetProject(rt, options.project, all)) ?? null
     } catch (error) {
-      targetNote = (error as UeboxError).hint ?? (error as UeboxError).message
+      warnings.push((error as GdboxError).hint ?? (error as GdboxError).message)
     }
 
     return report(
       checks,
       undefined,
       {
-        projects: projects.map((p) => ({ name: p.name, path: p.path })),
+        projects: (projects ?? []).map((p) => ({
+          name: p.name,
+          path: p.path,
+          editorConnected: p.editorConnected
+        })),
         target
       },
-      targetNote ? [targetNote] : []
+      warnings
     )
   } catch (error) {
-    const failed = error as UeboxError
+    const failed = error as GdboxError
     checks.push({
       name: 'projects',
       status: 'failed',

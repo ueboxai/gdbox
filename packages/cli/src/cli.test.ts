@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { run } from './cli.js'
-import { startFakeBox, type FakeBox, type FakeTool } from './testServer.js'
+import { projectListTool, startFakeBox, type FakeBox, type FakeTool } from './testServer.js'
 
 const boxes: FakeBox[] = []
 const dirs: string[] = []
@@ -18,43 +18,45 @@ afterEach(async () => {
 
 const TOKEN = 'test-token-0123456789'
 
-/** 会话体检：`projects list` 和工程解析都靠它 */
-function healthTool(projects: Array<{ id: string; name: string; path: string }>): FakeTool {
-  return {
-    name: 'ue_session_health',
-    description: '一次问清楚：编辑器在不在跑、盒子连没连上。',
-    // 它不依赖引擎连接，所以不是 projectScoped
-    meta: { namespace: 'ue.system', risk: 'safe', projectScoped: false },
-    handle: () => ({
-      content: [{ type: 'text', text: `${projects.length} 个连接` }],
-      structuredContent: {
-        state: projects.length > 0 ? 'connected' : 'not_running',
-        connections: projects.map((p) => ({
-          connectionId: p.id,
-          projectName: p.name,
-          projectPath: p.path,
-          engineVersion: '5.5',
-          isCurrentTarget: false
-        }))
-      }
-    })
-  }
+/** 「我的项目」清单：`projects list` 和第 3 级工程解析都靠它 */
+function healthTool(
+  projects: Array<{ id: string; name: string; path: string; connected?: boolean }>
+): FakeTool {
+  return projectListTool(
+    projects.map((p) => ({ name: p.name, path: p.path, editorConnected: p.connected !== false }))
+  )
 }
 
 /** 报出这次收到的目标工程路径 —— 绑定生没生效只有它说了算 */
 const SELECTION_TOOL: FakeTool = {
-  name: 'ue_get_selection',
-  description: '看用户此刻在编辑器里选中/打开着什么。',
-  meta: { namespace: 'ue.editor', risk: 'safe', projectScoped: true },
+  name: 'editor_scene_tree',
+  description: '读用户 Godot 编辑器里当前打开的场景树。',
+  meta: { namespace: 'godot.editor', risk: 'safe', projectScoped: true },
   handle: (_args, projectPath) => ({
     content: [{ type: 'text', text: `目标=${projectPath ?? 'none'}` }],
-    structuredContent: { selectedActorCount: 1, targetEcho: projectPath ?? null }
+    structuredContent: { targetEcho: projectPath ?? null }
+  })
+}
+
+/** 无头工具：工程目录走 `project_path` 参数，不需要编辑器 */
+const CHECK_TOOL: FakeTool = {
+  name: 'godot_check',
+  description: '无头导入并运行工程，报脚本错误。',
+  inputSchema: { properties: { project_path: { type: 'string' } } },
+  meta: { namespace: 'godot', risk: 'safe', projectScoped: false },
+  handle: (args, projectPath) => ({
+    content: [{ type: 'text', text: 'No errors.' }],
+    structuredContent: { argsEcho: args, targetEcho: projectPath ?? null }
   })
 }
 
 async function startBox(
   tools: FakeTool[],
-  options: { declareContract?: boolean; contractVersion?: number } = {}
+  options: {
+    declareContract?: boolean
+    contractVersion?: number
+    connectedProjects?: string[]
+  } = {}
 ): Promise<FakeBox> {
   const box = await startFakeBox({ token: TOKEN, tools, ...options })
   boxes.push(box)
@@ -62,15 +64,15 @@ async function startBox(
 }
 
 function envFor(box: FakeBox, token = TOKEN): NodeJS.ProcessEnv {
-  return { UEBOX_URL: box.url, UEBOX_TOKEN: token }
+  return { GDBOX_URL: box.url, GDBOX_TOKEN: token }
 }
 
 async function projectDir(name: string): Promise<string> {
-  const root = await fs.mkdtemp(join(tmpdir(), 'uebox 工程-'))
+  const root = await fs.mkdtemp(join(tmpdir(), 'gdbox 工程-'))
   dirs.push(root)
   const dir = join(root, name)
   await fs.mkdir(dir, { recursive: true })
-  await fs.writeFile(join(dir, `${name}.uproject`), '{}')
+  await fs.writeFile(join(dir, 'project.godot'), `config/name="${name}"\n`)
   return dir.replace(/\\/g, '/')
 }
 
@@ -82,18 +84,18 @@ describe('--help / --version', () => {
     const result = await run(['--help'], {})
 
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('uebox')
+    expect(result.stdout).toContain('gdbox')
     expect(result.stderr).toBe('')
   })
 
   it('有英文版帮助', async () => {
     const result = await run(['--help', '--lang', 'en-US'], {})
 
-    expect(result.stdout).toContain('Unreal Box CLI')
+    expect(result.stdout).toContain('GDBox CLI')
     expect(result.stdout).toContain('Exit codes')
   })
 
-  /** `uebox --version` 没有位置参数，不能因此掉进「你没给命令」那条路 */
+  /** `gdbox --version` 没有位置参数，不能因此掉进「你没给命令」那条路 */
   it('--version 只打版本号，退出码 0', async () => {
     const result = await run(['--version'], {})
 
@@ -101,8 +103,8 @@ describe('--help / --version', () => {
     expect(result.stdout.trim()).toMatch(/^\d+\.\d+\.\d+$/)
   })
 
-  /** 光敲 uebox 不是用法错误 —— 用户没说错什么，他只是还没说要干什么 */
-  it('光敲 uebox 给帮助，退出码 0', async () => {
+  /** 光敲 gdbox 不是用法错误 —— 用户没说错什么，他只是还没说要干什么 */
+  it('光敲 gdbox 给帮助，退出码 0', async () => {
     const result = await run([], {})
 
     expect(result.exitCode).toBe(0)
@@ -122,7 +124,7 @@ describe('用法错误', () => {
     const result = await run(['tools', 'show', '--json'], {})
 
     expect(result.exitCode).toBe(2)
-    expect(JSON.parse(result.stdout).error.hint).toContain('uebox tools list')
+    expect(JSON.parse(result.stdout).error.hint).toContain('gdbox tools list')
   })
 })
 
@@ -178,7 +180,7 @@ describe('连不上 / 令牌不对', () => {
     expect(result.exitCode).toBe(3)
     const envelope = JSON.parse(result.stdout)
     expect(envelope.error.code).toBe('AUTH_FAILED')
-    expect(envelope.error.hint).toContain('uebox doctor')
+    expect(envelope.error.hint).toContain('gdbox doctor')
   })
 
   it('服务没开时报 SERVICE_UNAVAILABLE，退出码 4', async () => {
@@ -187,23 +189,23 @@ describe('连不上 / 令牌不对', () => {
     await box.close()
     boxes.length = 0
 
-    const result = await run(['projects', 'list', '--json'], { UEBOX_URL: url, UEBOX_TOKEN: TOKEN })
+    const result = await run(['projects', 'list', '--json'], { GDBOX_URL: url, GDBOX_TOKEN: TOKEN })
 
     expect(result.exitCode).toBe(4)
     expect(JSON.parse(result.stdout).error.code).toBe('SERVICE_UNAVAILABLE')
   }, 20_000)
 
   it('环境变量只给一半时报配置错误，不去别处补', async () => {
-    const result = await run(['projects', 'list', '--json'], { UEBOX_URL: 'http://127.0.0.1:1/' })
+    const result = await run(['projects', 'list', '--json'], { GDBOX_URL: 'http://127.0.0.1:1/' })
 
     expect(result.exitCode).toBe(3)
     expect(JSON.parse(result.stdout).error.message).toContain('必须同时提供')
   })
 
-  it('UEBOX_URL 指向非回环地址时拒绝发送令牌', async () => {
+  it('GDBOX_URL 指向非回环地址时拒绝发送令牌', async () => {
     const result = await run(['projects', 'list', '--json'], {
-      UEBOX_URL: 'http://192.168.1.5:17861/',
-      UEBOX_TOKEN: TOKEN
+      GDBOX_URL: 'http://192.168.1.5:17871/',
+      GDBOX_TOKEN: TOKEN
     })
 
     expect(result.exitCode).toBe(3)
@@ -263,21 +265,45 @@ describe('projects list', () => {
     expect(envelope.warnings.length).toBeGreaterThan(0)
   })
 
-  it('有工程时列出名字和路径', async () => {
+  it('有工程时列出名字、路径和编辑器连接', async () => {
     const box = await startBox([healthTool([{ id: 'c1', name: 'Demo', path: 'D:/Games/Demo' }])])
     const result = await run(['projects', 'list', '--json'], envFor(box))
 
-    expect(JSON.parse(result.stdout).data.projects).toEqual([
-      { name: 'Demo', path: 'D:/Games/Demo', connectionId: 'c1' }
+    const data = JSON.parse(result.stdout).data
+    expect(data.projects).toEqual([
+      {
+        name: 'Demo',
+        path: 'D:/Games/Demo',
+        godotVersion: '4.4',
+        onDisk: true,
+        editorConnected: true,
+        projectKey: 'key-0'
+      }
     ])
+    expect(data.editorConnectedCount).toBe(1)
+  })
+
+  /** 只把清单写在文字里的盒子不能当接口用：报不兼容，不去拆文字 */
+  it('盒子没给结构化清单时报 INCOMPATIBLE_SERVER，退出码 4', async () => {
+    const box = await startBox([
+      {
+        name: 'project_list',
+        meta: { namespace: 'project', risk: 'safe' },
+        handle: () => ({ content: [{ type: 'text', text: '- Demo（k1）｜D:/Games/Demo' }] })
+      }
+    ])
+    const result = await run(['projects', 'list', '--json'], envFor(box))
+
+    expect(result.exitCode).toBe(4)
+    expect(JSON.parse(result.stdout).error.code).toBe('INCOMPATIBLE_SERVER')
   })
 })
 
 describe('tools list', () => {
   const MUTATING: FakeTool = {
-    name: 'ue_destroy_actor',
-    meta: { namespace: 'ue.actor', risk: 'destructive' },
-    handle: () => ({ content: [{ type: 'text', text: '删了' }] })
+    name: 'editor_save_all',
+    meta: { namespace: 'godot.editor', risk: 'mutating', projectScoped: true },
+    handle: () => ({ content: [{ type: 'text', text: '存了' }] })
   }
   const LOCAL: FakeTool = {
     name: 'search_assets',
@@ -298,11 +324,11 @@ describe('tools list', () => {
     const result = await run(['tools', 'list', '--json'], envFor(box))
 
     const names = JSON.parse(result.stdout).data.tools.map((t: { name: string }) => t.name)
-    expect(names).toContain('ue_get_selection')
-    expect(names).toContain('ue_session_health')
+    expect(names).toContain('editor_scene_tree')
+    expect(names).toContain('project_list')
     // 素材库是 asset 命名空间 —— 外部 harness 就是靠它找资产的，不能挡
     expect(names).toContain('search_assets')
-    expect(names).not.toContain('ue_destroy_actor')
+    expect(names).not.toContain('editor_save_all')
     expect(names).not.toContain('mystery_tool')
   })
 
@@ -311,7 +337,7 @@ describe('tools list', () => {
     const result = await run(['tools', 'list', '--allow-write', '--json'], envFor(box))
 
     const names = JSON.parse(result.stdout).data.tools.map((t: { name: string }) => t.name)
-    expect(names).toContain('ue_destroy_actor')
+    expect(names).toContain('editor_save_all')
   })
 
   it('说清楚盒子一共开放了多少、有多少超出范围', async () => {
@@ -326,10 +352,10 @@ describe('tools list', () => {
 
   it('--search 按名字和描述筛', async () => {
     const box = await startBox([healthTool([]), SELECTION_TOOL])
-    const result = await run(['tools', 'list', '--search', 'selection', '--json'], envFor(box))
+    const result = await run(['tools', 'list', '--search', 'scene_tree', '--json'], envFor(box))
 
     const names = JSON.parse(result.stdout).data.tools.map((t: { name: string }) => t.name)
-    expect(names).toEqual(['ue_get_selection'])
+    expect(names).toEqual(['editor_scene_tree'])
   })
 
   /**
@@ -338,7 +364,7 @@ describe('tools list', () => {
    */
   it('没加 --allow-write 就调写工具，退出码 6', async () => {
     const box = await startBox([healthTool([]), MUTATING])
-    const result = await run(['tools', 'call', 'ue_destroy_actor', '--json'], envFor(box))
+    const result = await run(['tools', 'call', 'editor_save_all', '--json'], envFor(box))
 
     expect(result.exitCode).toBe(6)
     expect(JSON.parse(result.stdout).error.code).toBe('RISK_NOT_SUPPORTED')
@@ -355,10 +381,10 @@ describe('tools list', () => {
 
   it('tools show 给完整描述和参数定义', async () => {
     const box = await startBox([healthTool([]), SELECTION_TOOL])
-    const result = await run(['tools', 'show', 'ue_get_selection', '--json'], envFor(box))
+    const result = await run(['tools', 'show', 'editor_scene_tree', '--json'], envFor(box))
 
     const data = JSON.parse(result.stdout).data
-    expect(data.description).toContain('选中')
+    expect(data.description).toContain('场景树')
     expect(data.inputSchema).toMatchObject({ type: 'object' })
     expect(data.projectScoped).toBe(true)
   })
@@ -377,7 +403,7 @@ describe('tools list', () => {
    */
   it('tools show 写工具不用 --allow-write，但会说明调用时要加', async () => {
     const box = await startBox([healthTool([]), MUTATING])
-    const result = await run(['tools', 'show', 'ue_destroy_actor', '--json'], envFor(box))
+    const result = await run(['tools', 'show', 'editor_save_all', '--json'], envFor(box))
 
     const envelope = JSON.parse(result.stdout)
     expect(result.exitCode).toBe(0)
@@ -389,10 +415,10 @@ describe('tools list', () => {
 /**
  * 命名空间那道门拆掉之后真正解锁的东西。
  *
- * 之前外部 harness（Codex 这类）在盒子里搜不到素材库、也导不进工程：
- * `search_assets` 是 `asset`、`project_manage` 是 `project`，两个都被
- * 「只调用 ue.* 」挡在外面，于是「找资产 → 导进工程 → 摆进场景」
- * 这条链子从中间断开，只剩最后一段。
+ * 早先外部 harness（Codex 这类）在盒子里搜不到素材库、也碰不到工程库：
+ * `search_assets` 是 `asset`、`project_organize` 是 `project`，都被
+ * 「只调用引擎命名空间」挡在外面，于是「找资产 → 放进工程 → 验证」
+ * 这条链子从中间断开。
  */
 describe('盒子自己的能力，外部 harness 也能调', () => {
   const SEARCH_ASSETS: FakeTool = {
@@ -405,7 +431,7 @@ describe('盒子自己的能力，外部 harness 也能调', () => {
   }
 
   const IMPORT_ASSETS: FakeTool = {
-    name: 'project_manage',
+    name: 'project_organize',
     meta: { namespace: 'project', risk: 'destructive', projectScoped: false },
     handle: () => ({
       content: [{ type: 'text', text: '导入完成' }],
@@ -437,11 +463,11 @@ describe('盒子自己的能力，外部 harness 也能调', () => {
     })
   })
 
-  it('把素材库资产导进工程 —— 加 --allow-write 就能调', async () => {
+  it('整理工程库 —— 加 --allow-write 就能调', async () => {
     const box = await startBox([healthTool([]), IMPORT_ASSETS])
-    const args = JSON.stringify({ action: 'import_assets', folder: 'SoStylized' })
+    const args = JSON.stringify({ action: 'move', collection: 'Prototypes' })
     const result = await run(
-      ['tools', 'call', 'project_manage', '--args', args, '--allow-write', '--json'],
+      ['tools', 'call', 'project_organize', '--args', args, '--allow-write', '--json'],
       envFor(box)
     )
 
@@ -451,7 +477,7 @@ describe('盒子自己的能力，外部 harness 也能调', () => {
 
   it('同一个工具不加开关仍然拒', async () => {
     const box = await startBox([healthTool([]), IMPORT_ASSETS])
-    const result = await run(['tools', 'call', 'project_manage', '--json'], envFor(box))
+    const result = await run(['tools', 'call', 'project_organize', '--json'], envFor(box))
 
     expect(result.exitCode).toBe(6)
     expect(JSON.parse(result.stdout).error.code).toBe('RISK_NOT_SUPPORTED')
@@ -473,15 +499,12 @@ describe('盒子自己的能力，外部 harness 也能调', () => {
 // ── 工程解析 ────────────────────────────────────────────────────────────────
 
 describe('tools call 的工程解析', () => {
-  it('显式 --project 会随请求发到服务端', async () => {
+  it('编辑器类工具：显式 --project 会随请求发到服务端', async () => {
     const dir = await projectDir('Demo')
-    const box = await startBox([
-      healthTool([{ id: 'c1', name: 'Demo', path: dir }]),
-      SELECTION_TOOL
-    ])
+    const box = await startBox([SELECTION_TOOL], { connectedProjects: [dir] })
 
     const result = await run(
-      ['tools', 'call', 'ue_get_selection', '--project', dir, '--json'],
+      ['tools', 'call', 'editor_scene_tree', '--project', dir, '--json'],
       envFor(box)
     )
 
@@ -493,13 +516,10 @@ describe('tools call 的工程解析', () => {
 
   it('带中文和空格的工程路径也发得过去', async () => {
     const dir = await projectDir('我的工程')
-    const box = await startBox([
-      healthTool([{ id: 'c1', name: '我的工程', path: dir }]),
-      SELECTION_TOOL
-    ])
+    const box = await startBox([SELECTION_TOOL], { connectedProjects: [dir] })
 
     const result = await run(
-      ['tools', 'call', 'ue_get_selection', '--project', dir, '--json'],
+      ['tools', 'call', 'editor_scene_tree', '--project', dir, '--json'],
       envFor(box)
     )
 
@@ -507,16 +527,16 @@ describe('tools call 的工程解析', () => {
     expect(JSON.parse(result.stdout).data.structured.targetEcho).toBe(dir)
   })
 
-  it('指定的工程没连上时退出码 5，且不改发给在线的那个', async () => {
+  it('指定工程的编辑器没连上时退出码 5，且不改发给在线的那个', async () => {
     const mine = await projectDir('Mine')
     const other = await projectDir('Other')
-    const box = await startBox([
-      healthTool([{ id: 'c1', name: 'Other', path: other }]),
-      SELECTION_TOOL
-    ])
+    const box = await startBox(
+      [healthTool([{ id: 'c1', name: 'Other', path: other }]), SELECTION_TOOL],
+      { connectedProjects: [other] }
+    )
 
     const result = await run(
-      ['tools', 'call', 'ue_get_selection', '--project', mine, '--json'],
+      ['tools', 'call', 'editor_scene_tree', '--project', mine, '--json'],
       envFor(box)
     )
 
@@ -527,28 +547,82 @@ describe('tools call 的工程解析', () => {
     expect(result.stdout).not.toContain('targetEcho')
   })
 
-  it('两个工程在线又没给 --project 时报歧义，退出码 5', async () => {
-    const a = await projectDir('A')
-    const b = await projectDir('B')
+  it('恰好一个编辑器连着又没给 --project 时用它', async () => {
     const box = await startBox([
       healthTool([
-        { id: 'c1', name: 'A', path: a },
-        { id: 'c2', name: 'B', path: b }
+        { id: 'c1', name: 'A', path: 'D:/A' },
+        { id: 'c2', name: 'B', path: 'D:/B', connected: false }
       ]),
       SELECTION_TOOL
     ])
 
-    // cwd 在临时目录里，往上找不到 .uproject，所以会落到第三级
-    const result = await run(['tools', 'call', 'ue_get_selection', '--json'], envFor(box))
+    const result = await run(['tools', 'call', 'editor_scene_tree', '--json'], envFor(box))
+
+    expect(result.exitCode).toBe(0)
+    expect(JSON.parse(result.stdout).data.structured.targetEcho).toBe('D:/A')
+  })
+
+  it('两个编辑器连着又没给 --project 时报歧义，退出码 5', async () => {
+    const box = await startBox([
+      healthTool([
+        { id: 'c1', name: 'A', path: 'D:/A' },
+        { id: 'c2', name: 'B', path: 'D:/B' }
+      ]),
+      SELECTION_TOOL
+    ])
+
+    // cwd 往上找不到 project.godot，所以会落到第三级
+    const result = await run(['tools', 'call', 'editor_scene_tree', '--json'], envFor(box))
 
     expect(result.exitCode).toBe(5)
     expect(JSON.parse(result.stdout).error.code).toBe('PROJECT_AMBIGUOUS')
   })
 
-  /** 与工程无关的工具不强绑目标 —— 强绑会让它们在引擎没连上时也失败 */
-  it('非 projectScoped 的工具在没有工程时照样调得通', async () => {
+  /**
+   * 无头工具不需要编辑器。工程目录要是走请求元数据，盒子会因为编辑器没连着
+   * 直接拒掉 —— 所以它走的是工具自己的 `project_path` 参数。
+   */
+  it('无头工具：--project 补进 project_path，不走元数据，编辑器没开也能调', async () => {
+    const dir = await projectDir('Demo')
+    const box = await startBox([CHECK_TOOL], { connectedProjects: [] })
+
+    const result = await run(
+      ['tools', 'call', 'godot_check', '--project', dir, '--json'],
+      envFor(box)
+    )
+
+    expect(result.exitCode).toBe(0)
+    const envelope = JSON.parse(result.stdout)
+    expect(envelope.data.structured.argsEcho).toEqual({ project_path: dir })
+    expect(envelope.data.structured.targetEcho).toBeNull()
+    expect(envelope.project).toEqual({ name: 'Demo', path: dir })
+  })
+
+  it('无头工具：调用方自己给了 project_path 就不动它', async () => {
+    const dir = await projectDir('Demo')
+    const box = await startBox([CHECK_TOOL])
+
+    const result = await run(
+      [
+        'tools',
+        'call',
+        'godot_check',
+        '--project',
+        dir,
+        '--args',
+        '{"project_path":"E:/X"}',
+        '--json'
+      ],
+      envFor(box)
+    )
+
+    expect(JSON.parse(result.stdout).data.structured.argsEcho).toEqual({ project_path: 'E:/X' })
+  })
+
+  /** 与工程无关的工具不强绑目标 —— 强绑会让它们在没有工程时也失败 */
+  it('与工程无关的工具在没有工程时照样调得通', async () => {
     const box = await startBox([healthTool([])])
-    const result = await run(['tools', 'call', 'ue_session_health', '--json'], envFor(box))
+    const result = await run(['tools', 'call', 'project_list', '--json'], envFor(box))
 
     expect(result.exitCode).toBe(0)
     expect(JSON.parse(result.stdout).project).toBeNull()
@@ -559,10 +633,10 @@ describe('tools call 的工程解析', () => {
 
 describe('工具失败', () => {
   const BOOM: FakeTool = {
-    name: 'ue_get_config',
-    meta: { namespace: 'ue.editor', risk: 'safe', projectScoped: false },
+    name: 'godot_check',
+    meta: { namespace: 'godot', risk: 'safe', projectScoped: false },
     handle: () => ({
-      content: [{ type: 'text', text: '引擎那边炸了' }],
+      content: [{ type: 'text', text: 'Godot 那边炸了' }],
       isError: true,
       _meta: { unrealBox: { errorCode: 'TOOL_FAILED' } }
     })
@@ -571,13 +645,13 @@ describe('工具失败', () => {
   /** HTTP 200 和 MCP 请求成功都不等于工具成功（§6.2） */
   it('isError 的结果不会被当成成功', async () => {
     const box = await startBox([healthTool([]), BOOM])
-    const result = await run(['tools', 'call', 'ue_get_config', '--json'], envFor(box))
+    const result = await run(['tools', 'call', 'godot_check', '--json'], envFor(box))
 
     expect(result.exitCode).toBe(8)
     const envelope = JSON.parse(result.stdout)
     expect(envelope.ok).toBe(false)
     expect(envelope.error.code).toBe('TOOL_FAILED')
-    expect(envelope.error.message).toContain('引擎那边炸了')
+    expect(envelope.error.message).toContain('Godot 那边炸了')
     // failed 表示收到了明确的失败结果，不是「不知道」
     expect(envelope.error.execution).toBe('failed')
   })
@@ -587,8 +661,8 @@ describe('工具失败', () => {
 
 describe('tools call 的参数', () => {
   const ECHO: FakeTool = {
-    name: 'ue_get_actor',
-    meta: { namespace: 'ue.actor', risk: 'safe', projectScoped: false },
+    name: 'search_assets',
+    meta: { namespace: 'asset', risk: 'safe', projectScoped: false },
     handle: (args) => ({
       content: [{ type: 'text', text: 'ok' }],
       structuredContent: { echo: args }
@@ -598,7 +672,7 @@ describe('tools call 的参数', () => {
   it('--args 的 JSON 原样发过去', async () => {
     const box = await startBox([healthTool([]), ECHO])
     const result = await run(
-      ['tools', 'call', 'ue_get_actor', '--args', '{"limit":10}', '--json'],
+      ['tools', 'call', 'search_assets', '--args', '{"limit":10}', '--json'],
       envFor(box)
     )
 
@@ -606,14 +680,14 @@ describe('tools call 的参数', () => {
   })
 
   it('--args-file 从文件读，带 BOM 也认', async () => {
-    const dir = await fs.mkdtemp(join(tmpdir(), 'uebox-args-'))
+    const dir = await fs.mkdtemp(join(tmpdir(), 'gdbox-args-'))
     dirs.push(dir)
     const file = join(dir, 'query.json')
     await fs.writeFile(file, `\uFEFF${JSON.stringify({ limit: 3 })}`, 'utf8')
 
     const box = await startBox([healthTool([]), ECHO])
     const result = await run(
-      ['tools', 'call', 'ue_get_actor', '--args-file', file, '--json'],
+      ['tools', 'call', 'search_assets', '--args-file', file, '--json'],
       envFor(box)
     )
 
@@ -621,9 +695,9 @@ describe('tools call 的参数', () => {
   })
 
   it('参数不是对象时在连服务之前就挡下', async () => {
-    const result = await run(['tools', 'call', 'ue_get_actor', '--args', '[1,2]', '--json'], {
-      UEBOX_URL: 'http://127.0.0.1:1/',
-      UEBOX_TOKEN: 'x'
+    const result = await run(['tools', 'call', 'search_assets', '--args', '[1,2]', '--json'], {
+      GDBOX_URL: 'http://127.0.0.1:1/',
+      GDBOX_TOKEN: 'x'
     })
 
     expect(result.exitCode).toBe(2)

@@ -1,6 +1,5 @@
 import type { ComputedRef, InjectionKey } from 'vue'
 import type { ChatSessionProject } from '@renderer/store/modules/chatSessions'
-import { projectDirectory } from '@renderer/views/AssetManagement/utils/importProjectChoices'
 
 /**
  * 审查时引擎没连上：替用户把这条对话的工程打开，连上后接着审查。
@@ -8,6 +7,15 @@ import { projectDirectory } from '@renderer/views/AssetManagement/utils/importPr
  * 只认对话自己的工程 —— 没绑工程的对话、库里找不到 .uproject 的工程，
  * 都不知道该开哪个，照旧只说一句「引擎没连上」。
  */
+
+/** 工程记录里的路径可能指向工程文件本身，统一成工程目录再比 */
+function projectDirectory(path?: string | null): string {
+  return String(path || '')
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/\/+$/, '')
+    .replace(/\/(?:project\.godot|[^/]+\.uproject)$/i, '')
+}
 
 /** 页面把当前对话的工程递给气泡 —— 气泡只看得见自己那一条消息 */
 export const SESSION_PROJECT_KEY: InjectionKey<ComputedRef<ChatSessionProject | null>> =

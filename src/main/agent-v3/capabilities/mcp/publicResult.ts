@@ -32,7 +32,8 @@ const SERIALIZERS: Record<string, (details: Record<string, unknown>) => Record<s
   godot_check: serializeCheck,
   godot_run: serializeCheck,
   godot_screenshot: serializeScreenshot,
-  editor_scene_tree: serializeSceneTree
+  editor_scene_tree: serializeSceneTree,
+  project_list: serializeProjectList
 }
 
 /**
@@ -102,6 +103,13 @@ function serializeCheck(details: Record<string, unknown>): Record<string, unknow
 
 function serializeScreenshot(details: Record<string, unknown>): Record<string, unknown> {
   return { path: str(details.path) }
+}
+
+// ── project_list ────────────────────────────────────────────────────────────
+
+/** 命令行的 `gdbox projects list` 靠它挑工程 */
+function serializeProjectList(details: Record<string, unknown>): Record<string, unknown> {
+  return { projects: arr(details.projects), collections: arr(details.collections) }
 }
 
 // ── editor_scene_tree ───────────────────────────────────────────────────────

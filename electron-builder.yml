@@ -47,7 +47,7 @@ extraResources:
   # Godot 侧的东西：GDBox Link 编辑器插件、无头试玩运行器
   - from: resources/godot
     to: godot
-  # uebox 命令行（自包含：dist + 生产依赖 + 给外部 Agent 的 Skill）。
+  # gdbox 命令行（自包含：dist + 生产依赖 + 给外部 Agent 的 Skill）。
   # 由 scripts/build-cli-bundle.mjs 产出，build:win 里先跑它再打包。
   # 不发 npm 包，只随安装包走。
   - from: packages/cli/bundle
@@ -66,12 +66,12 @@ extraResources:
 
 win:
   executableName: gdbox
-  # 跟 exe 放在同一层（不是 resources/ 里）—— `uebox.cmd` 靠 %~dp0 找同目录的
+  # 跟 exe 放在同一层（不是 resources/ 里）—— `gdbox.cmd` 靠 %~dp0 找同目录的
   # gdbox.exe 当 Node 用。放在 win 下而不是顶层：这是个 .cmd，
   # 发到 macOS/Linux 包里只是垃圾文件。
   extraFiles:
-    - from: build/uebox.cmd
-      to: uebox.cmd
+    - from: build/gdbox.cmd
+      to: gdbox.cmd
   icon: build/icon.ico
   legalTrademarks: GDBox
   requestedExecutionLevel: asInvoker
@@ -93,7 +93,7 @@ mac:
     - zip
   artifactName: gdbox-${version}-${arch}-mac.${ext}
   entitlements: build/entitlements.mac.plist
-  icon: build/icon.icns
+  icon: build/icon.png
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.

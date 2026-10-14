@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({ home: '', read: vi.fn(), write: vi.fn() }))
 vi.mock('electron', () => ({
   app: {
     isPackaged: true,
-    getPath: (name: string) => (name === 'exe' ? join(mocks.home, 'unreal-agent.exe') : mocks.home)
+    getPath: (name: string) => (name === 'exe' ? join(mocks.home, 'gdbox.exe') : mocks.home)
   }
 }))
 vi.mock('../logger', () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }))
@@ -20,7 +20,7 @@ vi.mock('./userPath', async (importOriginal) => ({
 import { cliStatus, addToUserPath, removeFromUserPath } from './index'
 
 beforeEach(() => {
-  mocks.home = mkdtempSync(join(tmpdir(), 'uebox-cli-state-'))
+  mocks.home = mkdtempSync(join(tmpdir(), 'gdbox-cli-state-'))
   mocks.read.mockReset().mockResolvedValue('')
   mocks.write.mockReset().mockResolvedValue(undefined)
 })
@@ -32,7 +32,7 @@ afterEach(() => {
 it('registers and removes the Mac CLI without touching the Windows registry', async () => {
   const directory = join(mocks.home, 'cli', 'bin')
   mkdirSync(directory, { recursive: true })
-  writeFileSync(join(directory, 'uebox'), '')
+  writeFileSync(join(directory, 'gdbox'), '')
   vi.stubGlobal('process', {
     ...process,
     platform: 'darwin',
@@ -41,7 +41,7 @@ it('registers and removes the Mac CLI without touching the Windows registry', as
   })
   expect(await cliStatus()).toMatchObject({
     available: true,
-    path: join(directory, 'uebox'),
+    path: join(directory, 'gdbox'),
     onPath: false
   })
   expect((await addToUserPath()).ok).toBe(true)
@@ -53,9 +53,9 @@ it('registers and removes the Mac CLI without touching the Windows registry', as
 })
 
 it('keeps the Windows launcher and registry PATH workflow', async () => {
-  writeFileSync(join(mocks.home, 'uebox.cmd'), '')
+  writeFileSync(join(mocks.home, 'gdbox.cmd'), '')
   vi.stubGlobal('process', { ...process, platform: 'win32' })
-  expect(await cliStatus()).toMatchObject({ available: true, path: join(mocks.home, 'uebox.cmd') })
+  expect(await cliStatus()).toMatchObject({ available: true, path: join(mocks.home, 'gdbox.cmd') })
   expect((await addToUserPath()).ok).toBe(true)
   expect(mocks.write).toHaveBeenCalledWith(mocks.home)
 })

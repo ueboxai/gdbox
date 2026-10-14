@@ -244,22 +244,12 @@ const handleMenuClick = (info: any): void => {
 }
 
 /**
- * 计算共创市场菜单项
- */
-const coCreateMarketItem = computed<MenuItem | undefined>(() => {
-  return menuItems.value.find(
-    (i) => i.path.includes('co-create-market') || i.label === t('menu.coCreateMarket')
-  )
-})
-
-/**
- * 计算功能菜单项（剔除共创市场、个人中心、偏好设置）
+ * 计算功能菜单项（剔除个人中心、偏好设置）
  *
  * 项目库（路由 `/`）留在这条列表里，靠 meta.sort = 8 排在资产库（9）上面。
  */
 const featureItems = computed<MenuItem[]>(() => {
   const exclude = new Set<string>()
-  if (coCreateMarketItem.value) exclude.add(coCreateMarketItem.value.key)
   // 排除个人中心和偏好设置
   exclude.add('Profile')
   exclude.add('Preferences')
@@ -490,10 +480,6 @@ function openChat(id: string): void {
         theme="light"
         @click="handleMenuClick"
       >
-        <Menu.Item v-if="coCreateMarketItem" :key="coCreateMarketItem.key" class="home-menu-item">
-          <component :is="coCreateMarketItem.icon" v-if="coCreateMarketItem.icon" />
-          <span>{{ coCreateMarketItem.label }}</span>
-        </Menu.Item>
         <Menu.Divider />
       </Menu>
     </div>

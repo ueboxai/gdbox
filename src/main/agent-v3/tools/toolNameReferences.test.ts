@@ -39,7 +39,7 @@ import { allToolNames, buildAllTools } from './registry'
  *
  * ## 为什么不扫 packages/cli/skills
  *
- * 那批随 uebox CLI 发给**外部** agent，教的是命令行子命令，不是这份注册表里的
+ * 那批随 gdbox 命令行 发给**外部** agent，教的是命令行子命令，不是这份注册表里的
  * 工具名。拿这里的清单去判它，判出来全是误报。
  */
 

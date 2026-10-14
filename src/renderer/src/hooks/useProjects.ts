@@ -107,7 +107,7 @@ export function useProjects() {
       const ret = await window.api.dialog.showOpenDialog({
         title: t('actionToast.project.pickUproject'),
         properties: ['openFile'],
-        filters: [{ name: 'Unreal Project', extensions: ['uproject'] }]
+        filters: [{ name: 'Godot Project', extensions: ['godot'] }]
       })
       const filePath = ret?.filePaths?.[0]
       if (!ret?.canceled && filePath) {

@@ -205,8 +205,8 @@ async function handleExplain(): Promise<void> {
 
   // 构建系统提示词
   const systemPrompt = isZh
-    ? `你是一个 Unreal Engine 技术专家。用户正在 AI Agent 操作过程中遇到一个敏感操作确认请求。请用简洁易懂的语言（50-100字）解释这个操作的含义、作用和可能的影响。帮助用户理解这个操作是否安全，以及为什么 AI 想要执行它。`
-    : `You are an Unreal Engine technical expert. The user encountered a sensitive operation confirmation during AI Agent execution. Please explain this operation's meaning, purpose, and potential effects in simple terms (50-100 words). Help the user understand if this operation is safe and why the AI wants to execute it.`
+    ? `你是一个 Godot 引擎技术专家。用户正在 AI Agent 操作过程中遇到一个敏感操作确认请求。请用简洁易懂的语言（50-100字）解释这个操作的含义、作用和可能的影响。帮助用户理解这个操作是否安全，以及为什么 AI 想要执行它。`
+    : `You are a Godot engine technical expert. The user encountered a sensitive operation confirmation during AI Agent execution. Please explain this operation's meaning, purpose, and potential effects in simple terms (50-100 words). Help the user understand if this operation is safe and why the AI wants to execute it.`
 
   // 构建用户提示词
   const userPrompt = isZh

@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * 把 uebox CLI 打成一份自包含的目录，供安装包携带。
+ * 把 gdbox CLI 打成一份自包含的目录，供安装包携带。
  *
  * ## 为什么用户不需要装 Node
  *
  * 盒子本身就是 Electron，而 Electron 里带着一个完整的 Node 运行时。设上
- * `ELECTRON_RUN_AS_NODE=1`，`unreal-agent.exe` 就是个 node —— 于是
- * `uebox.cmd` 只是一层三行的转发（见 `build/uebox.cmd`）。
+ * `ELECTRON_RUN_AS_NODE=1`，`gdbox.exe` 就是个 node —— 于是
+ * `gdbox.cmd` 只是一层三行的转发（见 `build/gdbox.cmd`）。
  *
- * 这一条决定了整个分发方案：目标用户是普通 UE 开发者，让他先去装 Node 和 npm
+ * 这一条决定了整个分发方案：目标用户是普通 Godot 开发者，让他先去装 Node 和 npm
  * 才能用一个命令行工具，等于把大多数人挡在门外。而这份运行时本来就在他机器上。
  *
  * ## 为什么单独带一份依赖，而不是复用盒子的 node_modules
@@ -64,7 +64,7 @@ function main() {
   cpSync(join(CLI, 'README.md'), join(BUNDLE, 'README.md'))
   if (process.platform === 'darwin') {
     mkdirSync(join(BUNDLE, 'bin'), { recursive: true })
-    cpSync(join(ROOT, 'build', 'uebox.sh'), join(BUNDLE, 'bin', 'uebox'))
+    cpSync(join(ROOT, 'build', 'gdbox.sh'), join(BUNDLE, 'bin', 'gdbox'))
   }
 
   // 只写运行时需要的那部分 package.json。

@@ -15,12 +15,7 @@ const SIDEBAR_TOOLS_PREFS_STORAGE_KEY = 'sidebar-tools-prefs'
  * key 是路由 name —— generateMenuFromRoutes 拿它当 MenuItem.key，
  * 不用路径，路径改了不影响用户已存的偏好。
  */
-export const DEFAULT_PINNED_TOOLS: readonly string[] = [
-  'Home',
-  'AssetManagement',
-  'BlueprintLibrary',
-  'MaterialLibrary'
-]
+export const DEFAULT_PINNED_TOOLS: readonly string[] = ['Home', 'AssetManagement', 'AIGCStudio']
 
 export interface SidebarToolsPrefs {
   /** 侧边栏工具的自定义顺序（路由 name）；缺失的按默认顺序补到末尾 */

@@ -4,7 +4,7 @@
  * ## 为什么要自己验，而不是信工具说的 saved: true
  *
  * 「收到了图片附件」和「用户要的那个文件已经躺在磁盘上、能打开」是两件事。
- * 中间隔着：插件那侧的写盘、跨进程的路径、磁盘空间、权限。任何一环断掉，
+ * 中间隔着：工具那侧的写盘、跨进程的路径、磁盘空间、权限。任何一环断掉，
  * 工具照样回 `saved: true`（它说的是它那一步成功了），而用户打开 `--output`
  * 得到的是一个 0 字节的文件，或者根本没有文件。
  *
@@ -83,7 +83,7 @@ export function assertMatchesReported(
 
   if (actual.width !== reported.width || actual.height !== reported.height) {
     throw new PngError(
-      `文件里的尺寸（${actual.width}×${actual.height}）和引擎报的` +
+      `文件里的尺寸（${actual.width}×${actual.height}）和工具报的` +
         `（${reported.width}×${reported.height}）对不上，这可能不是这次拍的那张图。`
     )
   }

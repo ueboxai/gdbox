@@ -2,8 +2,8 @@ import { promises as fs } from 'node:fs'
 import { join, basename, dirname } from 'node:path'
 import { randomUUID } from 'node:crypto'
 
-const START = '\n# >>> Unreal Box CLI >>>\n'
-const END = '# <<< Unreal Box CLI <<<\n'
+const START = '\n# >>> GDBox CLI >>>\n'
+const END = '# <<< GDBox CLI <<<\n'
 
 export function macShellProfile(home: string, shell: string): string {
   const name = basename(shell || '/bin/zsh')
@@ -23,18 +23,18 @@ export function macPathBlock(directory: string): string {
 function managedBlock(content: string): string | null {
   const start = content.indexOf(START)
   if (start < 0) {
-    if (content.includes('# >>> Unreal Box CLI >>>') || content.includes(END.trim())) {
-      throw new Error('The Unreal Box PATH block was edited; please review it manually.')
+    if (content.includes('# >>> GDBox CLI >>>') || content.includes(END.trim())) {
+      throw new Error('The GDBox PATH block was edited; please review it manually.')
     }
     return null
   }
   const end = content.indexOf(END, start)
   if (end < 0 || content.indexOf(START, start + START.length) >= 0) {
-    throw new Error('The Unreal Box PATH block is incomplete or duplicated.')
+    throw new Error('The GDBox PATH block is incomplete or duplicated.')
   }
   const block = content.slice(start, end + END.length)
   if (!/^export PATH="\$PATH":'[^\n]*'\n$/.test(block.slice(START.length, -END.length))) {
-    throw new Error('The Unreal Box PATH block was edited; please review it manually.')
+    throw new Error('The GDBox PATH block was edited; please review it manually.')
   }
   return block
 }
@@ -72,7 +72,7 @@ export async function setMacPath(
   const after = enabled ? without + macPathBlock(directory) : without
   if (after === before) return
   const mode = (await fs.stat(target).catch(() => null))?.mode ?? 0o600
-  const temporary = join(dirname(target), `.uebox-path-${randomUUID()}`)
+  const temporary = join(dirname(target), `.gdbox-path-${randomUUID()}`)
   try {
     await fs.writeFile(temporary, after, { flag: 'wx', mode })
     if ((await readProfile(target)) !== before)

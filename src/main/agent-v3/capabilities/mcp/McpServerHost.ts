@@ -684,10 +684,9 @@ function describeToolMeta(tool: UnrealAgentTool<never>): Record<string, unknown>
   const namespace = tool.unrealBox.namespace
   return {
     namespace,
-    // uebox CLI 只看这一项决定要不要 --allow-write，所以这里也要按对外的最坏情况报
+    // gdbox 命令行只看这一项决定要不要 --allow-write，所以这里也要按对外的最坏情况报
     risk: delegatesToSubAgent(tool) ? 'destructive' : tool.unrealBox.risk,
-    // 要不要带工程路径。ue.* 里有两个例外，它们不依赖引擎连接
-    // （见 tools/toolNames.ts 的 needsEditor）
+    // 要不要带工程路径：只有动编辑器的工具要（见 toolNames.ts 的 needsEditor）
     projectScoped: needsEditor(namespace),
     requiresExplicitApproval: tool.unrealBox.requiresExplicitApproval === true
   }

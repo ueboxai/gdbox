@@ -34,7 +34,7 @@ export function covered(entries: ExperienceEntry[], tool: string, error: string)
 /**
  * 写入时的查重：拿**片段**和已有片段比，不是拿报错原文。
  *
- * 不能复用 `covered`：它要的是完整报错，上帝工具的片段不是一整行异常，
+ * 不能复用 `covered`：它要的是完整报错，验证工具的片段不是一整行报错，
  * `patternProblem` 会判成「不是异常」，于是永远查不出重复。
  * 一个片段包含另一个就算同一件事。
  */

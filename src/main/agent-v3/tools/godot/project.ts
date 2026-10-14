@@ -14,7 +14,7 @@ import { locateGodot, type GodotInfo } from '../../../godot/locate'
 import { getSessionProjectPath, getTargetProjectPath } from '../../core/projectTargetContext'
 
 export const NO_GODOT =
-  '没有找到 Godot 4。请用户在「偏好设置 → 通用」里指定 Godot 编辑器的位置，然后再试。'
+  '没有找到 Godot 4。请用户在「设置 → 项目」里指定 Godot 编辑器的位置，然后再试。'
 
 /** 找到的 Godot 缓存一份：每次调工具都跑一遍 `--version` 太慢 */
 let cached: { preferred: string; info: GodotInfo | null } | undefined

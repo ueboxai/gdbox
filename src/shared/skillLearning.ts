@@ -6,4 +6,4 @@
  * 「此刻模型看不见」。各写各的字符串就会漂 —— 漂了之后界面显示的是开着，
  * 模型手里其实没有，而这正是开关最不该出现的失效方向。
  */
-export const SKILL_CREATOR_NAME = 'ue-skill-creator'
+export const SKILL_CREATOR_NAME = 'skill-creator'

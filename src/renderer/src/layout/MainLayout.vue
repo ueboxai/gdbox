@@ -14,12 +14,8 @@ import ScreenshotMode from '@renderer/components/ScreenshotMode.vue'
 import BridgeUnavailableBanner from '@renderer/components/BridgeUnavailableBanner.vue'
 import AssetLockIndicator from '@renderer/components/AssetLockIndicator.vue'
 import ImportProgressWidget from '@renderer/components/ImportProgressWidget.vue'
-import ImportToProjectModal from '@renderer/views/AssetManagement/components/modals/ImportToProjectModal.vue'
-import { checkImportCompatibility } from '@renderer/api/projectImport'
-import ImportResultModal from '@renderer/components/ImportResultModal.vue'
 import SensitiveActionConfirm from '@renderer/components/SensitiveActionConfirm.vue'
 import { useImportTasksStore } from '@renderer/store/modules/importTasks'
-import { isCleanImportReport } from '@core/shared/projectImport'
 import { useAssetViewStore } from '@renderer/store/modules/assetViewStore'
 import { useLayoutUiStore } from '@renderer/store/modules/layoutUiStore'
 import { useVaultStore } from '@renderer/store/modules/vaultStore'
@@ -32,7 +28,6 @@ import { useAutoReadAloud } from '@renderer/views/Assistant/composables/autoRead
 import { hasVisibleSidebarFloatingOverlay, useSidebarPeek } from './composables/sidebarPeek'
 import { useNotificationActivation } from './composables/notificationActivation'
 import { useTrayBridge } from './composables/trayBridge'
-import { promptEnableMissingPlugins } from '@renderer/views/AssetManagement/utils/missingPluginsPrompt'
 // StatusBar 已移至 AssetManagement 专用，只在资产库页面显示
 
 const { Content } = Layout
@@ -61,182 +56,25 @@ const handleImportTaskNavigate = (folderKey: string): void => {
 /**
  * 挂件上的中止按钮。
  *
- * 真正会停的是发起这次导入的那一方（工程导入在 ImportToProjectModal 里监听 window 事件），
+ * 真正会停的是发起这次导入的那一方（资产库页面监听 window 事件），
  * 这里只把「用户点了停」这件事广播出去。
  */
 const handleImportTaskCancel = (taskId: string): void => {
-  const task = importTasksStore.tasks.get(taskId)
-  if (task?.taskType !== 'project-import') {
-    window.dispatchEvent(new CustomEvent('vault-import:cancel', { detail: { id: taskId } }))
-    return
-  }
-  window.dispatchEvent(new CustomEvent('project-import:cancel', { detail: { id: taskId } }))
+  window.dispatchEvent(new CustomEvent('vault-import:cancel', { detail: { id: taskId } }))
 }
 
 /**
- * 导入失败之后的那一层。
- *
- * 挂在这里而不是发起导入的那个页面里，理由和 SensitiveActionConfirm 一样：
- * 导入是后台跑的，出结果时用户很可能已经在别的页面上了。
+ * 点任务卡片上的「查看」：回资产库，由页面自己展开那次导入的结果。
  */
-const inspectingTaskId = ref('')
-const retrying = ref(false)
-const compatibleProjectOpen = ref(false)
-const compatibleProjectSource = ref<{
-  type: string
-  children: Array<{ assetKey?: string; assetName?: string; fileExtension: string }>
-}>()
-const hasVersionConflict = computed(() =>
-  inspectingTask.value?.report?.planErrors.some(
-    (row) => row.code === 'engine-version' || (!row.code && row.error.includes('高于目标项目版本'))
-  )
-)
-const chooseCompatibleProject = (): void => {
-  const retry = inspectingTask.value?.retry
-  if (!retry) return
-  compatibleProjectSource.value = {
-    type: 'batch',
-    children: retry.sources.map((source) => ({ ...source, fileExtension: 'uasset' }))
-  }
-  inspectingTaskId.value = ''
-  compatibleProjectOpen.value = true
-}
-const inspectingTask = computed(() =>
-  inspectingTaskId.value ? importTasksStore.tasks.get(inspectingTaskId.value) : undefined
-)
-
 const handleImportTaskInspect = (taskId: string): void => {
-  if (importTasksStore.tasks.get(taskId)?.vaultResult) {
-    void router.push('/asset-management')
-    window.dispatchEvent(new CustomEvent('vault-import:inspect', { detail: { id: taskId } }))
-    return
-  }
-  inspectingTaskId.value = taskId
+  if (!importTasksStore.tasks.get(taskId)?.vaultResult) return
+  void router.push('/asset-management')
+  window.dispatchEvent(new CustomEvent('vault-import:inspect', { detail: { id: taskId } }))
 }
 
 /** 用户看过了，把这条失败任务收掉 */
 const handleImportTaskDismiss = (taskId: string): void => {
-  if (inspectingTaskId.value === taskId) inspectingTaskId.value = ''
   importTasksStore.removeTask(taskId)
-}
-
-/**
- * 重试。
- *
- * 安全的动作：导入是增量的，已经在的文件一个字节都不会重搬，缺的会补上
- * ——所以它配得上主按钮的位置。
- */
-const handleImportRetry = async (): Promise<void> => {
-  const task = inspectingTask.value
-  const retry = task?.retry
-  if (!task || !retry || retrying.value) return
-
-  if (hasVersionConflict.value) {
-    chooseCompatibleProject()
-    return
-  }
-  retrying.value = true
-  try {
-    const check = await checkImportCompatibility(retry.project, retry.sources)
-    if (check.blocked.length > 0) {
-      chooseCompatibleProject()
-      return
-    }
-  } catch (error) {
-    message.error(String(error))
-    return
-  } finally {
-    retrying.value = false
-  }
-
-  // 带上 requestId，重试这一轮才登记得进主进程的取消表、进度也才发得回来。
-  // 没有它的话，重试一批 30G 的素材在界面上只是按钮上转个圈：停不掉、也看不见进展
-  const requestId = `import-retry-${task.id}-${Date.now()}`
-  const unsubscribe = window.api.projectImport.onImportUAssetsBatchProgress((payload) => {
-    if (payload.requestId !== requestId) return
-    const planShare = payload.total > 0 ? Math.round((payload.processed / payload.total) * 50) : 0
-    const copyShare =
-      payload.filesQueued > 0 ? Math.round((payload.filesCopied / payload.filesQueued) * 49) : 0
-    importTasksStore.updateTask(task.id, {
-      status: 'running',
-      progress: Math.min(99, planShare + copyShare),
-      stageText: t('importResultModal.retrying')
-    })
-  })
-
-  const onCancel = (event: Event): void => {
-    if ((event as CustomEvent).detail?.id === task.id) {
-      void window.api.projectImport.cancelImportUAssetsBatch(requestId)
-    }
-  }
-  window.addEventListener('project-import:cancel', onCancel)
-  importTasksStore.updateTask(task.id, {
-    status: 'running',
-    progress: 0,
-    stageText: t('importResultModal.retrying')
-  })
-  retrying.value = true
-  try {
-    const result = await window.api.projectImport.importUAssetsBatch(retry.project, retry.sources, {
-      requestId
-    })
-    if (!result?.cancelled)
-      promptEnableMissingPlugins(retry.project, result?.missingPlugins, result?.unavailablePlugins)
-    if (result?.success && !result.cancelled) {
-      message.success(t('importResultModal.retrySucceeded'))
-      /*
-       * 只有「这批本来就只有 .uasset」时才敢把整条任务收掉。
-       *
-       * retry.sources 只装了 .uasset 那一半（外部文件得过引擎的导入 API，没法重试），
-       * 所以一批 10 个模型 + 2 个 FBX 里 FBX 失败的场景，重试成功不代表 FBX 好了 ——
-       * 直接 dismiss 等于把还没解决的那两个连同证据一起抹掉。
-       */
-      if (task.retryCoversAll) {
-        handleImportTaskDismiss(task.id)
-      } else {
-        importTasksStore.updateTask(task.id, {
-          status: 'error',
-          progress: 100,
-          stageText: t('importResultModal.retryPartial')
-        })
-        message.warning(t('importResultModal.retryPartial'))
-      }
-    } else {
-      // 还是没好 —— 用新的报告把旧的换掉，别让用户对着上一轮的清单看。
-      // 报告可能是「干净」的（比如整批路径无效），那种情况下留着旧的更有信息量
-      const next = isCleanImportReport(result?.report) ? task.report : result?.report
-      importTasksStore.updateTask(task.id, {
-        report: next,
-        status: 'error',
-        progress: 100,
-        stageText: t(
-          result?.cancelled
-            ? 'assetManagement.import.cancelled'
-            : 'importResultModal.retryStillFailing'
-        )
-      })
-      message.warning(
-        t(
-          result?.cancelled
-            ? 'assetManagement.import.cancelled'
-            : 'importResultModal.retryStillFailing'
-        )
-      )
-    }
-  } catch (error) {
-    importTasksStore.updateTask(task.id, { status: 'error', progress: 100 })
-    message.error(String((error as Error)?.message || error))
-  } finally {
-    unsubscribe()
-    window.removeEventListener('project-import:cancel', onCancel)
-    retrying.value = false
-  }
-}
-
-/** 在资产库里找这条缺失的依赖 —— 复用资产库已有的搜索入口，不另开页面 */
-const handleImportSearch = (keyword: string): void => {
-  inspectingTaskId.value = ''
-  void router.push({ path: '/asset-management', query: { search: keyword } })
 }
 
 const { sideMenuCollapseRequestVersion } = storeToRefs(layoutUiStore)
@@ -362,82 +200,6 @@ const handleAssetTreeRefresh = (
 }
 
 /**
- * 虚幻那边点「导入到盒子」后立刻给个回执。
- *
- * 插件是单向发事件、不显示任何提示，导入大目录又要跑一会儿 ——
- * 盒子这边不吭声，用户只会以为没点上，然后连点好几次。
- * 放在 MainLayout 是因为他当时未必停在资产库页面。
- *
- * 一句 toast 3 秒就没了，而导入要跑几十秒 —— 所以这里还要在进度挂件上开一条任务。
- * 挂件本来就挂在 MainLayout 上（应用级），进度和完成由下面两个处理器推着走；
- * 资产库页面挂着时它自己也会收到同样的事件去刷新列表，两边写的是同一个 store，
- * 值也一样，重复写没有副作用。
- */
-const handleUnrealImportStarted = (
-  _event: unknown,
-  payload: { taskId?: string; count: number; projectName?: string }
-): void => {
-  message.info(t('assetManagement.import.unrealImportStarted', { count: payload?.count ?? 0 }))
-  if (!payload?.taskId) return
-  importTasksStore.addTask({
-    id: payload.taskId,
-    type: 'folder',
-    name: payload.projectName || t('assetManagement.import.unrealImportTaskName'),
-    progress: 0,
-    total: payload.count,
-    done: 0,
-    stageText: t('assetManagement.import.stagePreparing'),
-    status: 'running',
-    taskType: 'vault-import',
-    vaultId: useVaultStore().currentVault?.id
-  })
-}
-
-/** 虚幻发起的那条导入任务（由主进程造 id），和界面自己发起的导入区分开 */
-const isUnrealImportTask = (taskId?: string): boolean => Boolean(taskId?.startsWith('ue-import-'))
-
-const handleUnrealImportProgress = (
-  _event: unknown,
-  payload: { taskId?: string; percent?: number; total?: number; done?: number }
-): void => {
-  if (!isUnrealImportTask(payload?.taskId)) return
-  importTasksStore.updateTask(payload.taskId!, {
-    progress: Math.round(payload.percent ?? 0),
-    total: payload.total,
-    done: payload.done
-  })
-}
-
-const handleUnrealImportCompleted = (
-  _event: unknown,
-  payload: { taskId?: string; done?: number }
-): void => {
-  if (!isUnrealImportTask(payload?.taskId)) return
-  importTasksStore.updateTask(payload.taskId!, {
-    progress: 100,
-    status: 'completed',
-    stageText: t('assetManagement.import.unrealImportTaskDone', { count: payload.done ?? 0 })
-  })
-  // 完成的卡片留 3 秒让人看见，然后收掉；失败的不自动收，见下面
-  const finishedId = payload.taskId!
-  setTimeout(() => importTasksStore.removeTask(finishedId), 3000)
-}
-
-const handleUnrealImportError = (
-  _event: unknown,
-  payload: { taskId?: string; error?: string }
-): void => {
-  if (!isUnrealImportTask(payload?.taskId)) return
-  // 失败的卡片不自动消失 —— 这是用户唯一能看到「导入没成」的地方
-  importTasksStore.updateTask(payload.taskId!, {
-    status: 'error',
-    stageText: t('assetManagement.import.unrealImportTaskFailed', {
-      error: payload.error || t('assetManagement.import.unknownError')
-    })
-  })
-}
-
-/**
  * 活跃保管库被主进程换掉了（agent 的 switch_vault、网络库迁移）。
  *
  * 必须让界面跟上：用户看着 A 库、应用实际在 B 库上读写，
@@ -465,10 +227,6 @@ let offPluginUpgradeFailed: (() => void) | null = null
 onMounted(() => {
   // 监听 Agent 创建文件夹事件
   window.electron.ipcRenderer.on('asset-tree:refresh', handleAssetTreeRefresh)
-  window.electron.ipcRenderer.on('asset:unrealImportStarted', handleUnrealImportStarted)
-  window.electron.ipcRenderer.on('asset:folderImportProgress', handleUnrealImportProgress)
-  window.electron.ipcRenderer.on('asset:folderImportCompleted', handleUnrealImportCompleted)
-  window.electron.ipcRenderer.on('asset:folderImportError', handleUnrealImportError)
   window.electron.ipcRenderer.on('vault:switched', handleVaultSwitched)
   document.addEventListener('keydown', handleGlobalKeydown)
   offPluginUpgradeFailed =
@@ -477,16 +235,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.electron.ipcRenderer.removeListener('asset-tree:refresh', handleAssetTreeRefresh)
-  window.electron.ipcRenderer.removeListener('asset:unrealImportStarted', handleUnrealImportStarted)
-  window.electron.ipcRenderer.removeListener(
-    'asset:folderImportProgress',
-    handleUnrealImportProgress
-  )
-  window.electron.ipcRenderer.removeListener(
-    'asset:folderImportCompleted',
-    handleUnrealImportCompleted
-  )
-  window.electron.ipcRenderer.removeListener('asset:folderImportError', handleUnrealImportError)
   window.electron.ipcRenderer.removeListener('vault:switched', handleVaultSwitched)
   document.removeEventListener('keydown', handleGlobalKeydown)
   offPluginUpgradeFailed?.()
@@ -572,28 +320,6 @@ onUnmounted(() => {
       @cancel="handleImportTaskCancel"
       @inspect="handleImportTaskInspect"
       @dismiss="handleImportTaskDismiss"
-    />
-
-    <!-- 导入没导全时的详情。和挂件同一层：该看到这件事的是人，人可能在别的页面 -->
-    <ImportResultModal
-      :open="Boolean(inspectingTask)"
-      :task-name="inspectingTask?.name"
-      :project-name="inspectingTask?.projectName"
-      :report="inspectingTask?.report"
-      :retryable="Boolean(inspectingTask?.retry)"
-      :retrying="retrying"
-      :retry-label="
-        hasVersionConflict ? t('importToProjectModal.chooseCompatibleProject') : undefined
-      "
-      @update:open="inspectingTaskId = $event ? inspectingTaskId : ''"
-      @retry="handleImportRetry"
-      @search="handleImportSearch"
-    />
-
-    <ImportToProjectModal
-      v-if="compatibleProjectOpen"
-      v-model:open="compatibleProjectOpen"
-      :source="compatibleProjectSource"
     />
 
     <!--

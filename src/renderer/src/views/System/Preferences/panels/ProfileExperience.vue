@@ -109,7 +109,7 @@ function effectLine(entry: AgentV3Experience): string {
     : entry.verified?.engine
       ? [entry.verified.engine]
       : []
-  if (engines.length) parts.push(`UE ${engines.join(' · ')}`)
+  if (engines.length) parts.push(`Godot ${engines.join(' · ')}`)
   if (entry.stats.adopted > 0) {
     parts.push(
       t('profile.experience.effect', {

@@ -15,12 +15,12 @@
  * 没有绕过这道检查的动机（它被告知的是「这里由盒子维护」，不是「这里有宝贝」）。
  */
 
-const EXPERIENCE_SEGMENT = /[\\/]\.uebox[\\/]experience([\\/]|$)/i
+const EXPERIENCE_SEGMENT = /[\\/]\.gdbox[\\/]experience([\\/]|$)/i
 
 export function assertNotWritingExperience(path: string): string | undefined {
   if (!EXPERIENCE_SEGMENT.test(path)) return undefined
   return (
-    '`.uebox/experience/` 由盒子根据引擎的真实结果自动维护，agent 不能直接写。' +
-    '这次学到的东西不用你记：这一轮结束后会自动整理。要沉淀一套做法，写成技能（.uebox/skills）。'
+    '`.gdbox/experience/` 由盒子根据引擎的真实结果自动维护，agent 不能直接写。' +
+    '这次学到的东西不用你记：这一轮结束后会自动整理。要沉淀一套做法，写成技能（.gdbox/skills）。'
   )
 }

@@ -22,7 +22,6 @@ import AIProviderSettings from './panels/AIProviders/AIProviderSettings.vue'
 import AgentV3DebugPanel from './panels/AgentV3Debug/AgentV3DebugPanel.vue'
 import McpSettings from './panels/Mcp/McpSettings.vue'
 import ProfileProject from './panels/ProfileProject.vue'
-import ProfilePlugin from './panels/ProfilePlugin.vue'
 import ProfileCli from './panels/ProfileCli.vue'
 import ProfileObjectStorage from './panels/ProfileObjectStorage.vue'
 import ProfileAsset from './panels/ProfileAsset.vue'
@@ -97,10 +96,6 @@ const pageHeaders: Record<string, { titleKey: string; descKey?: string }> = {
   },
   project: {
     titleKey: 'profile.project.title'
-  },
-  plugin: {
-    titleKey: 'profile.plugin.title',
-    descKey: 'profile.plugin.description'
   },
   cli: {
     titleKey: 'profile.cli.title',
@@ -249,7 +244,6 @@ function handleMenuChange(key: string): void {
             <ProfileProject v-else-if="activeKey === 'project'" />
 
             <!-- 插件设置 -->
-            <ProfilePlugin v-else-if="activeKey === 'plugin'" />
 
             <!-- 资产设置 -->
             <ProfileAsset v-else-if="activeKey === 'asset'" />

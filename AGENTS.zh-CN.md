@@ -135,7 +135,7 @@ Release 上的 `.exe`、`.blockmap`、`latest.yml`。运行期解析见 `src/mai
 | Agent 工具 | `src/main/agent-v3/tools/` | 用 `defineTool` 定义（调编辑器的走 `tools/editorRpc.ts`），在 `registry.ts` 注册；注意第 7 节的 `appSettingsManager` 坑 |
 | 运行时技能（盒子内置 Agent 和 CLI 加载的） | `resources/skills/**`、`packages/cli/skills/**` | 必须符合 `resources/skills/SKILL_STANDARD.md`，门禁步骤 `verify:skills` |
 | Godot 编辑器插件 | `resources/godot/addons/gdbox_link/` | GDScript，随包分发，打开工程时拷进去。线上格式和 `src/main/services/websocket` 一致；加命令要两边一起改，并在真编辑器里跑一遍（`.local/` 下的有窗口编辑器测试） |
-| `uebox` 命令行 | `packages/cli/` | 门禁通过 `tsconfig.cli.json` 做类型检查；`pnpm verify:cli-package`（构建 + 发布包体检）不在门禁里，发包前自己跑 |
+| `gdbox` 命令行 | `packages/cli/` | 门禁通过 `tsconfig.cli.json` 做类型检查；`pnpm verify:cli-package`（构建 + 发布包体检）不在门禁里，发包前自己跑 |
 
 ## 5. 硬规则
 

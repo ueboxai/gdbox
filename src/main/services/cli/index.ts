@@ -1,5 +1,5 @@
 /**
- * uebox 命令行的安装状态与 PATH 开关。
+ * gdbox 命令行的安装状态与 PATH 开关。
  *
  * CLI 随安装包发（`electron-builder.yml` 的 `win.extraFiles` / `extraResources`，
  * 决定、§11），所以盒子这边只需要回答三件事：
@@ -19,17 +19,17 @@ import { logger } from '../logger'
 import { containsDir, readUserPath, withDir, withoutDir, writeUserPath } from './userPath'
 import { macShellProfile, macPathEnabled, setMacPath } from './macUserPath'
 
-/** 启动器的文件名，和 `build/uebox.cmd` 打进安装目录后的名字一致 */
-const LAUNCHER = 'uebox.cmd'
+/** 启动器的文件名，和 `build/gdbox.cmd` 打进安装目录后的名字一致 */
+const LAUNCHER = 'gdbox.cmd'
 
 /**
- * 找 `uebox.cmd`。
+ * 找 `gdbox.cmd`。
  *
  * 它跟 exe 放在同一层（`win.extraFiles`），所以从 exe 的目录去找。
  * 开发模式下这个文件不存在 —— 那是正常的，CLI 只随安装包发。
  */
 function launcherPath(): string {
-  if (process.platform === 'darwin') return join(process.resourcesPath, 'cli', 'bin', 'uebox')
+  if (process.platform === 'darwin') return join(process.resourcesPath, 'cli', 'bin', 'gdbox')
   return join(dirname(app.getPath('exe')), LAUNCHER)
 }
 
@@ -64,7 +64,7 @@ export async function cliStatus(): Promise<CliStatus> {
       onPath: null,
       // 开发模式下最常见，说清楚免得以为是坏了
       reason: app.isPackaged
-        ? '当前安装中未找到命令行程序，请重新安装虚幻盒子。'
+        ? '当前安装中未找到命令行程序，请重新安装 GDBox。'
         : '开发模式下不提供命令行程序，命令行程序仅随安装包分发。'
     }
   }

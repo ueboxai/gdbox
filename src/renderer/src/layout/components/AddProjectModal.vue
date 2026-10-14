@@ -256,7 +256,7 @@ const filteredImportedProjects = computed<ImportedProject[]>(() => {
               <span class="add-project-row-head">
                 <span class="add-project-row-name">{{ project.projectName }}</span>
                 <span v-if="project.engineVersion" class="add-project-engine-version">
-                  UE {{ engineLabel(project.engineVersion) }}
+                  Godot {{ engineLabel(project.engineVersion) }}
                 </span>
               </span>
               <span v-if="project.projectPath" class="add-project-row-path">

@@ -8,16 +8,15 @@
  *
  * ## 为什么去掉了 `ue.*` 那道门
  *
- * V1 只放行 `ue.*`，于是外部 harness（Codex、Claude Code 这类）在盒子里
- * **搜不到素材库、也导不进工程**：`search_assets` 是 `asset`、
- * `project_manage` 是 `project`，两个都被命名空间那一刀挡在外面。结果是
- * 「找资产 → 导进工程 → 摆进场景」这条最常用的链子从中间断开，只剩最后一段。
+ * 早先（虚幻盒子时期）只放行引擎命名空间，于是外部 harness（Codex、Claude Code
+ * 这类）在盒子里**搜不到素材库、也导不进工程**：`search_assets` 是 `asset`、
+ * `project_list` 是 `project`，都被命名空间那一刀挡在外面。结果是
+ * 「找资产 → 放进工程 → 跑一遍验证」这条最常用的链子从中间断开。
  *
- * 那道门当初是按「CLI 的卖点是虚幻引擎能力」划的。但素材库→工程的导入
- * 恰恰**也是**虚幻引擎能力，只是实现上不经过引擎连接而已 —— 按实现细节
- * 划用户能力边界，划出来的形状用户理解不了，也讲不出道理。
+ * 按实现细节（经不经过引擎连接）划用户能力边界，划出来的形状用户理解不了，
+ * 也讲不出道理。
  *
- * ## 为什么去掉了写操作准入表
+ * ## 为什么没有写操作准入表
  *
  * 原来非 `safe` 的工具还要在 `write.ts` 的准入表里逐条点名（进来三条）。
  * 那张表按「失败之后能不能核实」判定，判据本身是对的，但它解决问题的位置
@@ -50,7 +49,7 @@
 
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 
-import { UeboxError } from './errors.js'
+import { GdboxError } from './errors.js'
 
 export interface ToolMeta {
   namespace: string
@@ -136,7 +135,8 @@ function describe(tool: {
       meta,
       readOnly: false,
       write: false,
-      unsupportedReason: '派子任务请用 uebox ask，它会把子任务限定在引擎和素材、工程库里。'
+      unsupportedReason:
+        '派子任务请用 gdbox ask，它会把子任务限定在 Godot 工具、工程文件和素材、工程库里。'
     }
   }
 
@@ -144,7 +144,7 @@ function describe(tool: {
 }
 
 /**
- * 盒子的「派子任务」工具。`uebox ask` 走它。
+ * 盒子的「派子任务」工具。`gdbox ask` 走它。
  *
  * 不让 `tools call` 直接调：外部会话里子任务的每一步都自动批准（客户端批了
  * 派任务就算批了全部），直接调等于把 shell、浏览器、「要求逐次审批」的工具
@@ -193,15 +193,15 @@ export function requireSupported(
 ): CatalogTool {
   const tool = catalog.find((item) => item.name === name)
   if (!tool) {
-    throw new UeboxError(
+    throw new GdboxError(
       'TOOL_UNAVAILABLE',
       `工具 ${name} 不在当前开放的清单里。`,
-      '运行 uebox tools list 看现在有哪些可用。'
+      '运行 gdbox tools list 看现在有哪些可用。'
     )
   }
 
   if (tool.write && !allowWrite) {
-    throw new UeboxError(
+    throw new GdboxError(
       'RISK_NOT_SUPPORTED',
       `${name} 会改动东西，这条命令没有开写操作。`,
       `确认要改的话加 --allow-write 重跑一次。` + 'CLI 没有审批弹窗，这个开关就是顶替它的那一下。'
@@ -209,14 +209,27 @@ export function requireSupported(
   }
 
   if (!tool.readOnly && !tool.write) {
-    throw new UeboxError(
+    throw new GdboxError(
       'RISK_NOT_SUPPORTED',
       `工具 ${name} 超出 CLI 的调用范围：${tool.unsupportedReason}`,
-      '这类操作请在虚幻盒子里做 —— 那边有审批界面和对话上下文。'
+      '这类操作请在 GDBox 里做 —— 那边有审批界面和对话上下文。'
     )
   }
 
   return tool
+}
+
+/**
+ * 工具的参数里有没有 `project_path`。
+ *
+ * 看的是服务端给的 schema，不按工具名点名：盒子加了新的无头工具，
+ * 这里自动跟上。
+ */
+export function acceptsProjectPath(tool: CatalogTool): boolean {
+  const properties = (tool.inputSchema as { properties?: unknown } | null)?.properties
+  return Boolean(
+    properties && typeof properties === 'object' && 'project_path' in (properties as object)
+  )
 }
 
 /** `tools list --search` 的匹配：名字和描述都算，大小写不敏感 */

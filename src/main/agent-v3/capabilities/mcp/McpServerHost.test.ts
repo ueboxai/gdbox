@@ -192,11 +192,11 @@ describe('McpServerHost 端到端', () => {
     const listed = await client.listTools()
     expect(listed.tools.map((t) => t.name).sort()).toEqual([
       'boom',
+      'editor_scene_tree',
+      'godot_check',
       'inspect_audio',
       'read_local_file',
-      'task',
-      'editor_scene_tree',
-      'godot_check'
+      'task'
     ])
   }, 30_000)
 

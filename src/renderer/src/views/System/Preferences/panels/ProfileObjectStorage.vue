@@ -415,7 +415,7 @@ onMounted(load)
             <a-input v-model:value="form.endpoint" />
           </a-form-item>
           <a-form-item :label="$t('profile.objectStorage.prefix')">
-            <a-input v-model:value="form.prefix" placeholder="uebox-media/" />
+            <a-input v-model:value="form.prefix" placeholder="gdbox-media/" />
           </a-form-item>
           <a-form-item :label="$t('profile.objectStorage.publicBaseUrl')">
             <a-input v-model:value="form.publicBaseUrl" placeholder="https://cdn.example.com" />

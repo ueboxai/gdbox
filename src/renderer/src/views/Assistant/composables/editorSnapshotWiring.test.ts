@@ -21,47 +21,26 @@ const agentV3Ipc = read('src/main/ipc/agentV3.ts')
 
 describe('提交那一刻抓取', () => {
   /**
-   * 抓取必须**先于**挂进提交链，而且不能 await。
-   *
-   * 反过来（先挂链再抓）的话，前一条的抓取要两秒，后一条就得两秒后才开始抓 ——
-   * 抓到的已经不是它自己的发送时刻了，闪存的意义当场归零。
+   * GDBox 的助手页不抓编辑器快照：负载里带 `editorSnapshot: null`，
+   * 表示提交时已定，下游不会再去抓。
    */
-  it('Welcome：抓取在挂进提交链之前发起，且没有 await', () => {
-    const captureAt = welcome.indexOf('const capture = agentV3API.captureEditorSnapshot(')
-    const enqueueAt = welcome.indexOf('enqueueSubmit(chatSid, async () => {')
-
-    expect(captureAt).toBeGreaterThan(-1)
-    expect(enqueueAt).toBeGreaterThan(-1)
-    expect(captureAt).toBeLessThan(enqueueAt)
-    // 抓取那一行前面不能有 await —— 有的话整条链又串行了
-    expect(welcome).not.toContain('const capture = await agentV3API.captureEditorSnapshot(')
+  it('Welcome：发送与插话都不抓快照', () => {
+    expect(welcome).not.toContain('captureEditorSnapshot(')
+    expect(welcome).toContain('{ ...payload, editorSnapshot: null }')
   })
 
-  /**
-   * 会话号要在抓取**之前**定死。
-   *
-   * 中间要 await 两秒，那期间用户完全可能切到别的对话去 —— 再读 `sid.value`
-   * 就把这条话发到别人那儿了。
-   */
-  it('Welcome：chatSid 在抓取之前就定下来', () => {
+  /** 会话号在挂进提交链之前就定死，排队期间切走了也不会发错对话 */
+  it('Welcome：chatSid 在挂进提交链之前定下来', () => {
     const sidAt = welcome.indexOf('const chatSid = sid.value')
-    const captureAt = welcome.indexOf('const capture = agentV3API.captureEditorSnapshot(')
-
+    const enqueueAt = welcome.indexOf('enqueueSubmit(chatSid, async () => {')
     expect(sidAt).toBeGreaterThan(-1)
-    expect(sidAt).toBeLessThan(captureAt)
+    expect(sidAt).toBeLessThan(enqueueAt)
   })
 
-  /**
-   * 抓完要**重新判**一次忙不忙，而且判的是 `isBusy` 不是 `isGenerating`：
-   * 这两秒里那一轮可能已经跑完（该直发却排了队），也可能刚发完 `done` 但后台
-   * 还没释放（该排队却直发，会被顶回来）。
-   */
-  it('Welcome：排队/直发的判据是 isBusy，且在抓取之后', () => {
-    const captureAt = welcome.indexOf('const capture = agentV3API.captureEditorSnapshot(')
-    const decideAt = welcome.indexOf('if (agentStreamStore.isBusy(chatSid)) {', captureAt)
-
-    expect(decideAt).toBeGreaterThan(captureAt)
-    // 判定和入队之间不能有 await，否则中间又开了一道窗口
+  it('Welcome：排队/直发的判据是 isBusy，且判定与入队之间没有 await', () => {
+    const enqueueAt = welcome.indexOf('enqueueSubmit(chatSid, async () => {')
+    const decideAt = welcome.indexOf('if (agentStreamStore.isBusy(chatSid)) {', enqueueAt)
+    expect(decideAt).toBeGreaterThan(enqueueAt)
     const between = welcome.slice(decideAt, welcome.indexOf('enqueueFollowUp(', decideAt))
     expect(between).not.toContain('await')
   })
@@ -91,15 +70,8 @@ describe('提交那一刻抓取', () => {
     )
   })
 
-  /** 插话注入的是正在跑的那一轮，快照必须来自它盯着的工程 */
-  it('Welcome：插话抓取带 runningSessionId', () => {
-    const handler = welcome.slice(welcome.indexOf('async function handleComposerSteer'))
-
-    expect(handler.slice(0, 800)).toContain('runningSessionId')
-  })
-
   /**
-   * 插进哪一轮在开始等闪存之前就定下来：等的那一两秒里切了对话，`currentSessionId`
+   * 插进哪一轮在开始等之前就定下来：等待期间切了对话，`currentSessionId`
    * 就指向别人的那一轮了。插话没成时把输入框摘走的东西放回去。
    */
   it('Welcome：插话的目标在等之前定下，没插进去就放回输入框', () => {
@@ -111,25 +83,6 @@ describe('提交那一刻抓取', () => {
       "attachments: payload.attachments, targetSessionId: runningSessionId, ifRejected: 'restored', restoreDraft: payload.restore }"
     )
     expect(body).toContain('if (!steered) payload.restore?.()')
-  })
-
-  /**
-   * 从侧边栏工程 A 的「+」新建对话时，归属**还没进 store** —— 它只在路由参数
-   * `?project=` 上，要等第一条消息发出去才由 `stampSessionProject` 盖戳。
-   *
-   * 只读会话戳的话这里拿到 null，于是按「当前连接」抓，抓到的是碰巧连着的 B，
-   * 还把这一轮钉死在 B 上；稍后会话才被归入 A。用户从 A 下面点的「+」，
-   * 第一句话却在 B 上执行 —— 而且全程不报错。
-   */
-  it('Welcome：会话还没盖戳时按路由上那个工程抓', () => {
-    const submit = welcome.slice(
-      welcome.indexOf('function handleComposerSend'),
-      welcome.indexOf('enqueueSubmit(chatSid, async () => {')
-    )
-
-    expect(submit).toContain('pendingProjectName.value')
-    // 抓取用的是算好的那份，不是直接读 store
-    expect(submit).toContain('captureEditorSnapshot({\n    sessionProject,')
   })
 })
 

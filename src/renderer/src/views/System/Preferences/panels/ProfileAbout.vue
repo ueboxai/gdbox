@@ -181,7 +181,7 @@ async function checkForUpdates(): Promise<void> {
 
     <!-- 应用信息 -->
     <div class="app-info">
-      <h3 class="app-name">UNREAL BOX</h3>
+      <h3 class="app-name">GDBOX</h3>
       <p class="app-version">{{ $t('profile.about.version') }} {{ appVersion }}</p>
     </div>
 

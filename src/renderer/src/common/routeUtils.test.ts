@@ -16,10 +16,10 @@ describe('routeUtils', () => {
         path: '/',
         children: [
           {
-            path: '/material-library',
-            name: 'MaterialLibrary',
-            meta: { title: 'menu.materialLib' },
-            children: [{ path: '', name: 'MaterialGallery', meta: { title: 'menu.materialLib' } }]
+            path: '/notebooks',
+            name: 'Notebooks',
+            meta: { title: 'menu.notebooks' },
+            children: [{ path: '', name: 'NotebookList', meta: { title: 'menu.notebooks' } }]
           },
           { path: '/asset-management', name: 'Assets', meta: { title: 'menu.assets' } }
         ]
@@ -36,7 +36,7 @@ describe('routeUtils', () => {
       items.forEach((item, index) => {
         expect(isReactive(item.icon)).toBe(false)
         expect(item.icon).toBe(originals[index].icon)
-        expect(item.label).toBe(`${locale}:${index === 2 ? 'menu.assets' : 'menu.materialLib'}`)
+        expect(item.label).toBe(`${locale}:${index === 2 ? 'menu.assets' : 'menu.notebooks'}`)
       })
     }
   })
@@ -47,18 +47,18 @@ describe('routeUtils', () => {
         path: '/',
         children: [
           {
-            path: '/material-library',
-            name: 'MaterialLibrary',
+            path: '/notebooks',
+            name: 'Notebooks',
             meta: {
-              title: 'menu.materialLib',
+              title: 'menu.notebooks',
               isShowInMenu: true
             },
             children: [
               {
                 path: '',
-                name: 'MaterialGallery',
+                name: 'NotebookList',
                 meta: {
-                  title: 'menu.materialLib',
+                  title: 'menu.notebooks',
                   isShowInMenu: true
                 }
               }
@@ -70,31 +70,27 @@ describe('routeUtils', () => {
 
     const menu = generateMenuFromRoutes(routes, (key) => key)
 
-    expect(menu[0]?.children?.[0]?.path).toBe('/material-library')
+    expect(menu[0]?.children?.[0]?.path).toBe('/notebooks')
   })
 
   it('keeps top-level libraries selected on nested detail paths', () => {
     const menuItems: MenuItem[] = [
       {
-        key: 'MaterialLibrary',
+        key: 'Notebooks',
         icon: null,
-        label: 'Material Library',
-        path: '/material-library'
+        label: 'Notebooks',
+        path: '/notebooks'
       },
       {
-        key: 'BlueprintLibrary',
+        key: 'AIGCStudio',
         icon: null,
-        label: 'Blueprint Library',
-        path: '/blueprint-library'
+        label: 'AI Studio',
+        path: '/aigc-studio'
       }
     ]
 
-    expect(getSelectedMenuKeys('/material-library/material-123', menuItems)).toEqual([
-      'MaterialLibrary'
-    ])
-    expect(getSelectedMenuKeys('/blueprint-library/blueprint-123', menuItems)).toEqual([
-      'BlueprintLibrary'
-    ])
+    expect(getSelectedMenuKeys('/notebooks/notebook-123', menuItems)).toEqual(['Notebooks'])
+    expect(getSelectedMenuKeys('/aigc-studio/item-123', menuItems)).toEqual(['AIGCStudio'])
   })
 
   it('matches dynamic child menu routes when computing selected and open keys', () => {

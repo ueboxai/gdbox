@@ -31,7 +31,6 @@ import {
   type NotebookRagCitation,
   type NotebookRagContextResult
 } from './notebookRagContext'
-import { buildLibraryContextMessage, type LibraryChatContext } from './libraryChatContext'
 import { buildCurrentUEProjectContext } from './ueProjectContext'
 import {
   attachmentsOnlySteerText,
@@ -65,13 +64,6 @@ export interface UseAgentModeParams {
   ) => void
   pushAssistantTyping: (startTime?: number) => string
   currentAgentProcess: Ref<AgentProcessItem[]>
-  /**
-   * 嵌在库详情页里时，「用户正在看什么」。
-   *
-   * 每一轮请求前算一次并注入，不写进对话历史 —— 所以带的永远是**当下**的
-   * 选中节点，用户点了别的节点就跟着变。不在库里嵌时是 undefined。
-   */
-  libraryContext?: ComputedRef<LibraryChatContext | null>
 }
 
 type ExecuteAgentOptions = {
@@ -136,8 +128,7 @@ export function useAgentMode(params: UseAgentModeParams) {
     scrollToBottomIfNeeded,
     pushUser,
     pushAssistantTyping,
-    currentAgentProcess,
-    libraryContext
+    currentAgentProcess
   } = params
 
   const agentStreamStore = useAgentStreamStore()
@@ -741,16 +732,6 @@ export function useAgentMode(params: UseAgentModeParams) {
       const finalMessages = currentUserMessage
         ? [JSON.parse(JSON.stringify(currentUserMessage))]
         : []
-
-      /*
-       * 库详情页的上下文。放在最前面 unshift，所以它会排在知识库 RAG 和
-       * UE 工程上下文**之后**（后 unshift 的排更前），紧贴着用户这句话 ——
-       * 「他正在看什么」是理解这句话的直接依据，离得越近越好。
-       */
-      const libraryContextMessage = buildLibraryContextMessage(libraryContext?.value)
-      if (libraryContextMessage) {
-        finalMessages.unshift({ ...libraryContextMessage })
-      }
 
       const notebookRagTarget = await resolveNotebookRagTarget({
         boundNotebook: chatStore.getBoundNotebook?.(chatSid),

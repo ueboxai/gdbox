@@ -23,7 +23,7 @@ export function render(envelope: Envelope): string {
     lines.push(`失败（${envelope.error.code}）：${envelope.error.message}`)
     if (envelope.error.hint) lines.push(`怎么办：${envelope.error.hint}`)
     if (envelope.error.execution === 'unknown') {
-      lines.push('注意：请求可能已经发到引擎了，结果无法确认。先核实现场，不要直接重发。')
+      lines.push('注意：请求可能已经发出去了，结果无法确认。先核实现场，不要直接重发。')
     }
   }
 
@@ -77,11 +77,18 @@ function renderChecks(value: Record<string, unknown>): string[] {
 
 function renderProjects(value: Record<string, unknown>): string[] {
   const projects = value.projects as Array<Record<string, unknown>>
-  if (projects.length === 0) return ['没有已连接的 UE 工程。']
+  if (projects.length === 0) return ['「我的项目」里还没有登记工程。']
 
   return [
-    `${projects.length} 个可操作的 UE 工程：`,
-    ...projects.map((project) => `  ${project.name}  ${project.path}`)
+    `${projects.length} 个 Godot 工程：`,
+    ...projects.map((project) => {
+      const marks = [
+        project.godotVersion ? `Godot ${project.godotVersion}` : '',
+        project.editorConnected ? '编辑器已连接' : '',
+        project.onDisk === false ? '盘上找不到' : ''
+      ].filter(Boolean)
+      return `  ${project.name}  ${project.path}${marks.length ? `  （${marks.join('，')}）` : ''}`
+    })
   ]
 }
 
@@ -103,16 +110,12 @@ function renderTools(value: Record<string, unknown>): string[] {
 }
 
 function renderScreenshot(value: Record<string, unknown>): string[] {
-  const lines = [
+  // 拍的是哪个场景决定这张图能说明什么，永远报出来
+  return [
     `截图已保存：${value.output}`,
-    `  尺寸：${value.width}×${value.height}，${value.bytes} 字节`
+    `  尺寸：${value.width}×${value.height}，${value.bytes} 字节`,
+    `  场景：${value.scene ?? '主场景'}`
   ]
-
-  // 机位来源决定这张图算不算数，永远报出来
-  if (value.world || value.cameraSource) {
-    lines.push(`  世界：${value.world ?? '未报告'}，机位：${value.cameraSource ?? '未报告'}`)
-  }
-  return lines
 }
 
 function renderToolCall(value: Record<string, unknown>): string[] {
@@ -126,7 +129,11 @@ function renderToolCall(value: Record<string, unknown>): string[] {
   // 图片块绝不打印 base64 —— 一张压缩过的截图有二十多万个字符，
   // 刷完终端之后用户什么也看不到了
   const images = content.filter((block) => block.type === 'image').length
-  if (images > 0) lines.push(`（另有 ${images} 张图片，本版不落盘，用 --json 看结构化结果）`)
+  if (images > 0) {
+    lines.push(
+      `（另有 ${images} 张图片，不在终端打印；要存成文件用 gdbox screenshot，或加 --json）`
+    )
+  }
 
   if (value.structured) {
     lines.push('', '结构化结果：', JSON.stringify(value.structured, null, 2))

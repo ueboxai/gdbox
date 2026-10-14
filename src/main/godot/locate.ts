@@ -21,8 +21,10 @@ export async function locateGodot(preferred?: string): Promise<GodotInfo | null>
   return null
 }
 
-export async function probeGodot(path: string): Promise<GodotInfo | null> {
-  if (!path) return null
+export async function probeGodot(input: string): Promise<GodotInfo | null> {
+  if (!input) return null
+  // macOS 上用户在文件对话框里选的是 Godot.app，能跑的是包里那个可执行文件
+  const path = /\.app\/?$/i.test(input) ? join(input, 'Contents', 'MacOS', 'Godot') : input
   const output = await new Promise<string | null>((resolve) => {
     execFile(path, ['--version'], { timeout: 15_000, windowsHide: true }, (err, stdout) => {
       resolve(err ? null : stdout.trim())

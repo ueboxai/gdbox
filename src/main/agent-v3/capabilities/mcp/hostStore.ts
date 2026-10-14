@@ -103,7 +103,7 @@ export async function readHostSettings(): Promise<McpHostSettings> {
  * ## 为什么从「默认关」改成了「默认开」
  *
  * 这个服务原来默认关闭，用户要去设置里显式开一次。那条默认挡住的主要是误装误用，
- * 但代价是**我们自己随包发的命令行开箱不可用** —— 装完盒子敲 `uebox doctor`
+ * 但代价是**我们自己随包发的命令行开箱不可用** —— 装完盒子敲 `gdbox doctor`
  * 直接拿到 `SERVICE_UNAVAILABLE`，而用户完全想不到要去「MCP 设置」里开一个
  * 名叫「对外暴露引擎能力」的开关。CLI 和第三方 MCP 客户端是两件事，
  * 却共用同一个开关，这个耦合本身就是错的。

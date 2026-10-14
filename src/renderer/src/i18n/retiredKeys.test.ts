@@ -40,7 +40,20 @@ const RETIRED_KEYS: string[] = [
   'profile.menu.miniChat',
   'profile.miniChat',
   // 资产导入：语义从「会话过期」改成「服务器上没有这次导入」，key 跟着改
-  'assetManagement.import.sessionExpired'
+  'assetManagement.import.sessionExpired',
+  // GDBox：虚幻引擎专属功能整块下线（蓝图库、材质库、引擎插件、Epic MCP、UE 来源）
+  'blueprintGallery',
+  'materialGallery',
+  'blueprintLibraryStore',
+  'libraryAIPanel',
+  'menu.blueprintLib',
+  'menu.materialLib',
+  'profile.plugin',
+  'mcp.epicSetup',
+  'mcp.engine',
+  'notebook.addSource.ue',
+  'page.home.engine',
+  'assetManagement.import.unrealImportDone'
 ]
 
 describe('已退役的 i18n key', () => {

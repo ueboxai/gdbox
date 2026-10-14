@@ -18,24 +18,24 @@ function createRoute(route: Partial<TestRoute> & Pick<TestRoute, 'path' | 'fullP
 describe('resolveTabRoute', () => {
   it('uses the parent route key for nested detail routes that share a tab', () => {
     const route = createRoute({
-      path: '/blueprint-library/blueprint-1',
-      fullPath: '/blueprint-library/blueprint-1',
-      meta: { isShowInTab: false, title: 'menu.blueprintDetail' } as RouteMeta,
+      path: '/notebooks/notebook-1',
+      fullPath: '/notebooks/notebook-1',
+      meta: { isShowInTab: false, title: 'menu.notebookDetail' } as RouteMeta,
       matched: [
         {
-          path: '/blueprint-library',
-          meta: { isShowInTab: true, title: 'menu.blueprintLib' } as RouteMeta
+          path: '/notebooks',
+          meta: { isShowInTab: true, title: 'menu.notebooks' } as RouteMeta
         },
         {
-          path: '/blueprint-library/:id',
-          meta: { isShowInTab: false, title: 'menu.blueprintDetail' } as RouteMeta
+          path: '/notebooks/:id',
+          meta: { isShowInTab: false, title: 'menu.notebookDetail' } as RouteMeta
         }
       ]
     })
 
     expect(resolveTabRoute(route)).toEqual({
-      key: '/blueprint-library',
-      meta: { isShowInTab: true, title: 'menu.blueprintLib' }
+      key: '/notebooks',
+      meta: { isShowInTab: true, title: 'menu.notebooks' }
     })
   })
 

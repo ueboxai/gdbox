@@ -6,28 +6,10 @@
     @dragleave="handleDragLeave"
     @drop="handleDropRefresh"
   >
-    <!-- 广告招商 ~ -->
-    <!-- <section class="section tools-section">
-      <header v-if="false" class="section-header">
-        <h2 class="section-title">{{ $t('page.home.toolsSection.title') }}</h2>
-        <span class="section-sub">{{ $t('page.home.toolsSection.subtitle') }}</span>
-      </header>
-      <div class="header-banner">
-        <img
-          src="@renderer/assets/imgs/header-image.png"
-          alt="Unreal Engine Banner"
-          class="header-banner__image"
-        />
-      </div>
-    </section> -->
-
-    <!-- 引擎版本 -->
-    <EngineSection @engine-drag-enter="handleEngineDragEnter" />
-
     <!-- 我的工程 -->
     <ProjectSection ref="projectSectionRef" />
 
-    <!-- 拖拽导入覆盖层（仅覆盖工程区域，不遮挡引擎版本） -->
+    <!-- 拖拽导入覆盖层（仅覆盖工程区域） -->
     <div v-if="isDragOver" ref="dragOverlayRef" class="home-drag-overlay" :style="dragOverlayStyle">
       <DragDropOverlay
         :visible="isDragOver"
@@ -49,7 +31,6 @@ import ProjectSelectModal from '@renderer/components/ProjectSelectModal.vue'
 import i18n from '@renderer/i18n'
 import { useDragImport } from '@renderer/hooks/useDragImport'
 import ProjectSection from './components/Project/ProjectSection.vue'
-import EngineSection from './components/EngineSection.vue'
 
 const { t } = useI18n()
 
@@ -61,13 +42,6 @@ const {
   handleDragLeave,
   setOnImportComplete
 } = useDragImport()
-
-/**
- * 当进入引擎区域拖拽时，隐藏项目区域的覆层
- */
-const handleEngineDragEnter = (): void => {
-  isDragOver.value = false
-}
 
 const projectSectionRef = ref<{
   reload: () => Promise<void>
@@ -130,11 +104,10 @@ const handleDropRefresh = async (e: DragEvent): Promise<void> => {
 
     const files = entries.filter((it) => it.isFile)
     const directories = entries.filter((it) => it.isDirectory)
-    const uprojectFiles = files.filter((f) => /\.uproject$/i.test(f.path))
-    const otherFiles = files.filter((f) => !/\.uproject$/i.test(f.path))
+    const uprojectFiles = files.filter((f) => /(^|[\\/])project\.godot$/i.test(f.path))
+    const otherFiles = files.filter((f) => !/(^|[\\/])project\.godot$/i.test(f.path))
 
     // 只处理 .uproject 文件和目录（扫描工程）
-    // 其他文件不处理（引擎拖拽由 EngineSection 处理）
     if (uprojectFiles.length > 0) {
       const importedKeys: string[] = []
       const existingKeys: string[] = []

@@ -42,7 +42,6 @@ import { message } from '@renderer/utils/messageManager'
 import { useI18n } from 'vue-i18n'
 
 import {
-  isEngineServerId,
   isValidPort,
   isValidServerId,
   mcpClientAPI,
@@ -52,7 +51,6 @@ import {
   toSettings,
   BLENDER_SERVER_ID,
   type BlenderSetupStatus,
-  type EpicSetupProjectStatus,
   type McpServerFormValue
 } from '@renderer/api/mcp'
 import AppSwitch from '@renderer/components/AppSwitch.vue'
@@ -230,19 +228,6 @@ function isRowDirty(value: McpServerFormValue): boolean {
   return saved === undefined || saved !== rowSnapshot(value)
 }
 
-/**
- * 引擎自动发现来的 server（UE 5.8 内置的官方 MCP）。
- *
- * 它不在 `mcp.json` 里，所以不能混进上面那张可编辑的表 —— 用户会去找一个
- * 删不掉也改不动的条目。单独一块只读地列出来，并告诉他怎么覆盖。
- *
- * 用户如果真在 `mcp.json` 里写了同名条目，那条就归可编辑列表管，这里不再重复。
- */
-const engineStatuses = computed(() => {
-  const configured = new Set(servers.value.map((s) => s.id.trim()))
-  return statuses.value.filter((s) => isEngineServerId(s.id) && !configured.has(s.id))
-})
-
 /** 状态胶囊。停用是用户自己的选择，不能和连接失败混为一谈 */
 function chipOf(rawId: string): { tone: string; label: string; title: string } | undefined {
   const status = statusById.value.get(rawId.trim())
@@ -267,34 +252,6 @@ function errorOf(rawId: string): string {
   if (!status || status.connected || status.disabled) return ''
   return status.error ?? ''
 }
-
-/** 停用是用户自己关的，不算「连不上」 */
-const engineFailed = computed(() => engineStatuses.value.some((s) => !s.connected && !s.disabled))
-
-/**
- * 引擎块收起时那一行的状态。
- *
- * 有一个连不上就整块报失败 —— 折叠区最怕的就是把问题盖住，
- * 收起来的那一行必须自己说清楚里面是好是坏。
- */
-const engineSummary = computed((): { tone: string; label: string } | undefined => {
-  const list = engineStatuses.value
-  if (list.length === 0) return undefined
-  if (engineFailed.value) return { tone: 'bad', label: t('mcp.status.failed') }
-
-  const connected = list.filter((s) => s.connected)
-  if (connected.length === 0) return { tone: 'muted', label: t('mcp.status.disabled') }
-  const count = connected.reduce((sum, s) => sum + (s.toolCount ?? 0), 0)
-  return { tone: 'ok', label: t('mcp.engine.connected', { count }) }
-})
-
-/**
- * 连不上的时候强制摊开。
- *
- * 和 server 行同一条规矩：错误原因和重试按钮藏在折叠里等于不存在。
- * 好好跑着的时候才允许收成一行 —— 那时候里面确实没有要处理的事。
- */
-const showEngine = ref(false)
 
 /**
  * 把主进程回的视图落到本地表单状态。
@@ -353,114 +310,7 @@ async function load(): Promise<void> {
   } catch (error) {
     console.warn('[MCP] 读取第三方 server 配置失败:', error)
   }
-  await Promise.all([refreshHost(), refreshEpic(), refreshBlender()])
-}
-
-/**
- * 一键开启 UE 5.8 官方 MCP。
- *
- * 手工流程要在 Edit > Plugins 和 Editor Preferences 两个面板里点四步，
- * **大部分用户走不完，走不完就等于这个能力不存在**。这里代劳前三步。
- *
- * ## 这一块永远显示（除非已经开好了）
- *
- * 初版写的是「没有可操作项目就整个不渲染」，理由是「不给用户一个永远点不了的
- * 按钮」。**那个理由是错的**：结果不是界面更干净，而是用户在设置页里
- * 什么都看不到，也无从知道为什么 —— 没连项目、引擎太老、主进程没起来，
- * 三种完全不同的原因长得一模一样，都是「一片空白」。
- *
- * 空白不是「没有噪音」，空白是「看起来坏了」。所以现在：块常驻，
- * **能一键就给按钮，不能就说清楚差什么**。只有真正开好了（ready）才收起来 ——
- * 那时下面的自动发现块已经在报「已连接」，再留一块就真是重复了。
- */
-const epicProjects = ref<EpicSetupProjectStatus[]>([])
-const epicBusy = ref('')
-const epicMessage = ref('')
-const epicError = ref('')
-const epicLoading = ref(true)
-
-/** 可以点按钮的项目 */
-const epicActionable = computed(() =>
-  epicProjects.value.filter((p) => p.state === 'needs-plugins' || p.state === 'needs-start')
-)
-
-/** 配好了但还没重启编辑器的 */
-const epicPendingRestart = computed(() =>
-  epicProjects.value.filter((p) => p.state === 'needs-restart')
-)
-
-/** 引擎版本不够的。要点名说出来，否则用户只会觉得「按钮怎么不见了」 */
-const epicUnsupported = computed(() => epicProjects.value.filter((p) => p.state === 'unsupported'))
-
-/** 已经开好的。正常情况下由下面的自动发现块接手报状态，这里只在它没接上时兜底 */
-const epicReady = computed(() => epicProjects.value.filter((p) => p.state === 'ready'))
-
-/** 空列表不算：那说明一个项目都没连，得告诉用户先去打开项目 */
-const epicAllReady = computed(
-  () => epicProjects.value.length > 0 && epicProjects.value.every((p) => p.state === 'ready')
-)
-
-/**
- * 探到服务在跑、缓存里却没有它 —— 自动补一次重连。
- *
- * `currentStatuses()` 只有在 agent 跑过一次、或用户手点「重新连接」时才会更新，
- * 没有任何东西会因为「用户刚打开了工程」去重新发现。不补的话用户得自己猜到
- * 去点那个跟引擎看起来毫无关系的按钮。
- *
- * 一次挂载只补一次：补不上（发现的三道门有一道没过）就让上面的 ready 行兜底，
- * 不要在这儿空转。
- */
-const engineReconnectTried = ref(false)
-
-async function syncEngineConnection(): Promise<void> {
-  if (engineReconnectTried.value || !epicAllReady.value) return
-  // 用原始列表判断，不是 engineStatuses —— 用户在 mcp.json 里手写了同名条目时
-  // 它会被过滤掉，但那条**已经连上了**，再重连一次纯属多余
-  if (statuses.value.some((s) => isEngineServerId(s.id))) return
-
-  engineReconnectTried.value = true
-  try {
-    const result = await mcpClientAPI.reconnect()
-    if (result.success) statuses.value = result.statuses ?? []
-  } catch (error) {
-    console.warn('[MCP] 引擎 server 补连失败:', error)
-  }
-}
-
-async function refreshEpic(): Promise<void> {
-  epicLoading.value = true
-  epicError.value = ''
-  try {
-    const result = await mcpClientAPI.epicStatus()
-    epicProjects.value = result.success ? result.projects : []
-    // 主进程报的错要显示出来。吞掉的话界面又变回那片没有原因的空白 ——
-    // 开发时最常见的一种就是主进程没重启，新的 IPC 通道压根不存在
-    if (!result.success) epicError.value = result.error ?? ''
-  } catch (error) {
-    epicProjects.value = []
-    epicError.value = (error as Error).message
-  } finally {
-    epicLoading.value = false
-  }
-  await syncEngineConnection()
-}
-
-async function setupEpic(project: EpicSetupProjectStatus): Promise<void> {
-  if (epicBusy.value) return
-  epicBusy.value = project.connectionId
-  epicMessage.value = ''
-  try {
-    const result = await mcpClientAPI.epicSetup(project.connectionId)
-    // message 由主进程给：它才知道这次是「起来了」「要重启」还是「配置失败」，
-    // 渲染层照着 state 猜会和实际发生的事对不上
-    epicMessage.value = result.message ?? result.error ?? ''
-    if (result.statuses) statuses.value = result.statuses
-    await refreshEpic()
-  } catch (error) {
-    epicMessage.value = (error as Error).message
-  } finally {
-    epicBusy.value = ''
-  }
+  await Promise.all([refreshHost(), refreshBlender()])
 }
 
 /**
@@ -509,8 +359,7 @@ const blenderTarget = computed(() => pickedBlender.value || blender.value?.blend
  * 这些时候 `runBlenderSetup` 的「再点一次修一修」正是唯一的出路，
  * 而唯一能调它的按钮刚好不见了，只剩下手改 `mcp.json`。
  *
- * 判据和上面引擎那块的 `hideEpicSetup` 是同一条：**接手的那块真的在
- * 说话了，才允许收起**。
+ * 判据：**接手的那块真的在说话了，才允许收起**。
  */
 const hideBlenderSetup = computed(() => {
   if (blender.value?.state !== 'configured') return false
@@ -719,50 +568,12 @@ const showBlenderRaw = ref(false)
  * 安装按钮、重试按钮、缺的前置、失败原因，任何一样在里面就摊开。
  * 好好跑着的时候才允许收成一行 —— 那时里面确实没有要处理的事。
  */
-const engineActionable = computed(
-  () =>
-    epicActionable.value.length > 0 ||
-    epicError.value !== '' ||
-    engineFailed.value ||
-    // 引擎那边好了、盒子这边还没接上：屏幕上只有一句「已开启 · 运行中」，
-    // 而**下一步在摊开的里面**（`readyHint`：会在下次对话时自动接上）。
-    // 这是原来那条一键块/自动发现块互锁换了个位置 —— 接手的那条真的在说话了，
-    // 才允许收起。两边都不说话的那片空白，用户读到的是「坏了」。
-    (epicReady.value.length > 0 && engineStatuses.value.length === 0)
-)
-const engineRowOpen = computed(() => showEngine.value || engineActionable.value)
-
 /** 还没装好就等于有事要办：按钮在行右端，缺的前置和说明在摊开的里面 */
 const blenderActionable = computed(() => !hideBlenderSetup.value && !blenderLoading.value)
 const showBlender = ref(false)
 const blenderRowOpen = computed(
   () => showBlender.value || blenderActionable.value || blenderError.value !== ''
 )
-
-/**
- * 虚幻引擎那一行右端说什么。
- *
- * 原来这些状态散在两块卡片里（一键块报「还没连项目 / 版本太低 / 要重启」，
- * 自动发现块报「已连接 / 连接失败」），而它们说的是**同一个东西**在不同阶段。
- * 压成一行之后就得排个优先级：真连上了以连接状态为准，没连上才轮到
- * 「差哪一步」。
- */
-const engineRowMeta = computed((): { tone: string; label: string } | undefined => {
-  if (engineSummary.value) return engineSummary.value
-  if (epicLoading.value) return { tone: 'muted', label: t('mcp.epicSetup.checking') }
-  if (epicError.value) return { tone: 'bad', label: t('mcp.status.failed') }
-  if (epicProjects.value.length === 0) {
-    return { tone: 'muted', label: t('mcp.epicSetup.noProjectShort') }
-  }
-  if (epicPendingRestart.value.length > 0) {
-    return { tone: 'muted', label: t('mcp.epicSetup.needsRestart') }
-  }
-  if (epicUnsupported.value.length > 0) {
-    return { tone: 'muted', label: t('mcp.epicSetup.unsupported') }
-  }
-  if (epicReady.value.length > 0) return { tone: 'ok', label: t('mcp.epicSetup.ready') }
-  return undefined
-})
 
 /**
  * Blender 那一行右端说什么。
@@ -900,27 +711,6 @@ async function saveRow(index: number): Promise<void> {
     saveError.value = (error as Error).message
   } finally {
     savingId.value = ''
-  }
-}
-
-/**
- * 重连全部 server。
- *
- * 引擎块的「重试连接」走的是同一个动作 —— 主进程那边本来就是整批重建
- * （`reconnectMcp` 先 shutdown 再 ensureConnected），没有单独重连一条的口子。
- * 按钮放在失败那块旁边，是因为**用户是在那儿看到问题的**，
- * 不该让他去猜「下面那个跟第三方服务放在一起的按钮也管引擎」。
- */
-const reconnecting = ref(false)
-
-async function reconnect(): Promise<void> {
-  if (reconnecting.value) return
-  reconnecting.value = true
-  try {
-    const result = await mcpClientAPI.reconnect()
-    if (result.success) statuses.value = result.statuses ?? []
-  } finally {
-    reconnecting.value = false
   }
 }
 
@@ -1084,197 +874,9 @@ onMounted(load)
       面板里再来一遍是上一版最刺眼的重复。
     -->
     <section class="settings-section">
-      <!--
-        一键开启，排在最前面 —— 这是用户在这一屏唯一需要做决定的地方。
-
-        **这块常驻**（除非已经全部开好、且下面的自动发现块接手了 —— 见
-        `hideEpicSetup`）。初版做成「没有可操作项目就不渲染」，
-        结果是用户什么都看不到、也不知道为什么：没连项目、引擎太老、
-        主进程没起来，三种原因长得一模一样，都是一片空白。
-        空白不是「没有噪音」，空白是「看起来坏了」。
-      -->
       <h4 class="section-title">{{ t('mcp.client.builtinTitle') }}</h4>
 
       <ul class="category-list">
-        <li class="category builtin engine">
-          <div class="category-head">
-            <button class="category-open" @click="showEngine = !showEngine">
-              <PhCaretRight class="caret" :class="{ open: engineRowOpen }" />
-              <span class="category-name">{{ t('mcp.epicSetup.rowTitle') }}</span>
-              <!--
-                一行里只说一件事：现在是什么状态。原来这些话散在两块卡片里 ——
-                一键块说「还没连项目 / 版本太低 / 要重启」，自动发现块说
-                「已连接 / 连接失败」，可它们讲的是同一个东西的不同阶段。
-              -->
-              <span v-if="engineRowMeta" class="status" :class="engineRowMeta.tone">
-                {{ engineRowMeta.label }}
-              </span>
-            </button>
-
-            <!--
-            有得点就把按钮放在行右端，别藏进摊开的里面 —— 这一整块存在的理由
-            就是那一下点击。只在**恰好一个**项目可操作时放这儿；多个项目时
-            按钮跟着各自的项目名走，摆在摊开的里面才分得清点的是哪个。
-          -->
-            <AppButton
-              v-if="epicActionable.length === 1"
-              class="row-action"
-              variant="primary"
-              size="medium"
-              :disabled="epicBusy !== ''"
-              @click="setupEpic(epicActionable[0])"
-            >
-              {{
-                epicBusy === epicActionable[0].connectionId
-                  ? t('mcp.epicSetup.working')
-                  : epicActionable[0].state === 'needs-start'
-                    ? t('mcp.epicSetup.start')
-                    : t('mcp.epicSetup.enable')
-              }}
-            </AppButton>
-          </div>
-
-          <div v-if="engineRowOpen" class="category-body">
-            <!-- 主进程报的错原样显示。最常见的是开发时主进程没重启 -->
-            <p v-if="epicError" class="error">
-              {{ t('mcp.epicSetup.failed', { error: epicError }) }}
-            </p>
-
-            <!-- 一个项目都没连：这是最常见的「按钮怎么不见了」，必须点破 -->
-            <p v-else-if="epicProjects.length === 0" class="section-note">
-              {{ t('mcp.epicSetup.noProject') }}
-            </p>
-
-            <template v-else>
-              <!-- 多个项目才逐条给按钮，否则行右端那一个就够了（见上面） -->
-              <template v-if="epicActionable.length > 1">
-                <div
-                  v-for="project in epicActionable"
-                  :key="project.connectionId"
-                  class="engine-row"
-                >
-                  <code>{{ project.projectName }}</code>
-                  <AppButton
-                    variant="primary"
-                    size="medium"
-                    :disabled="epicBusy !== ''"
-                    @click="setupEpic(project)"
-                  >
-                    {{
-                      epicBusy === project.connectionId
-                        ? t('mcp.epicSetup.working')
-                        : project.state === 'needs-start'
-                          ? t('mcp.epicSetup.start')
-                          : t('mcp.epicSetup.enable')
-                    }}
-                  </AppButton>
-                </div>
-              </template>
-
-              <!-- 配好了但没重启：给不了按钮，UE 没法热加载新插件模块 -->
-              <div
-                v-for="project in epicPendingRestart"
-                :key="project.connectionId"
-                class="engine-row"
-              >
-                <code>{{ project.projectName }}</code>
-                <span class="status muted">{{ t('mcp.epicSetup.needsRestart') }}</span>
-              </div>
-
-              <!-- 引擎太老：点名说出版本号，否则用户只会觉得按钮丢了 -->
-              <div
-                v-for="project in epicUnsupported"
-                :key="project.connectionId"
-                class="engine-row"
-              >
-                <code>{{ project.projectName }}</code>
-                <span class="status muted">{{ t('mcp.epicSetup.unsupported') }}</span>
-              </div>
-
-              <!--
-              已经开好了，但下面那几条自动发现的 server 还没接上。
-              正常情况下这几行不会出现 —— 接上了就由 `engineStatuses` 报状态。
-              它只为一种情况存在：引擎服务确实在跑，盒子这边还没连上（补连失败、
-              或用户在 mcp.json 里把它停用了）。那时候什么都不显示，
-              用户看到的就是一片「坏了」。
-            -->
-              <template v-if="engineStatuses.length === 0">
-                <div v-for="project in epicReady" :key="project.connectionId" class="engine-row">
-                  <code>{{ project.projectName }}</code>
-                  <span class="status ok">{{ t('mcp.epicSetup.ready') }}</span>
-                </div>
-              </template>
-            </template>
-
-            <!--
-            真连上的那几条 server。原来这是一块独立的「自动发现」卡片，
-            而它报的「已连接 · 3 个入口」和上面一键块报的「已开启 · 运行中」
-            是同一件事的两种说法，摆成两块只会让人对账。
-          -->
-            <!-- 用户没做任何配置就多出一条东西，必须说清楚它从哪来 -->
-            <p v-if="engineStatuses.length > 0" class="engine-desc">
-              {{ t('mcp.engine.description') }}
-            </p>
-
-            <div v-for="status in engineStatuses" :key="status.id" class="engine-entry">
-              <div class="engine-row">
-                <code>{{ status.id }}</code>
-                <!--
-                连上时不能报「3 个工具」。上面刚说完「约 900 个」，
-                旁边一个「3 个工具」的绿标签，看起来就是没接全 ——
-                这是真实被问过的一句「怎么只有三个工具」。
-                这里说清楚 3 是**入口**，不是能力总数。
-              -->
-                <span v-if="status.connected" class="status ok" :title="t('mcp.engine.twoTier')">
-                  {{ t('mcp.engine.connected', { count: status.toolCount }) }}
-                </span>
-                <span v-else class="status" :class="chipOf(status.id)!.tone">
-                  {{ chipOf(status.id)!.label }}
-                </span>
-              </div>
-              <!--
-              原因写出来，不放 tooltip。一条「连接失败」不带原因，用户能做的只有
-              瞪着它；而原因常常一句话就说清了（`ECONNREFUSED 127.0.0.1:30069`），
-              是这一屏信息量最大的一行字。
-            -->
-              <p v-if="errorOf(status.id)" class="row-error">{{ errorOf(status.id) }}</p>
-            </div>
-
-            <!-- 重试放在看到问题的地方。好好跑着的时候不给按钮：没什么可重试的 -->
-            <div v-if="engineFailed" class="actions">
-              <AppButton
-                variant="primary"
-                size="medium"
-                :disabled="reconnecting"
-                @click="reconnect"
-              >
-                {{ reconnecting ? t('mcp.engine.retrying') : t('mcp.engine.retry') }}
-              </AppButton>
-            </div>
-
-            <p v-if="epicMessage" class="section-note">{{ epicMessage }}</p>
-            <p v-else-if="epicActionable.length > 0" class="section-note">
-              {{ t('mcp.epicSetup.hint') }}
-            </p>
-            <!-- 能走到这儿说明引擎那边好了、盒子这边还没接上，得说清下一步 -->
-            <p v-else-if="epicReady.length > 0 && engineStatuses.length === 0" class="section-note">
-              {{ t('mcp.epicSetup.readyHint') }}
-            </p>
-
-            <!--
-            两层结构讲在正文里，不能只放进 tooltip —— 会问「怎么只有三个」的人不会去悬停。
-            但**只在真连上时讲**：连接失败的时候屏幕上没有那个「3」，
-            再解释一遍「每个入口包含多种操作」就是纯噪音，还盖住了真正的问题。
-          -->
-            <p v-if="engineStatuses.some((s) => s.connected)" class="section-note">
-              {{ t('mcp.engine.twoTier') }}
-            </p>
-            <p v-if="engineStatuses.length > 0" class="section-note">
-              {{ t('mcp.engine.hint') }}
-            </p>
-          </div>
-        </li>
-
         <!--
         一键接入 Blender。同样常驻（配好了才收起）——
         缺 git、缺 Python、Blender 太老、Linux，四种原因如果都长成
@@ -2057,7 +1659,6 @@ onMounted(load)
 }
 
 /* 摊开区里的条目：上边线分隔，同 `.tool-item` */
-.category-body .engine-entry,
 .category-body .engine-row {
   border-top: 1px solid var(--color-border-subtle);
   padding-top: var(--space-2);
@@ -2266,19 +1867,6 @@ onMounted(load)
 .engine-row code {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-}
-
-.engine-entry {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.engine-desc {
-  margin: 0;
-  font-size: var(--font-size-xs);
-  line-height: 1.6;
-  color: var(--color-text-muted);
 }
 
 /*

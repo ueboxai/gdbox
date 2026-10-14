@@ -40,7 +40,7 @@
           >
             <option value="all">{{ t('page.home.project.importProjectModal.allVersions') }}</option>
             <option v-for="ver in availableEngineVersions" :key="ver" :value="ver">
-              UE {{ ver }}
+              Godot {{ ver }}
             </option>
           </select>
           <div class="search-wrapper">
@@ -116,7 +116,7 @@
               <div class="card-body">
                 <div class="card-head">
                   <h3 class="card-title">{{ project.projectName }}</h3>
-                  <span class="engine-badge">UE {{ project.engineVersion }}</span>
+                  <span class="engine-badge">Godot {{ project.engineVersion }}</span>
                 </div>
                 <p class="card-path">{{ project.projectPath }}</p>
               </div>
@@ -329,7 +329,7 @@ const handlePickFile = async (): Promise<void> => {
     const ret = await window.api.dialog.showOpenDialog({
       title: t('actionToast.project.pickUproject'),
       properties: ['openFile'],
-      filters: [{ name: 'Unreal Project', extensions: ['uproject'] }]
+      filters: [{ name: 'Godot Project', extensions: ['godot'] }]
     })
     const filePath = ret?.filePaths?.[0]
     if (ret?.canceled || !filePath) return

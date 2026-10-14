@@ -99,7 +99,7 @@ describe('CreatorPlanCard', () => {
     stubApi()
     const wrapper = mount(CreatorPlanCard, { global: { stubs } })
     await flushPromises()
-    expect(wrapper.text()).toContain('使用虚幻盒子订阅服务一键配置所有模型')
+    expect(wrapper.text()).toContain('使用 GDBox 订阅服务一键配置所有模型')
     expect(wrapper.text()).toContain('连接')
     expect(wrapper.text()).not.toContain('断开')
   })

@@ -123,7 +123,7 @@ const tooltip = computed<string>(() => {
   if (!projectName.value) return t('assistantTopNav.sessionProject.none')
 
   const parts = [projectName.value]
-  if (engineVersion.value) parts.push(`UE ${engineVersion.value}`)
+  if (engineVersion.value) parts.push(`Godot ${engineVersion.value}`)
   if (sessionProject.value?.projectPath) parts.push(sessionProject.value.projectPath)
   return parts.join('\n')
 })
@@ -230,9 +230,9 @@ function clearProject(): void {
     color: var(--color-text-secondary);
   }
 
-  // 连着编辑器时把文件夹图标染成 UE 蓝 —— 绿点留给「任务完成」，不表示连接
+  // 连着编辑器时把文件夹图标加深一档（中性色）—— 绿点留给「任务完成」，不表示连接
   &.connected .chip-icon {
-    color: var(--color-accent-text);
+    color: var(--color-text-primary);
   }
 }
 

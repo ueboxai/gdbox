@@ -29,23 +29,23 @@ export function useContextChips() {
         t('assistant.contextChips.analytics.1'),
         t('assistant.contextChips.analytics.2')
       ]
-    } else if (hit(['blueprint', '蓝图', 'bp'])) {
+    } else if (hit(['script', '脚本', 'gdscript', '.gd'])) {
       contextChips.value = [
-        t('assistant.contextChips.blueprint.0'),
-        t('assistant.contextChips.blueprint.1'),
-        t('assistant.contextChips.blueprint.2')
+        t('assistant.contextChips.script.0'),
+        t('assistant.contextChips.script.1'),
+        t('assistant.contextChips.script.2')
       ]
-    } else if (hit(['material', '材质', 'shader', '着色器'])) {
+    } else if (hit(['shader', '着色器', 'gdshader'])) {
       contextChips.value = [
-        t('assistant.contextChips.material.0'),
-        t('assistant.contextChips.material.1'),
-        t('assistant.contextChips.material.2')
+        t('assistant.contextChips.shader.0'),
+        t('assistant.contextChips.shader.1'),
+        t('assistant.contextChips.shader.2')
       ]
-    } else if (hit(['niagara', '粒子'])) {
+    } else if (hit(['particle', '粒子'])) {
       contextChips.value = [
-        t('assistant.contextChips.niagara.0'),
-        t('assistant.contextChips.niagara.1'),
-        t('assistant.contextChips.niagara.2')
+        t('assistant.contextChips.particles.0'),
+        t('assistant.contextChips.particles.1'),
+        t('assistant.contextChips.particles.2')
       ]
     } else if (hit(['physics', '物理', '碰撞'])) {
       contextChips.value = [
@@ -53,13 +53,13 @@ export function useContextChips() {
         t('assistant.contextChips.physics.1'),
         t('assistant.contextChips.physics.2')
       ]
-    } else if (hit(['animation', '动画', 'sequencer'])) {
+    } else if (hit(['animation', '动画'])) {
       contextChips.value = [
         t('assistant.contextChips.animation.0'),
         t('assistant.contextChips.animation.1'),
         t('assistant.contextChips.animation.2')
       ]
-    } else if (hit(['package', '打包', 'build', '构建', '部署'])) {
+    } else if (hit(['export', '导出', '打包', 'build', '构建', '部署'])) {
       contextChips.value = [
         t('assistant.contextChips.package.0'),
         t('assistant.contextChips.package.1'),
@@ -71,13 +71,13 @@ export function useContextChips() {
         t('assistant.contextChips.performance.1'),
         t('assistant.contextChips.performance.2')
       ]
-    } else if (hit(['ai', '行为树', 'pathfinding', '寻路'])) {
+    } else if (hit(['ai', '状态机', 'pathfinding', '寻路'])) {
       contextChips.value = [
         t('assistant.contextChips.ai.0'),
         t('assistant.contextChips.ai.1'),
         t('assistant.contextChips.ai.2')
       ]
-    } else if (hit(['input', '绑定', '控件'])) {
+    } else if (hit(['input', '输入', '按键'])) {
       contextChips.value = [
         t('assistant.contextChips.input.0'),
         t('assistant.contextChips.input.1'),

@@ -6,13 +6,11 @@
     </div>
     <div class="right">
       <!--
-        这条对话属于哪个 UE 工程。知识库里用的是**同一个** —— 知识库原来另有一套
+        这条对话属于哪个工程。知识库里用的是**同一个** —— 知识库原来另有一套
         「关联工程」（存在 notebook 表上），那套只改了这里的显示，从来没有传进
-        主进程，也就从来没有真的把 ue.* 工具指向那个工程。留着两套的结果是
+        主进程，也就从来没有真的把引擎工具指向那个工程。留着两套的结果是
         用户以为绑了、模型那边毫无变化。
       -->
-      <!-- 状态监控放在工程胶囊左边；欢迎页把胶囊挪走了，它照样留在顶栏 -->
-      <EditorStatusMonitor :chat-sid="chatSid" :pending-project-name="pendingProjectName" />
       <SessionProjectChip
         v-if="!hideProjectChip"
         :chat-sid="chatSid"
@@ -55,7 +53,6 @@ import AppMenuItem from '@renderer/components/AppMenuItem.vue'
 import { PhDotsThree } from '@phosphor-icons/vue'
 import { useI18n } from 'vue-i18n'
 import SessionProjectChip from './SessionProjectChip.vue'
-import EditorStatusMonitor from './EditorStatusMonitor.vue'
 
 /**
  * TopNav 组件属性
@@ -63,7 +60,7 @@ import EditorStatusMonitor from './EditorStatusMonitor.vue'
  */
 defineProps<{
   notebookMode?: boolean
-  /** 当前对话 ID，用于在右上角显示这条对话属于哪个 UE 工程 */
+  /** 当前对话 ID，用于在右上角显示这条对话属于哪个工程 */
   chatSid?: string
   /** 对话还没建出来时的待定工程归属（侧边栏在工程标题上点「+」新建的对话） */
   pendingProjectName?: string

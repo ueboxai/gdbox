@@ -62,40 +62,6 @@ watch(deleteConfirm, (val) => {
 // 得离开资产库翻到这一页，改完还得翻回去 —— 而且改完那边并不刷新，
 // 因为资产页从来没监听过这个 localStorage 事件
 
-// ==============================
-// 压缩包导入询问
-// ==============================
-//
-// 往资产库里拖 zip 不问、也不解 —— 用户可能就是想把包存起来。只有他真的要把这个包
-// 导进 UE 工程时才问一次「解压还是原样复制」。这个开关管的就是那一次询问。
-//
-// 存的是**动作**而不是布尔：关掉询问以后总得有个默认行为，勾了「不再询问」时
-// 用户点的哪个按钮，以后就一直走哪个。
-const ARCHIVE_ACTION_KEY = 'assetManagement.archiveImportAction'
-
-const archiveImportAsk = ref(!localStorage.getItem(ARCHIVE_ACTION_KEY))
-
-watch(archiveImportAsk, (val) => {
-  if (val) {
-    // 恢复询问 -> 忘掉上次记住的动作
-    localStorage.removeItem(ARCHIVE_ACTION_KEY)
-    window.dispatchEvent(
-      new CustomEvent('local-storage-change', {
-        detail: { key: ARCHIVE_ACTION_KEY, value: null }
-      })
-    )
-  } else {
-    // 从设置里关掉询问时用户没有在选动作，默认「解压后导入」——
-    // 把压缩包原样丢进工程是极少数情况，不该成为静默的默认值。
-    localStorage.setItem(ARCHIVE_ACTION_KEY, 'extract')
-    window.dispatchEvent(
-      new CustomEvent('local-storage-change', {
-        detail: { key: ARCHIVE_ACTION_KEY, value: 'extract' }
-      })
-    )
-  }
-})
-
 // 「导入并发数」删了。它是个全局值，会盖掉渲染层按库类型算好的那三档
 // （远端 HTTP 库 2、局域网库 1、本地库 3，见 AssetManagement/index.vue）——
 // 填 10 就是拿 10 路并发去压一个代码里特意限到 1 的 SMB 共享。
@@ -381,9 +347,6 @@ const handleStorageChange = (e: StorageEvent) => {
   if (e.key === SKIP_CONFIRM_KEY) {
     deleteConfirm.value = e.newValue !== 'true'
   }
-  if (e.key === ARCHIVE_ACTION_KEY) {
-    archiveImportAsk.value = !e.newValue
-  }
   if (e.key === DEFAULT_APPS_KEY) {
     loadDefaultApps()
   }
@@ -395,9 +358,6 @@ const handleStorageChange = (e: StorageEvent) => {
 const handleCustomStorageChange = (e: CustomEvent) => {
   if (e.detail?.key === SKIP_CONFIRM_KEY) {
     deleteConfirm.value = localStorage.getItem(SKIP_CONFIRM_KEY) !== 'true'
-  }
-  if (e.detail?.key === ARCHIVE_ACTION_KEY) {
-    archiveImportAsk.value = !localStorage.getItem(ARCHIVE_ACTION_KEY)
   }
   if (e.detail?.key === DEFAULT_APPS_KEY) {
     loadDefaultApps()
@@ -551,20 +511,6 @@ onUnmounted(() => {
           </div>
           <div class="row-control">
             <AppSwitch v-model:checked="deleteConfirm" />
-          </div>
-        </div>
-
-        <!-- Archive Import Confirm Row -->
-        <div class="setting-row">
-          <div class="row-icon">
-            <PhInfo />
-          </div>
-          <div class="row-content">
-            <div class="row-title">{{ $t('profile.asset.archiveImportAsk') }}</div>
-            <div class="row-desc">{{ $t('profile.asset.archiveImportAskDesc') }}</div>
-          </div>
-          <div class="row-control">
-            <AppSwitch v-model:checked="archiveImportAsk" />
           </div>
         </div>
       </div>

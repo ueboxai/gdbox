@@ -1884,16 +1884,6 @@ function rowDetail(group: ChangeGroup): string {
 function changeLabel(change: { toolName: string; detail?: string }): string {
   if (isMcpChange(change)) return t('assistant.changes.tools.mcpEngineToolset')
 
-  // 插件管理的启停方向在参数里，一个工具拆成两句话说清「到底启了还是停了」。
-  // 查不到方向（历史旧消息存的条目没有 detail）才退回含糊的「启用/停用插件」
-  if (change.toolName === 'ue_manage_plugin' && change.detail) {
-    return t(
-      change.detail === 'Disable'
-        ? 'assistant.changes.tools.ue_manage_plugin_disable'
-        : 'assistant.changes.tools.ue_manage_plugin_enable'
-    )
-  }
-
   const key = changeLabelKey(change.toolName)
   const label = t(key)
   // vue-i18n 查不到 key 时原样回 key 本身

@@ -1,5 +1,5 @@
 /**
- * `uebox tools list / show / call`。
+ * `gdbox tools list / show / call`。
  *
  * ## list 只给名字和简述，show 才给完整 schema
  *
@@ -14,10 +14,17 @@
  */
 
 import { success, type Envelope } from '../envelope.js'
-import { UeboxError } from '../errors.js'
+import { GdboxError } from '../errors.js'
 import * as runtime from '../runtime.js'
+import { localProject, type ResolvedProject } from '../project.js'
 import { readToolArgs } from '../toolArgs.js'
-import { requireSupported, search, supportedTools, type CatalogTool } from '../tools.js'
+import {
+  acceptsProjectPath,
+  requireSupported,
+  search,
+  supportedTools,
+  type CatalogTool
+} from '../tools.js'
 
 export interface ToolsOptions {
   configPath?: string
@@ -120,8 +127,16 @@ export async function runToolsShow(options: ToolsOptions & { name: string }): Pr
         projectScoped: tool.meta.projectScoped,
         requiresAllowWrite: tool.write,
         ...(tool.meta.projectScoped
-          ? { projectRequirement: '这个工具要操作具体的 UE 工程，调用时需要能定下目标工程。' }
-          : {})
+          ? {
+              projectRequirement:
+                '这个工具操作用户开着的 Godot 编辑器，调用时要能定下目标工程，且那个工程的编辑器连着。'
+            }
+          : acceptsProjectPath(tool)
+            ? {
+                projectRequirement:
+                  '参数里没给 project_path 时，CLI 用 --project 或当前目录所在的工程补上。'
+              }
+            : {})
       },
       warnings: tool.write ? ['这个工具会改动东西，调用时要加 --allow-write。'] : []
     })
@@ -149,24 +164,31 @@ export async function runToolsCall(
     const all = await runtime.catalog(rt)
     const tool = requireSupported(all, options.name, options.allowWrite === true)
 
-    // 与工程无关的工具不强绑目标（§5）—— 强绑会让它们在引擎没连上时也失败，
-    // 而那正是最需要它们的时候
-    const project = tool.meta.projectScoped
-      ? await runtime.targetProject(rt, options.project)
-      : null
+    /*
+     * 目标工程怎么交过去，看工具要什么：
+     *
+     *   - 编辑器类（projectScoped）：走请求元数据，由盒子核对那个工程的编辑器
+     *     连没连着。定不下来（前两级没线索、盒子又给不出清单）就不带，让盒子
+     *     按「恰好一个连接」自己判 —— 它同样不猜。
+     *   - 参数里有 `project_path` 的（godot_check 这类无头工具）：调用方没填就
+     *     用 --project / 当前目录补上。**不走元数据**：元数据要求编辑器连着，
+     *     而无头工具本来就不需要编辑器。
+     *   - 其余工具与工程无关，不强绑（§5）。
+     */
+    let project: ResolvedProject | undefined
+    if (tool.meta.projectScoped) {
+      project = await runtime.targetProject(rt, options.project, all)
+    } else if (acceptsProjectPath(tool) && args.project_path === undefined) {
+      project = await localProject(options.project)
+      if (project) args.project_path = project.path
+    }
 
     /*
-     * `tools call` 一律原样转发，不再按工具名分流到 `runWrite`。
+     * `tools call` 一律原样转发，不按工具名收窄参数。
      *
-     * ## 为什么把那条分流去掉了
-     *
-     * `runWrite` 那一层会**收窄参数**：`ue_set_transform` 只放行绝对 `set`，
-     * `ue_destroy_actor` 只放行单个具名目标。在准入表时代这是准入条件本身 ——
-     * 不收窄就没有确定的回读判据，那个工具根本进不了 CLI。
-     *
-     * 门拆了之后，同一段代码的效果就反过来了：它会让 `tools call` 比盒子自己的
-     * agent **更窄**，`--operation add` 这类完全正常的调用被 CLI 挡在半路，
-     * 而挡它的理由（CLI 写不出回读判据）是 CLI 的局限，不是用户的问题。
+     * 收窄会让 `tools call` 比盒子自己的 agent **更窄**：完全正常的调用被 CLI
+     * 挡在半路，而挡它的理由（CLI 写不出每个工具的回读判据）是 CLI 的局限，
+     * 不是用户的问题。
      *
      * 所以 `tools call` 是对等入口，转发什么就发什么，核实由工具自己的返回值
      * 负责（这个仓库的硬规矩：工具不回读就不许报 success）。
@@ -179,15 +201,20 @@ export async function runToolsCall(
      */
     let result: runtime.ToolCallResult
     try {
-      result = await runtime.callTool(rt, tool.name, args, project?.path)
+      result = await runtime.callTool(
+        rt,
+        tool.name,
+        args,
+        tool.meta.projectScoped ? project?.path : undefined
+      )
     } catch (error) {
-      throw error instanceof UeboxError && error.code === 'TIMEOUT' && tool.write
-        ? new UeboxError(
+      throw error instanceof GdboxError && error.code === 'TIMEOUT' && tool.write
+        ? new GdboxError(
             'TIMEOUT',
             `${tool.name} 的执行结局不明（请求已发出，未收到结果）。`,
             '不要直接重发 —— 先用只读工具查一遍它到底做了没有' +
-              '（工程里的资产用 ue_content_search，工程库用 project_list，' +
-              '关卡里的对象用 ue_get_actor）。确认没做才重发。',
+              '（场景结构用 editor_scene_tree，脚本和资源用 godot_check，' +
+              '工程库用 project_list）。确认没做才重发。',
             'unknown'
           )
         : error

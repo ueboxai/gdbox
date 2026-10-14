@@ -23,7 +23,7 @@ const brandSurfaces = [
   'src/renderer/src/views/System/Onboarding/LanguageGate.vue'
 ].map((file) => readFileSync(resolve(process.cwd(), file), 'utf8'))
 
-describe('Unreal Box brand mark', () => {
+describe('GDBox brand mark', () => {
   it('uses the shared viewport mark on every in-app brand surface', () => {
     const viewportPath = 'M27 10H10v17M37 10h17v17M54 37v17H37M27 54H10V37'
 
@@ -68,6 +68,6 @@ describe('Unreal Box brand mark', () => {
     expect(darkAppIconSource).toContain('transform="translate(16 16) scale(7.5)"')
     expect(darkAppIconSource).toContain('fill="#17191c"')
     expect(darkAppIconSource).toContain('stroke="#f2f1ed"')
-    expect(darkAppIconSource).toContain('stroke="#9aa0a6"')
+    expect(darkAppIconSource).toContain('fill="#9aa0a6"')
   })
 })

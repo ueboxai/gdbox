@@ -1,10 +1,10 @@
 /**
- * 一层经验的目录。两层用同一个类：本工程 `<工程>/.uebox/experience/`，
+ * 一层经验的目录。两层用同一个类：本工程 `<工程>/.gdbox/experience/`，
  * 通用 `<userData>/experience/`（见 `session.ts`）。下面以本工程为例。
  *
  * ```
  * experience/
- *   ue_run_python_script.md   按工具分文件（见 experienceFile.ts）
+ *   godot_check.md            按工具分文件（见 experienceFile.ts）
  *   .ledger.json              统计（出场/采纳/对照），删了只会让试用期重来
  *   .history/<时间>/          每次整理前的快照，回滚就是拷回来
  * ```
@@ -39,7 +39,7 @@ export function experienceDir(projectRoot?: string): string | undefined {
   if (!projectRoot) return undefined
   const root = projectRoot.toLowerCase().endsWith('.uproject') ? dirname(projectRoot) : projectRoot
   if (!root || basename(root) === '') return undefined
-  return join(root, '.uebox', 'experience')
+  return join(root, '.gdbox', 'experience')
 }
 
 interface LedgerFile {

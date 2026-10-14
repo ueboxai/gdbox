@@ -24,7 +24,6 @@ import {
   PhPalette,
   PhPlugs,
   PhRobot,
-  PhSquaresFour,
   PhToolbox,
   PhUsersThree,
   PhVideoCamera
@@ -194,11 +193,6 @@ const menuGroups: MenuGroup[] = [
         key: 'objectStorage',
         labelKey: 'profile.menu.objectStorage',
         icon: PhCloudArrowUp
-      },
-      {
-        key: 'plugin',
-        labelKey: 'profile.menu.plugin',
-        icon: PhSquaresFour
       },
       {
         key: 'screenRecorder',

@@ -1,5 +1,5 @@
 {
-  // 第三个 TS 工程：独立的 uebox CLI。
+  // 第三个 TS 工程：独立的 gdbox CLI。
   //
   // 必须单独列一份，不能指望 `tsconfig.node.json` 顺带查到 —— 那份的 include
   // 只有 `src/main` / `src/preload` / `src/shared` / `src/renderer/src/types`，

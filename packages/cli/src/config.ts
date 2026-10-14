@@ -3,8 +3,7 @@
  *
  * ## 为什么不需要 setup
  *
- * 以前要先跑一次 `uebox setup`，把盒子配置的路径记进 CLI 自己的配置文件。
- * 可那份文件只可能在两个固定位置之一，每次现找也来得及；而装机版的 CLI 是
+ * 盒子的配置只可能在两个固定位置之一，每次现找也来得及；而装机版的 CLI 是
  * 用盒子自己的 exe 启动的，天生知道自己属于哪个盒子。多一步「关联」只是
  * 多一道第一次用就可能卡住的门（Claude Code 的 App 和 CLI 读同一处配置，
  * 也没有这一步）。
@@ -21,13 +20,16 @@ import { promises as fs } from 'node:fs'
 import { homedir, platform } from 'node:os'
 import { join, resolve } from 'node:path'
 
-import { UeboxError } from './errors.js'
+import { GdboxError } from './errors.js'
 
 /** 盒子写在 userData 下的那份配置文件名（见主仓库 `capabilities/mcp/hostStore.ts`） */
 const HOST_CONFIG_FILE = 'mcp-server.json'
 
-/** CLI 自己的配置目录名 */
-const CLI_DIR = 'unreal-box-cli'
+/** 正式安装包的 userData 目录名：electron-builder 的 `productName` */
+const INSTALLED_DIR = 'GDBox'
+
+/** 开发版的 userData 目录名：`app.getName()` 取的是 package.json 的 `name` */
+const DEV_DIR = 'gdbox'
 
 /**
  * Electron `app.getPath('appData')` 在各平台的落点。
@@ -46,31 +48,22 @@ export function appDataDir(env: NodeJS.ProcessEnv = process.env): string {
 }
 
 /**
- * 盒子配置的候选位置。
+ * 盒子配置的候选位置，顺序是 `[开发版, 正式版]`。
  *
- * 两个候选对应两种安装：
- *   - `unreal-box` —— 开发版。`app.getName()` 取的是 package.json 的 `name`
- *   - `虚幻盒子`   —— 正式安装包。electron-builder 的 `productName`
+ * 两个目录名只差大小写（`gdbox` / `GDBox`）。Windows 和 macOS 默认的文件系统
+ * 不分大小写，那上面两个候选其实是**同一个文件** —— 开发版和正式版共用一份
+ * 配置；只有区分大小写的文件系统（Linux）上才真是两处。`discoverHostConfig`
+ * 按文件身份去重，不按路径字符串。
  *
  * **只查这两个明确候选，不扫用户目录。** 一个「帮你找找」的全盘扫描会读到
  * 用户所有应用的配置文件，而它要找的东西本来就只可能在这两处之一。
  *
- * 两处都没有时让用户用 `--config` / `UEBOX_HOST_CONFIG` 指定，不能挑一个
+ * 两处都没有时让用户用 `--config` / `GDBOX_HOST_CONFIG` 指定，不能挑一个
  * 看着像的就报成功。
  */
 export function hostConfigCandidates(env: NodeJS.ProcessEnv = process.env): string[] {
   const base = appDataDir(env)
-  return [join(base, 'unreal-box', HOST_CONFIG_FILE), join(base, '虚幻盒子', HOST_CONFIG_FILE)]
-}
-
-/**
- * 旧版 `uebox setup` 写下的那份文件。
- *
- * 只剩兼容用途：开发版和正式版同时装着的机器上，它记着用户当初选的是哪一个。
- * 没有它不影响任何事，CLI 不再写它。
- */
-export function legacyCliConfigPath(env: NodeJS.ProcessEnv = process.env): string {
-  return join(appDataDir(env), CLI_DIR, 'config.json')
+  return [join(base, DEV_DIR, HOST_CONFIG_FILE), join(base, INSTALLED_DIR, HOST_CONFIG_FILE)]
 }
 
 /** 从盒子配置里读出来的、这次连接要用的东西 */
@@ -107,30 +100,26 @@ export async function readHostConfig(path: string): Promise<HostConnection> {
     // 带 BOM 的 JSON 用 JSON.parse 会直接抛，先摘掉
     parsed = JSON.parse(stripBom(text))
   } catch (error) {
-    throw new UeboxError(
+    throw new GdboxError(
       'CONFIG_INVALID',
       `盒子配置不是合法 JSON：${path}（${(error as Error).message}）`,
       // 「重开一次服务」在服务默认开着之后就不再是个动作了。改设置才一定触发重写
-      '去虚幻盒子的「MCP」设置页动一下设置（比如重置令牌），盒子会重写这个文件。'
+      '去 GDBox 的「设置 → MCP」动一下设置（比如重置令牌），GDBox 会重写这个文件。'
     )
   }
-
-  // 旧版 setup 写的 CLI 配置只记着一个路径。有人把 --config 指到它上面时，顺着找过去
-  const legacy = (parsed as { hostConfigPath?: unknown } | null)?.hostConfigPath
-  if (typeof legacy === 'string' && legacy) return readHostConfig(legacy)
 
   const settings = parsed as Partial<HostSettings> | null
   const port = Number(settings?.port)
   const token = typeof settings?.token === 'string' ? settings.token.trim() : ''
 
   if (!Number.isInteger(port) || port <= 0 || port >= 65536) {
-    throw new UeboxError('CONFIG_INVALID', `盒子配置里的端口无效：${path}`)
+    throw new GdboxError('CONFIG_INVALID', `盒子配置里的端口无效：${path}`)
   }
   if (!token) {
-    throw new UeboxError(
+    throw new GdboxError(
       'CONFIG_INVALID',
       `盒子配置里没有访问令牌：${path}`,
-      '在虚幻盒子的 MCP 设置里开一次对外服务，令牌会在那时生成。'
+      '在 GDBox 的「设置 → MCP → 共享引擎能力」里开一次服务，令牌会在那时生成。'
     )
   }
 
@@ -151,14 +140,14 @@ export async function readHostConfig(path: string): Promise<HostConnection> {
 export function connectionFromEnv(
   env: NodeJS.ProcessEnv = process.env
 ): HostConnection | undefined {
-  const url = env.UEBOX_URL?.trim()
-  const token = env.UEBOX_TOKEN?.trim()
+  const url = env.GDBOX_URL?.trim()
+  const token = env.GDBOX_TOKEN?.trim()
 
   if (!url && !token) return undefined
   if (!url || !token) {
-    throw new UeboxError(
+    throw new GdboxError(
       'CONFIG_INVALID',
-      'UEBOX_URL 和 UEBOX_TOKEN 必须同时提供。',
+      'GDBOX_URL 和 GDBOX_TOKEN 必须同时提供。',
       '只设置其中一个是配置错误，不会退回去读配置文件。'
     )
   }
@@ -167,18 +156,18 @@ export function connectionFromEnv(
   try {
     parsed = new URL(url)
   } catch {
-    throw new UeboxError('CONFIG_INVALID', `UEBOX_URL 不是合法的 URL：${url}`)
+    throw new GdboxError('CONFIG_INVALID', `GDBOX_URL 不是合法的 URL：${url}`)
   }
 
   if (!isLoopbackHost(parsed.hostname)) {
-    throw new UeboxError(
+    throw new GdboxError(
       'CONFIG_INVALID',
-      `UEBOX_URL 只能指向本机回环地址，收到 ${parsed.hostname}。`,
-      '虚幻盒子的对外服务只监听 127.0.0.1，往别的地址发令牌没有正当用途。'
+      `GDBOX_URL 只能指向本机回环地址，收到 ${parsed.hostname}。`,
+      'GDBox 的对外服务只监听 127.0.0.1，往别的地址发令牌没有正当用途。'
     )
   }
 
-  return { url: parsed.toString(), token, source: 'UEBOX_URL / UEBOX_TOKEN' }
+  return { url: parsed.toString(), token, source: 'GDBOX_URL / GDBOX_TOKEN' }
 }
 
 export function isLoopbackHost(hostname: string): boolean {
@@ -216,28 +205,28 @@ export function stripBom(text: string): string {
  *
  * 退出码两者都是 3：对只看退出码的脚本来说都是「配置这一环没搞定」。
  */
-function describeReadFailure(error: unknown, path: string): UeboxError {
+function describeReadFailure(error: unknown, path: string): GdboxError {
   const code = (error as NodeJS.ErrnoException)?.code
 
   if (code === 'ENOENT') {
-    return new UeboxError(
+    return new GdboxError(
       'CONFIG_MISSING',
       `读不到盒子配置：${path}`,
-      '确认虚幻盒子已安装并至少启动过一次；装在别处就用 --config <路径> 或 UEBOX_HOST_CONFIG 指定。'
+      '确认 GDBox 已安装并至少启动过一次；装在别处就用 --config <路径> 或 GDBOX_HOST_CONFIG 指定。'
     )
   }
 
   if (code === 'EACCES' || code === 'EPERM') {
-    return new UeboxError(
+    return new GdboxError(
       'CONFIG_UNREADABLE',
       `没有读取权限，打不开配置文件：${path}`,
       '文件是在的，缺的是权限 —— 不用重装盒子。' +
-        '在沙箱或受限环境里跑时，把这个路径加进可读范围；或者改用 UEBOX_URL / UEBOX_TOKEN 环境变量。'
+        '在沙箱或受限环境里跑时，把这个路径加进可读范围；或者改用 GDBOX_URL / GDBOX_TOKEN 环境变量。'
     )
   }
 
   if (code === 'EISDIR') {
-    return new UeboxError(
+    return new GdboxError(
       'CONFIG_UNREADABLE',
       `这是一个目录，不是配置文件：${path}`,
       '指到具体的 .json 文件上。'
@@ -245,7 +234,7 @@ function describeReadFailure(error: unknown, path: string): UeboxError {
   }
 
   // 认不出来的错误保留系统原文，不猜。猜错会把人支到另一个方向去
-  return new UeboxError(
+  return new GdboxError(
     'CONFIG_UNREADABLE',
     `打不开配置文件：${path}（${(error as Error)?.message ?? String(error)}）`
   )
@@ -257,10 +246,9 @@ function describeReadFailure(error: unknown, path: string): UeboxError {
  * 这次运行用哪个连接。
  *
  * 顺序：
- *   1. `UEBOX_URL` / `UEBOX_TOKEN` —— 自动化在不碰任何文件的前提下跑起来
- *   2. `--config` / `UEBOX_HOST_CONFIG` —— 盒子装在非常规位置
- *   3. 旧版 setup 留下的记录 —— 两个盒子都装着的机器上，它记着当初选的哪个
- *   4. 在两个固定位置里找（见 `discoverHostConfig`）
+ *   1. `GDBOX_URL` / `GDBOX_TOKEN` —— 自动化在不碰任何文件的前提下跑起来
+ *   2. `--config` / `GDBOX_HOST_CONFIG` —— 盒子装在非常规位置
+ *   3. 在两个固定位置里找（见 `discoverHostConfig`）
  */
 export async function resolveConnection(options: {
   configPath?: string
@@ -273,11 +261,8 @@ export async function resolveConnection(options: {
   const fromEnv = connectionFromEnv(env)
   if (fromEnv) return fromEnv
 
-  const explicit = options.configPath ?? env.UEBOX_HOST_CONFIG?.trim()
+  const explicit = options.configPath ?? env.GDBOX_HOST_CONFIG?.trim()
   if (explicit) return readHostConfig(resolve(explicit))
-
-  const remembered = await legacyTarget(legacyCliConfigPath(env))
-  if (remembered) return readHostConfig(remembered)
 
   return readHostConfig(
     await discoverHostConfig(env, options.bundled ?? Boolean(process.versions.electron))
@@ -287,61 +272,55 @@ export async function resolveConnection(options: {
 /**
  * 在两个固定位置里找盒子配置。
  *
- * 恰好一个就用它。两个都在（开发版和正式版同时装着）时**不替用户挑** ——
- * 两个是不同的安装，各有各的令牌和端口，挑错了表现是「连上了但工程对不上」。
- * 唯一的例外是装机版 CLI：它是用正式版的 exe 启动的，属于哪个盒子没有疑问。
+ * 恰好一个就用它。两个都在、而且确实是两个文件（区分大小写的文件系统上
+ * 开发版和正式版同时装着）时**不替用户挑** —— 两个是不同的安装，各有各的
+ * 令牌和端口，挑错了表现是「连上了但工程对不上」。唯一的例外是装机版 CLI：
+ * 它是用正式版的 exe 启动的，属于哪个盒子没有疑问。
  */
 export async function discoverHostConfig(
   env: NodeJS.ProcessEnv,
   bundled: boolean
 ): Promise<string> {
   const [dev, installed] = hostConfigCandidates(env)
-  if (bundled && (await isFile(installed))) return installed
+  if (bundled && (await fileId(installed))) return installed
 
   const found: string[] = []
+  const seen = new Set<string>()
   for (const candidate of [dev, installed]) {
-    if (await isFile(candidate)) found.push(candidate)
+    const id = await fileId(candidate)
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    found.push(candidate)
   }
   if (found.length === 1) return found[0]
 
   if (found.length === 0) {
-    throw new UeboxError(
+    throw new GdboxError(
       'CONFIG_MISSING',
-      `在已知位置找不到虚幻盒子的配置。查过这些：\n  ${dev}\n  ${installed}`,
+      `在已知位置找不到 GDBox 的配置。查过这些：\n  ${dev}\n  ${installed}`,
       // 对外服务默认开着，所以「启动过一次」就足以写下这份配置
-      '先启动一次虚幻盒子，它会写下这份配置；装在别处就用 --config <路径> 或 UEBOX_HOST_CONFIG 指定。'
+      '先启动一次 GDBox，它会写下这份配置；装在别处就用 --config <路径> 或 GDBOX_HOST_CONFIG 指定。'
     )
   }
 
-  throw new UeboxError(
+  throw new GdboxError(
     'CONFIG_INVALID',
-    `找到 ${found.length} 份虚幻盒子配置，无法确定用哪一份：\n  ${found.join('\n  ')}`,
-    '用 --config <路径> 或 UEBOX_HOST_CONFIG 明确指定一份。'
+    `找到 ${found.length} 份 GDBox 配置，无法确定用哪一份：\n  ${found.join('\n  ')}`,
+    '用 --config <路径> 或 GDBOX_HOST_CONFIG 明确指定一份。'
   )
 }
 
 /**
- * 旧版记录指向的那份盒子配置 —— 只在它还在的时候。
+ * 文件身份（设备号 + inode），不是文件就返回 undefined。
  *
- * 记录坏了、指向的盒子已经卸载了，都当没有这份记录，接着往下找：它只是个
- * 偏好，不该因为它过期就让本来找得到的盒子连不上。
+ * 用它而不是路径字符串去重：大小写不敏感的文件系统上 `gdbox/` 和 `GDBox/`
+ * 是同一个目录，按字符串比会把一份配置当成两份，然后报「无法确定用哪一份」。
  */
-async function legacyTarget(path: string): Promise<string | undefined> {
+async function fileId(path: string): Promise<string | undefined> {
   try {
-    const parsed = JSON.parse(stripBom(await fs.readFile(path, 'utf8'))) as {
-      hostConfigPath?: unknown
-    }
-    const target = parsed?.hostConfigPath
-    return typeof target === 'string' && (await isFile(target)) ? target : undefined
+    const stats = await fs.stat(path)
+    return stats.isFile() ? `${stats.dev}:${stats.ino}` : undefined
   } catch {
     return undefined
-  }
-}
-
-async function isFile(path: string): Promise<boolean> {
-  try {
-    return (await fs.stat(path)).isFile()
-  } catch {
-    return false
   }
 }

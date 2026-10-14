@@ -14,7 +14,6 @@ function get(obj: unknown, path: string): unknown {
 }
 
 const bilingualToastKeys = [
-  'page.home.engine.startSuccess',
   'assetLib.contextMenu.useAsReferenceSuccess',
   'assetLib.baiduyun.upload.error.api',
   'notebook.list.renameEmpty',
@@ -153,8 +152,7 @@ describe('Toast 文案', () => {
       'src/renderer/src/views/Notebook/NotebookDetail.vue',
       'src/renderer/src/views/AssetManagement/Baiduyun.vue',
       'src/renderer/src/views/AssetManagement/components/AssetFileList.vue',
-      'src/renderer/src/views/Assistant/composables/agentStreamHandlers.ts',
-      'src/renderer/src/views/Home/components/EngineSection.vue'
+      'src/renderer/src/views/Assistant/composables/agentStreamHandlers.ts'
     ]
       .map((file) => readFileSync(resolve(file), 'utf8'))
       .join('\n')

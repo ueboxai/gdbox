@@ -4,13 +4,7 @@
     <header class="section-header">
       <div class="flex items-center gap-3">
         <h2 class="section-title">{{ t('page.home.project.title') }}</h2>
-        <AppButton
-          :title="t('page.home.project.createFromTemplate')"
-          @click="handleClickCreateProject"
-        >
-          <template #icon><PhStorefront /></template>
-        </AppButton>
-        <!-- 导入已有工程：跟「用模板建新工程」是两件事，各自一个入口 -->
+        <!-- 导入已有工程 -->
         <AppButton
           id="project-import-entry"
           :title="t('page.home.project.importExisting')"
@@ -212,12 +206,6 @@
     @success="handleRenameSuccess"
   />
 
-  <!-- 从模板创建工程弹窗 -->
-  <CreateProjectFromTemplateModal
-    v-model:open="createFromTemplateVisible"
-    @success="handleImportSuccess"
-  />
-
   <!-- 导入本机已有工程弹窗 -->
   <ImportProjectModal
     v-model:open="importProjectVisible"
@@ -265,7 +253,6 @@ import {
   PhPlus,
   PhSelectionSlash,
   PhPushPin,
-  PhStorefront,
   PhTrash
 } from '@phosphor-icons/vue'
 import ProjectCoverModal from './ProjectCoverModal.vue'
@@ -277,7 +264,6 @@ import { useConnectedProjects } from '@renderer/composables/useBridgeStatus'
 import { useEngineVersionLabel } from '@renderer/hooks/useEngineVersionLabel'
 import { ContextMenu, type MenuItem } from '@renderer/components/ContextMenu'
 import RenameProjectModal from './RenameProjectModal.vue'
-import CreateProjectFromTemplateModal from './CreateProjectFromTemplateModal.vue'
 import ImportProjectModal from './ImportProjectModal.vue'
 import CollectionNameModal from './CollectionNameModal.vue'
 import DragOverlay from '@renderer/components/DragOverlay.vue'
@@ -337,15 +323,15 @@ const isProjectConnected = (projectFilePath: string | null | undefined): boolean
   }
 
   /**
-   * 从 .uproject 文件路径提取项目目录路径
-   * @param filePath .uproject 文件路径或目录路径
+   * 从 project.godot 文件路径提取项目目录路径
+   * @param filePath project.godot 文件路径或目录路径
    * @returns 项目目录路径
    */
   const getProjectDir = (filePath: string): string => {
     const normalized = normalize(filePath)
     if (!normalized) return ''
-    // 如果路径以 .uproject 结尾，则去掉文件名部分
-    if (normalized.endsWith('.uproject')) {
+    // 如果路径以 project.godot 结尾，则去掉文件名部分
+    if (normalized.endsWith('/project.godot')) {
       const lastSlash = normalized.lastIndexOf('/')
       return lastSlash > 0 ? normalized.substring(0, lastSlash) : normalized
     }
@@ -478,10 +464,6 @@ const loadCollections = async () => {
   }
 }
 
-const handleClickCreateProject = () => {
-  createFromTemplateVisible.value = true
-}
-
 const refreshProjectSectionData = (): Promise<void> => {
   if (refreshInFlight) {
     refreshQueued = true
@@ -612,7 +594,7 @@ const engineOptions = computed(() => [
     .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
     .map((version) => ({
       value: version,
-      label: version === 'N/A' ? t('page.home.project.unknownEngineVersion') : `UE ${version}`
+      label: version === 'N/A' ? t('page.home.project.unknownEngineVersion') : `Godot ${version}`
     }))
 ])
 
@@ -1238,7 +1220,6 @@ const menuItems = ref<MenuItem[]>([])
 
 const blankMenuItems = computed<MenuItem[]>(() => [
   { key: 'import-project', label: t('page.home.project.menu.import'), icon: PhFolderOpen },
-  { key: 'create-project', label: t('page.home.project.menu.create'), icon: PhPlus },
   {
     key: 'create-collection',
     label: t('page.home.project.menu.createCollection'),
@@ -1397,7 +1378,6 @@ const handleProjectContextMenu = async (e: MouseEvent, item: ProjectRecord): Pro
   )
 }
 
-const createFromTemplateVisible = ref(false)
 const importProjectVisible = ref(false)
 
 const handleBlankAreaContextMenu = (e: MouseEvent) => {
@@ -1415,8 +1395,6 @@ const handleBlankMenuClick = async (key: string) => {
     } catch (err: any) {
       message.error(err?.message || '导入工程失败')
     }
-  } else if (key === 'create-project') {
-    createFromTemplateVisible.value = true
   } else if (key === 'create-collection') {
     handleCreateCollection()
   }

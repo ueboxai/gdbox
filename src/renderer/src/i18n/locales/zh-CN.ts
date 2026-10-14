@@ -1,9 +1,9 @@
 export default {
   mediaPermissions: {
     macScreenDenied:
-      '屏幕录制权限被拒绝。请在「系统设置 → 隐私与安全性 → 屏幕录制（或屏幕与系统音频录制）」中允许虚幻盒子，然后重启应用。',
+      '屏幕录制权限被拒绝。请在「系统设置 → 隐私与安全性 → 屏幕录制（或屏幕与系统音频录制）」中允许 GDBox，然后重启应用。',
     macMicrophoneDenied:
-      '麦克风权限被拒绝。请在「系统设置 → 隐私与安全性 → 麦克风」中允许虚幻盒子，然后重启应用。',
+      '麦克风权限被拒绝。请在「系统设置 → 隐私与安全性 → 麦克风」中允许 GDBox，然后重启应用。',
     sourcesFailed: '获取屏幕源失败：{error}',
     previewFailed: '无法预览屏幕：{error}'
   },
@@ -11,11 +11,6 @@ export default {
     projectLib: '项目库',
     assetLib: '资产库',
     assetDependency: '资产依赖关系图',
-    blueprintLib: '蓝图库',
-    blueprintDetail: '蓝图详情',
-    materialLib: '材质库',
-    materialDetail: '材质详情',
-    coCreateMarket: '共创市场',
     explore: '探索',
     assets: '资产',
     talents: '开发者',
@@ -34,7 +29,7 @@ export default {
     model3dStudio: '3D 工作室',
     aigcStudio: 'AI 创作',
     serverManagement: '服务器管理',
-    appName: '虚幻盒子'
+    appName: 'GDBox'
   },
   // 侧边栏工具定制：常驻名单与「更多」分组
   sidebarTools: {
@@ -53,7 +48,7 @@ export default {
     projectSessionCount: '{count} 个对话',
     newChatInProject: '在此工程下新建对话',
     unassigned: '对话',
-    unassignedHint: '没有关联 UE 工程的对话',
+    unassignedHint: '没有关联项目的对话',
     connected: '已连接',
     taskDone: '任务已完成，未查看',
     running: '正在运行',
@@ -74,13 +69,13 @@ export default {
       title: '添加项目',
       typeLabel: '项目类型',
       folder: '本地文件夹',
-      folderDesc: '从本机选择 UE 工程目录',
+      folderDesc: '从本机选择 Godot 项目目录',
       imported: '已导入的项目',
       importedDesc: '从资产库已导入的工程中选择',
       importedEmpty: '暂无已导入的项目',
       searchPlaceholder: '搜索项目名称或路径',
       searchEmpty: '未找到匹配项目',
-      pickFolderTitle: '选择 UE 工程目录',
+      pickFolderTitle: '选择 Godot 项目目录',
       pickFolderFailed: '打开文件夹选择框失败',
       next: '下一步',
       back: '上一步',
@@ -89,7 +84,7 @@ export default {
     empty: '暂无对话',
     loadMore: '显示更多',
     organize: '整理侧边栏',
-    groupByProject: '按 UE 工程',
+    groupByProject: '按项目',
     groupFlat: '在一个列表中',
     sortBy: '对话排序方式',
     sortRecent: '最近更新',
@@ -109,7 +104,7 @@ export default {
     moveToProject: '归入工程',
     removeFromProject: '不在项目中工作',
     newProjectGroup: '新建工程分组…',
-    projectNamePlaceholder: '请输入 UE 工程名',
+    projectNamePlaceholder: '请输入项目名',
     delete: '删除',
     deleteTitle: '确认删除',
     deleteContent: '确定要删除对话「{title}」吗？此操作不可撤销。',
@@ -134,9 +129,9 @@ export default {
   },
   ai: {
     followUpSystemPrompt:
-      '你是资深虚幻引擎技术助手。仅输出JSON且必须符合schema，字段为followUps（数组），包含2-3个站在用户立场的对assistant十个字以内的{lang}追加提问或指令建议，每个为可直接提问的完整句子，不要输出其它内容或解释。',
+      '你是资深 Godot 游戏开发技术助手。仅输出JSON且必须符合schema，字段为followUps（数组），包含2-3个站在用户立场的对assistant十个字以内的{lang}追加提问或指令建议，每个为可直接提问的完整句子，不要输出其它内容或解释。',
     followUpUserPrompt:
-      '基于上面的对话，站在用户当前的立场生成对assistant的{lang}追加和虚幻开发相关的提问建议或是对用户可能会回复的操作指令',
+      '基于上面的对话，站在用户当前的立场生成对assistant的{lang}追加和 Godot 开发相关的提问建议或是对用户可能会回复的操作指令',
     sessionTitleSystemPrompt:
       '你是对话标题生成器。根据用户发来的第一条消息，用{lang}起一个概括这段对话主题的标题，不超过15个字。只写主题本身，不要引号、不要句末标点、不要“关于”“如何”这类前缀，也不要复述整句话。仅输出JSON且必须符合schema，字段为title（字符串），不要输出其它内容或解释。',
     sessionRenameSystemPrompt:
@@ -154,7 +149,7 @@ export default {
     conflict: '{path} 正被「{session}」修改，本次未改动',
     dismiss: '知道了',
     unknownChat: '其他对话',
-    currentLevel: '当前关卡'
+    currentLevel: '当前场景'
   },
   agentV3Debug: {
     title: 'Agent V3 调试台',
@@ -200,7 +195,7 @@ export default {
       title: '接入外部 MCP 服务',
       description: '连接第三方 MCP 服务，扩展助手能力；可粘贴 Claude Desktop 格式的配置。',
       // 页面 Header 用这句短的。面板里不再重复标题，长描述用不上了
-      shortDescription: '给助手接入第三方能力，或把虚幻引擎开放给外部客户端。',
+      shortDescription: '给助手接入第三方能力，或把引擎能力开放给外部客户端。',
       empty: '尚未配置 MCP 服务。',
       configPath: '配置文件：{path}',
       // 上半页分两组：盒子自己装好的 vs 用户自己加的。原来这两类混在一起，
@@ -213,30 +208,6 @@ export default {
       // 收起态那一行要显示名字，还没填标识时给个占位
       newServer: '新服务'
     },
-    epicSetup: {
-      title: '开启虚幻引擎自带的 AI 工具集',
-      // 折叠行的标题。整块卡片压成一行之后，标题要短到能和状态并排
-      rowTitle: '虚幻引擎',
-      // noProject 那句是给展开区读的，太长挂不到行右端
-      noProjectShort: '未连接项目 · 请先在首页打开项目',
-      checking: '检查中…',
-      enable: '一键开启',
-      start: '启动服务',
-      working: '处理中…',
-      loading: '正在检查已连接的项目…',
-      // UE 没法热加载新插件模块，这一步骗不过去，只能如实说
-      needsRestart: '已配置 · 请重启编辑器',
-      unsupported: '引擎版本过低 · 需要 5.8+',
-      ready: '已开启 · 运行中',
-      // 只在「引擎那边好了、盒子还没接上」时出现，必须给下一步而不是干说一句已开启
-      readyHint: '引擎服务已在运行，虚幻盒子将在下次对话时自动连接。',
-      // 「按钮怎么不见了」最常见的原因，必须点破而不是留一片空白
-      // 不在这里提 5.8：用户一个项目都没连时就读到版本门槛，用 5.5 的会直接
-      // 认定「这功能跟我无关」而走开。版本不够有 unsupported 那条单独说
-      noProject: '尚未连接虚幻引擎项目。请先在首页打开项目，此处将显示该项目是否可用。',
-      failed: '检查失败：{error}。如刚更新过虚幻盒子，请重启应用后重试。',
-      hint: '会更新项目文件和编辑器偏好；可在虚幻引擎的 Edit > Plugins 中关闭。'
-    },
     blenderSetup: {
       title: '接入 Blender（官方 Blender Lab MCP）',
       rowTitle: 'Blender',
@@ -248,7 +219,7 @@ export default {
       // 装好之后能改的只有这两样。标识、连接方式、启动命令都是盒子自己写的，
       // 给输入框只会让用户改坏一条本来好好的配置 —— 要动就去「高级」
       pathLabel: 'Blender 程序路径',
-      pathHint: 'Blender 安装位置变更后请修改此处，虚幻盒子将按此路径启动 Blender。',
+      pathHint: 'Blender 安装位置变更后请修改此处，GDBox 将按此路径启动 Blender。',
       portLabel: '端口',
       reinstall: '重新安装',
       // 逃生口。做成链接不做成折叠区：这一页的层级已经够深了
@@ -263,7 +234,7 @@ export default {
       // 找不到 Blender 不是错误：便携版、网络盘上的本来就猜不到
       noBlender: '未找到 Blender',
       unsupported: '当前平台暂无安装脚本，仅支持 Windows 和 macOS。',
-      failed: '检查失败：{error}。如刚更新过虚幻盒子，请重启应用后重试。',
+      failed: '检查失败：{error}。如刚更新过 GDBox，请重启应用后重试。',
       hint: '将安装官方 Blender Lab 服务与 Blender 插件，并自动填写 MCP 配置。需要联网。',
       // 缺什么点名说，别合成一句「环境不满足」—— 那正是安装脚本原来的
       // 失败样子（一句 Command failed: git），用户看不出要去装什么
@@ -282,31 +253,18 @@ export default {
         }
       }
     },
-    engine: {
-      title: '虚幻引擎内置工具集',
-      // 用户没做任何配置就多出一块东西，必须说清楚它从哪来
-      description: '已自动接入所连接工程中虚幻引擎 5.8 的官方 MCP 工具。',
-      hint: '如需更改连接，请在下方添加相同标识的配置。',
-      readOnly: '自动发现',
-      // 「3 个工具」看起来像没接全 —— 这是真实被问过的一句「怎么只有三个工具」
-      connected: '已连接 · {count} 个入口',
-      // 重试放在看到问题的地方。走的是整批重连，主进程没有单独重连一条的口子
-      retry: '重试连接',
-      retrying: '连接中…',
-      twoTier: '每个入口都包含多种引擎操作，助手会按任务需要使用。'
-    },
     server: {
-      title: '共享虚幻引擎能力',
+      title: '共享引擎能力',
       label: '开放给外部客户端',
       // 第一层只给一行；可写时在权限设置中显示完整风险说明。
       shortNote:
-        '向 Codex、Claude Code 开放虚幻盒子助手的全部工具。仅限本机连接，需令牌，默认可写。',
+        '向 Codex、Claude Code 开放 GDBox 助手的全部工具。仅限本机连接，需令牌，默认可写。',
       securityNote:
-        '外部客户端可使用与虚幻盒子助手相同的全部工具，包括读写本机文件和执行命令。虚幻盒子不弹出审批窗口，是否拦截由客户端自身的审批设置决定。令牌一旦泄露，持有者即可修改你的工程和本机文件。',
+        '外部客户端可使用与 GDBox 助手相同的全部工具，包括读写本机文件和执行命令。GDBox 不弹出审批窗口，是否拦截由客户端自身的审批设置决定。令牌一旦泄露，持有者即可修改你的工程和本机文件。',
       // 服务停着的时候要用将来时。主开关明明是关的，却读到一句「会直接执行」，
       // 三处状态互相打架，用户只会以为自己开着一个危险的东西
       securityNoteIdle:
-        '开启后，外部客户端将可使用与虚幻盒子助手相同的全部工具，包括读写本机文件和执行命令。虚幻盒子不弹出审批窗口，是否拦截由客户端自身的审批设置决定。令牌一旦泄露，持有者即可修改你的工程和本机文件。',
+        '开启后，外部客户端将可使用与 GDBox 助手相同的全部工具，包括读写本机文件和执行命令。GDBox 不弹出审批窗口，是否拦截由客户端自身的审批设置决定。令牌一旦泄露，持有者即可修改你的工程和本机文件。',
       includeMutating: '外部客户端的权限',
       // 当前档位要直接说出来，别让用户从开关的明暗去推
       scopeReadOnly: '当前只读。打开后允许外部客户端创建、修改和删除。',
@@ -324,7 +282,7 @@ export default {
       // 完整那句仍在，挂 title 上，要对账的人够得着
       runningShort: '运行中 · 开放 {count} 个引擎工具',
       // 同一页三个「工具数」口径不同，不说清楚用户会拿它们互相对账
-      toolsNote: '此为虚幻盒子自身的引擎工具总数，与上方各第三方服务的工具数量无关。',
+      toolsNote: '此为 GDBox 自身的引擎工具总数，与上方各第三方服务的工具数量无关。',
       // 标题要点名说出里面有什么。风险可以折起来，但不能藏在一个叫「高级」的抽屉里
       advanced: '端口和权限',
       scopeTagReadOnly: '只读',
@@ -340,7 +298,7 @@ export default {
         '重置后，所有已配置此服务的外部客户端将立即断开连接，需重新粘贴配置。是否继续？',
       // 地址和令牌都在这段 JSON 里，说一句就不用再在别处各印一份
       clientHint: '粘贴到外部客户端的 MCP 配置文件中，其中已包含地址和令牌。',
-      autoStartHint: '此状态将被保存，下次启动虚幻盒子时自动运行。'
+      autoStartHint: '此状态将被保存，下次启动 GDBox 时自动运行。'
     },
     fields: {
       id: '标识',
@@ -754,7 +712,7 @@ export default {
     },
     creatorPlan: {
       title: 'Box Plan',
-      desc: '使用虚幻盒子订阅服务一键配置所有模型',
+      desc: '使用 GDBox 订阅服务一键配置所有模型',
       connect: '连接',
       connecting: '等待浏览器确认…',
       cancel: '取消',
@@ -946,7 +904,7 @@ export default {
       className: '类名',
       assetClass: '资产分类',
       softPath: '软路径',
-      softPathTooltip: ' - 点击复制，可用于快速在UE内容浏览器中定位资产',
+      softPathTooltip: ' - 点击复制',
       format: '格式',
       created: '创建',
       modified: '修改',
@@ -1034,18 +992,19 @@ export default {
       formatVideo: '视频',
       formatModel: '3D 模型',
       formatAudio: '音频',
-      formatCode: '代码',
-      formatUAsset: 'UE 资产',
+      formatScene: '场景',
+      formatResource: '资源',
+      formatScript: '脚本',
+      formatShader: '着色器',
+      formatFont: '字体',
       // 资产类型映射
       assetTypeMaterialInstance: '材质实例',
       assetTypeStaticMesh: '静态网格体',
-      assetTypeBlueprint: '蓝图',
       assetTypeTexture2D: '纹理2D',
       assetTypeMaterial: '主材质',
       assetTypeSkeletalMesh: '骨骼网格体',
       assetTypeAnimation: '动画',
       assetTypeSound: '音效',
-      assetTypeWorld: '关卡',
       assetTypeDataTable: '数据表',
       assetTypeCurve: '曲线',
       assetTypeFont: '字体',
@@ -1165,8 +1124,6 @@ export default {
       issueCountText: '异常条目：{count}',
       errorReportNote: '详细异常清单已写入 JSON 报告',
       openErrorReport: '打开报告所在位置',
-      unrealImportStarted: '正在从虚幻导入 {count} 项，请稍候…',
-      unrealImportDone: '虚幻导入完成：{count} 个资产',
       skipReason: {
         user_skip: '你选择了跳过',
         user_skip_all: '你选择了全部跳过',
@@ -1225,7 +1182,6 @@ export default {
       addTags: '添加标签',
       importToProject: '导入项目',
       pullProjectArchive: '取回工程整包…',
-      importPluginToProject: '导入插件到项目',
       delete: '删除',
       refresh: '刷新',
       newFolder: '新建文件夹',
@@ -1406,8 +1362,8 @@ export default {
     project: {
       importOk: '项目导入成功',
       importedCount: '已导入 {count} 个项目',
-      pickUproject: '选择 .uproject 文件',
-      pickUprojectDir: '选择包含 .uproject 的目录',
+      pickUproject: '选择 project.godot 文件',
+      pickUprojectDir: '选择包含 project.godot 的目录',
       alreadyRunning: '工程已在运行',
       launch: '启动',
       assetImported: '资产导入成功：{path}',
@@ -1443,7 +1399,7 @@ export default {
       cloudDrives: '网盘仅作为本地库的导入来源；服务器库请拖入文件导入',
       tagInUse: '此标签仍关联 {count} 个资产，请先从资产上移除',
       tagFavorite: '服务器库的标签没有「常用」',
-      trash: '服务器库的回收站由服务端保留，暂不支持在虚幻盒子中查看',
+      trash: '服务器库的回收站由服务端保留，暂不支持在 GDBox 中查看',
       scan: '服务器库无需扫描，变更将自动同步',
       folderSearch: '服务器暂不支持按文件夹名搜索',
       dependencyGraph: '服务器库暂未接入依赖图，请查看上方的依赖列表',
@@ -1524,11 +1480,11 @@ export default {
     },
     download: {
       title: '导入 {count} 个资产到工程',
-      lead: '通过 Lore 获取文件，并连同依赖复制到目标位置（Content/… 对应 /Game/…）。',
+      lead: '通过 Lore 获取文件，并连同依赖复制到目标位置。',
       more: '还有 {count} 个',
       target: '目标位置',
       targets: {
-        project: 'UE 工程',
+        project: 'Godot 项目',
         folder: '文件夹'
       },
       pickProject: '选择工程',
@@ -1551,7 +1507,7 @@ export default {
       pickRepository: '选择仓库',
       message: '提交说明',
       messagePlaceholder: '可留空',
-      hint: '.uasset / .umap 旁的同名 .uexp、.ubulk 将一并提交。推送完成且服务端完成索引后，文件将显示在列表中。',
+      hint: '推送完成且服务端完成索引后，文件将显示在列表中。',
       start: '开始导入'
     },
     jobs: {
@@ -1582,7 +1538,7 @@ export default {
       'fingerprint-mismatch': '证书指纹不匹配，可能连接到了其他服务器，已拒绝连接。',
       'ca-file-not-ca': '该文件不是 CA 证书。',
       'ca-file-not-pem': '该文件不是 PEM 格式的证书。',
-      'not-a-catalog': '该地址不是虚幻盒子资产服务器。',
+      'not-a-catalog': '该地址不是 GDBox 资产服务器。',
       'no-member-surface': '该服务器不支持账号登录，请粘贴身份令牌。',
       'missing-password': '请填写密码。',
       'missing-token': '请粘贴身份令牌。',
@@ -1658,7 +1614,7 @@ export default {
     settings: '设置',
     language: '语言',
     // 托盘「退出」时还有 Agent session 的操作没收摊。数的是 session 操作，不是全部后台任务
-    trayQuitTitle: '退出虚幻盒子？',
+    trayQuitTitle: '退出 GDBox？',
     trayQuitContent: 'AI 仍有 {count} 项操作正在进行，退出将中断这些操作。',
     trayQuitOk: '仍然退出',
     // 同一个框，安装更新时换标题和按钮
@@ -1699,61 +1655,12 @@ export default {
         subtitle: '高频操作集中在此，提升效率',
         building: '功能正在建设中'
       },
-      // 引擎区域
-      engine: {
-        title: '引擎版本',
-        refresh: '刷新',
-        lastOpened: '最近打开',
-        running: '运行中',
-        default: '默认',
-        start: '启动',
-        more: '更多',
-        setDefault: '设为默认',
-        unsetDefault: '取消默认',
-        openRoot: '安装目录',
-        openPlugins: '插件目录',
-        remove: '移除引擎',
-        // 首次启动时引擎区可能一个都没有 —— 原来这里什么都不显示，
-        // 新用户看到的是一片空白，不知道盒子是没扫到还是坏了
-        emptyTitle: '未找到已安装的虚幻引擎',
-        emptyDesc: '将引擎根目录拖到此处，或点击上方的 + 手动添加。',
-        // 扫不动和真的没装是两回事，后者才是上面那句。
-        // scanFailed 给主动点刷新的那一次弹提示；下面两句是列表空着时留在屏幕上的
-        scanFailed: '扫描引擎失败，列表可能不全。',
-        staleList: '列表可能已过期',
-        scanFailedTitle: '读取引擎列表失败',
-        scanFailedDesc: '这不表示未安装引擎，仅本次读取失败。请点击右上角刷新重试。',
-        dropTitle: '释放以添加自定义引擎',
-        dropDesc: '拖入引擎根目录（包含 Engine/Binaries/Win64/UnrealEditor.exe）',
-        addSuccess: '已添加 {count} 个自定义引擎',
-        addFailed: '自定义引擎添加失败',
-        notValidRoot: '未检测到有效引擎',
-        startSuccess: '正在启动 UE {version}…',
-        startFailed: 'UE {version} 启动失败',
-        removeConfirmTitle: '确认移除引擎',
-        removeConfirmContent:
-          '确定要移除引擎 {version} 吗？此操作只会从列表中移除，不会删除引擎文件。',
-        removeSuccess: 'UE {version} 已移除',
-        removeFailed: '移除引擎失败',
-        setDefaultSuccess: 'UE {version} 已设为默认',
-        unsetDefaultSuccess: '已取消默认引擎',
-        openPathFailed: '打开目录失败',
-        selectEngineDir: '选择引擎目录',
-        refreshSuccess: '引擎列表已刷新',
-        cleanupNone: '刷新完成',
-        cleanupConfirmTitle: '发现 {count} 个失效引擎记录',
-        cleanupConfirmContent: '是否将这些失效引擎从列表中移除？此操作不会删除磁盘上的任何文件。',
-        cleanupSuccess: '已清理 {count} 个失效引擎',
-        cleanupFailed: '刷新引擎列表失败',
-        cleanupMore: '以及另外 {count} 项',
-        epicManaged: 'Epic 安装的引擎请在 Epic Games Launcher 中管理'
-      },
       // 项目区域
       project: {
         title: '我的项目',
-        subtitle: '管理和启动 Unreal 项目',
+        subtitle: '管理和启动 Godot 项目',
         empty: '暂无项目',
-        emptyDesc: '拖拽 .uproject 文件或项目目录到此处导入',
+        emptyDesc: '拖拽 project.godot 文件或项目目录到此处导入',
         // 搜不到 ≠ 一个都没导入：后者才该讲怎么导入
         loadFailedTitle: '读取工程列表失败',
         loadFailedDesc: '这不表示没有工程，仅本次读取失败。请刷新页面重试。',
@@ -1774,7 +1681,7 @@ export default {
         importFailed: '项目导入失败',
         scanComplete: '已导入 {count} 个项目',
         scanFailed: '扫描目录失败',
-        noProjectFound: '未找到 .uproject',
+        noProjectFound: '未找到 project.godot',
         multiProjectTip: '目录中包含 {count} 个工程，请使用资产库页面导入',
         multiProjectConfirmTitle: '批量导入工程',
         multiProjectConfirmContent: '该目录中包含 {count} 个工程，确定要全部导入吗？',
@@ -1782,7 +1689,7 @@ export default {
         importError: '导入异常',
         dropHint: '释放以导入资产',
         dropHintDesc: '支持文件夹和文件的拖拽导入',
-        invalidDrop: '未找到 UE 工程，请拖入工程目录或 .uproject 文件',
+        invalidDrop: '未找到 Godot 项目，请拖入项目目录或 project.godot 文件',
         searchPlaceholder: '搜索我的工程',
         engineFilter: '按引擎版本筛选',
         allEngineVersions: '全部版本',
@@ -1812,21 +1719,21 @@ export default {
           refresh: '刷新'
         },
         ualink: {
-          removeTitle: '从此项目移除 UnrealAgentLink？',
+          removeTitle: '从此项目移除 GDBox 插件？',
           removeContent:
-            '将删除项目下的 Plugins/UnrealAgentLink 目录，并从 .uproject 中移除该插件。此后虚幻盒子不再为此项目自动安装该插件，如有需要可通过右键菜单重新安装。',
-          removeSuccess: 'UnrealAgentLink 已移除，不会自动重装',
-          removeFailed: '移除 UnrealAgentLink 失败',
-          installing: '正在安装 UnrealAgentLink...',
-          installSuccess: 'UnrealAgentLink 已安装',
-          installFailed: 'UnrealAgentLink 安装失败'
+            '将删除项目 addons 目录中的 GDBox 插件，并在项目设置中停用该插件。此后 GDBox 不再为此项目自动安装该插件，如有需要可通过右键菜单重新安装。',
+          removeSuccess: 'GDBox 插件已移除，不会自动重装',
+          removeFailed: '移除 GDBox 插件失败',
+          installing: '正在安装 GDBox 插件…',
+          installSuccess: 'GDBox 插件已安装',
+          installFailed: 'GDBox 插件安装失败'
         },
         pluginFailure: {
           dialogTitle: '工程已导入，但 AI 无法连接该引擎',
-          title: '原因：{reason}。UnrealAgentLink 未安装成功，AI 无法访问引擎内容。',
+          title: '原因：{reason}。GDBox 插件未安装成功，AI 无法访问编辑器内容。',
           askAi: '交给 AI 排查',
           dismiss: '知道了',
-          pathUnknown: '（虚幻盒子未获取到工程文件路径）',
+          pathUnknown: '（GDBox 未获取到工程文件路径）',
           askAiFailed: '无法提交给 AI：{reason}',
           /*
            * 交给 AI 的那条消息。
@@ -1835,15 +1742,11 @@ export default {
            * 而用户不认得。查什么也要写清楚：只说「装不上」的话，模型会反过来问用户
            * 一串他答不上来的问题（见 hooks/usePluginInstallNotice.ts 的文件头）。
            */
-          aiPrompt: `UnrealAgentLink 插件没能装进工程「{project}」，帮我查一下是什么问题，能修的话直接修。
-
-工程文件：{path}
-盒子报的原因：{reason}
-
-可以从这几处看起：这个 .uproject 能不能正常读出来、里面的 EngineAssociation 写的是哪个版本；工程目录下的 Plugins/UnrealAgentLink/ 在不在、里面有没有 UnrealAgentLink.uplugin；这台机器上装没装对应版本的引擎。查清楚之后用一句话告诉我是什么问题。`,
-          noEngineAssociation: '该 .uproject 未指定引擎版本',
+          aiPrompt:
+            'GDBox 插件没能装进项目「{project}」，帮我查一下是什么问题，能修的话直接修。\n\n项目文件：{path}\n盒子报的原因：{reason}\n\n可以从这几处看起：这个 project.godot 能不能正常读出来、里面声明的是哪个 Godot 版本；项目目录下的 addons/ 里有没有 GDBox 插件、插件目录里有没有 plugin.cfg；这台机器上装没装对应版本的 Godot。查清楚之后用一句话告诉我是什么问题。',
+          noEngineAssociation: '该 project.godot 未指定 Godot 版本',
           filesMissing: '缺少该引擎版本的随包插件',
-          uprojectUnreadable: '无法读取该 .uproject，文件可能已损坏'
+          uprojectUnreadable: '无法读取该 project.godot，文件可能已损坏'
         },
         /*
          * 拖拽 / 选目录导入的那一串提示。
@@ -1856,7 +1759,7 @@ export default {
           fileFailed: '项目导入失败：{path}',
           fileError: '项目导入异常：{reason}',
           scanFailed: '扫描目录失败：{path}',
-          noUproject: '未找到 .uproject：{path}',
+          noUproject: '未找到 project.godot：{path}',
           dirOk: '已导入 {count} 个项目',
           dirError: '目录导入异常：{reason}',
           pickAtLeastOne: '请至少选择一个工程',
@@ -1864,7 +1767,7 @@ export default {
           allDone: '工程均已导入',
           allFailed: '所有工程导入失败',
           cancelled: '已取消导入',
-          nothingFound: '未找到 UE 工程，请拖入工程目录或 .uproject 文件',
+          nothingFound: '未找到 Godot 项目，请拖入项目目录或 project.godot 文件',
           // 拖拽覆盖层上那句话。它在 dragenter 时就定下来，所以必须在这边翻
           dropCounted: '释放以导入：{count} 个项目/文件',
           dropPlain: '释放以导入',
@@ -1894,7 +1797,7 @@ export default {
         // 所以按「N 个工程 + 第一条原因」汇总，具体哪几个在日志里
         pluginUpgradeFailure: {
           title:
-            '{count} 个工程的 UnrealAgentLink 更新失败（{project}：{reason}），这些工程仍在使用旧版插件。'
+            '{count} 个项目的 GDBox 插件更新失败（{project}：{reason}），这些项目仍在使用旧版插件。'
         },
         messages: {
           slnNotFound: '未找到 sln 文件',
@@ -1910,7 +1813,7 @@ export default {
           removeFailed: '移除失败',
           removeFromCollectionSuccess: '已移出分组',
           removeFromCollectionFailed: '移出分组失败',
-          uprojectNotFound: '未找到 .uproject 文件',
+          uprojectNotFound: '未找到 project.godot 文件',
           projectMissingTitle: '找不到该工程',
           projectMissingContent:
             '找不到工程文件，无法打开：{path}\n该文件可能已被删除或移动。是否从列表中移除此记录？',
@@ -1971,16 +1874,16 @@ export default {
           okText: '创建',
           cancelText: '取消',
           nameLabel: '项目名称',
-          uprojectLabel: '.uproject 文件',
-          uprojectPlaceholder: '请输入或选择 .uproject 文件路径',
+          uprojectLabel: 'project.godot 文件',
+          uprojectPlaceholder: '请输入或选择 project.godot 文件路径',
           pickFile: '选择文件',
           dirLabel: '项目目录',
           dirPlaceholder: '请输入或选择项目目录',
           pickDir: '选择目录',
-          hint: '.uproject 文件与项目目录至少填写一项，选择 .uproject 文件后会自动填充项目目录',
+          hint: 'project.godot 文件与项目目录至少填写一项，选择 project.godot 文件后会自动填充项目目录',
           nameRequired: '请输入项目名称',
-          pathRequired: '请填写 .uproject 文件或项目目录',
-          dialogTitle: '选择 .uproject 文件',
+          pathRequired: '请填写 project.godot 文件或项目目录',
+          dialogTitle: '选择 project.godot 文件',
           dialogDirTitle: '选择项目目录'
         },
         // 从模板创建工程
@@ -2041,7 +1944,7 @@ export default {
           // 全新安装的第一屏
           onboardTitle: '暂无模板',
           onboardDesc:
-            '模板均位于在线模板源中。虚幻盒子默认完全离线，未启用模板源时不会发出任何网络请求，启用后才会获取模板列表。官方源包含 GitHub 和国内镜像两个地址，将同时启用，自动使用可用的地址。',
+            '模板均位于在线模板源中。GDBox 默认完全离线，未启用模板源时不会发出任何网络请求，启用后才会获取模板列表。官方源包含 GitHub 和国内镜像两个地址，将同时启用，自动使用可用的地址。',
           onboardPickSource: '使用其他源',
           // 社区模板
           communityOfflineDesc: '启用官方源可查看更多模板。启用前不会发出任何网络请求。',
@@ -2095,15 +1998,15 @@ export default {
           title: '导入已有工程',
           subtitle: '从本地引擎最近打开的工程中选择，选中即可加入工程库',
           subtitleIntoCollection: '从本地引擎最近打开的工程中选择，导入后加入「{name}」分组',
-          pickFile: '选择 .uproject 文件',
-          dropHint: '列表中没有？可手动选择文件，或将 .uproject 直接拖入工程库',
+          pickFile: '选择 project.godot 文件',
+          dropHint: '列表中没有？可手动选择文件，或将 project.godot 直接拖入项目库',
           searchPlaceholder: '搜索工程名称...',
           allVersions: '全部版本',
           importAll: '全部导入（{count}）',
           importingAll: '正在导入…',
           scanning: '正在扫描本地引擎工程...',
           empty: '未发现本地工程',
-          emptyDesc: '本地引擎中没有最近打开的工程，请先通过 Epic Launcher 打开工程后重试',
+          emptyDesc: '没有找到最近打开的项目，请先在 Godot 编辑器中打开项目后重试',
           imported: '已导入',
           clickToImport: '点击导入',
           clickToJoin: '点击加入「{name}」分组',
@@ -2187,23 +2090,23 @@ export default {
       failed: '审查执行失败',
       fix: '交给 AI 修复',
       // 编译报错带原文时用这一句；原文是引擎给的，可能好几行
-      compileErrorDetail: '蓝图编译报错：\n{detail}',
+      compileErrorDetail: '脚本解析报错：\n{detail}',
       /** 「交给 AI 修」发出去的那句话。发给模型的，但走 i18n，理由同 selfCheck.prompt */
       fixPrompt: {
         intro: '刚才那一轮改完，引擎检查查出下面这些问题，请修好：',
         rules:
-          '先用只读工具确认每一条确实存在再动手。修完重新编译相关的蓝图，把编译结果告诉我。' +
+          '先用只读工具确认每一条确实存在再动手。修完重新检查相关的脚本和场景，把检查结果告诉我。' +
           '修不了的直说原因，不要绕过去。'
       },
       codes: {
         missing: '报告已创建，但工程中未找到',
         'still-there': '报告已删除，但仍然存在',
         unsaved: '修改仅存在于编辑器内存中，尚未保存到磁盘',
-        'compile-error': '蓝图编译出错，当前不可用',
-        'compile-warning': '蓝图编译有警告',
+        'compile-error': '脚本解析出错，当前不可用',
+        'compile-warning': '脚本解析有警告',
         'broken-dependency': '引用了不存在的资产：{detail}',
         'orphan-referencer': '已删除，但仍被其他资产引用：{detail}',
-        naming: '命名不符合 UE 惯例，通常以 {detail} 开头',
+        naming: '命名不符合项目惯例，通常以 {detail} 开头',
         'check-failed': '该项检查失败：{detail}'
       }
     },
@@ -2224,8 +2127,8 @@ export default {
         engineOfflineHeader: '引擎没连上，机器那一半没跑成 —— 别把「机器没说话」当成「没问题」。',
         rules:
           '请按下面的规矩逐条回应：\n' +
-          '1. **不许凭记忆回答**。每一条都用只读工具重新去引擎里查一遍（material_describe、' +
-          'material_get_graph、blueprint_describe、blueprint_get_graph、ue_content_* 等），' +
+          '1. **不许凭记忆回答**。每一条都用只读工具重新去引擎里查一遍（读取场景、脚本、资源' +
+          '的那几个工具），' +
           '把你查到的实际值写出来。你记得自己调用成功了，这不算证据。\n' +
           '2. 机器查出的每个问题，说清是真的还是误报；是误报要给出你查到的依据。\n' +
           '3. 回答机器答不了的那一半：你做出来的东西，和我要的是不是一回事？哪里没做到、' +
@@ -2258,10 +2161,10 @@ export default {
        */
       kinds: {
         material: '材质',
-        blueprint: '蓝图',
-        widget: '控件蓝图',
-        level: '关卡',
-        actor: 'Actor',
+        blueprint: '脚本',
+        widget: '界面',
+        level: '场景',
+        actor: '节点',
         asset: '资产',
         folder: '文件夹',
         file: '文件',
@@ -2292,58 +2195,6 @@ export default {
         // 引擎工具集（MCP）来的一律归一句：具体做了什么在后面的 target 里
         mcpEngineToolset: '通过引擎工具集操作',
 
-        // Actor
-        ue_spawn_actor: '创建 Actor',
-        ue_destroy_actor: '删除 Actor',
-        ue_set_property: '修改属性',
-        ue_set_transform: '调整位置/旋转/缩放',
-
-        // 蓝图
-        blueprint_create: '新建蓝图',
-        blueprint_apply_graph: '修改蓝图图表',
-        blueprint_add_component: '添加蓝图组件',
-        blueprint_set_property: '修改蓝图属性',
-        blueprint_create_function: '新建蓝图函数',
-        blueprint_create_event_graph: '新建蓝图事件图',
-        blueprint_add_variable: '新建蓝图变量',
-        blueprint_remove_variable: '删除蓝图变量',
-        blueprint_set_variable_meta: '修改蓝图变量设置',
-        blueprint_function_signature: '修改蓝图函数签名',
-        blueprint_set_parent_class: '修改蓝图父类',
-        blueprint_event_dispatcher: '修改蓝图事件分发器',
-        blueprint_component_event: '添加蓝图组件事件',
-        blueprint_compile: '编译蓝图',
-        blueprint_compile_all: '编译全部蓝图',
-        blueprint_tidy_graph: '整理蓝图连线',
-
-        // 材质
-        material_create: '新建材质',
-        material_create_instance: '新建材质实例',
-        material_apply: '应用材质',
-        material_add_node: '添加材质节点',
-        material_delete_node: '删除材质节点',
-        material_connect_pins: '连接材质引脚',
-        material_disconnect_pins: '断开材质引脚',
-        material_delete_unused_nodes: '删除未使用的材质节点',
-        material_create_function: '新建材质函数',
-        material_parameter_collection: '修改材质参数集',
-        material_set_node_value: '修改材质节点值',
-        material_set_param: '修改材质参数',
-        material_set_property: '修改材质属性',
-        material_compile: '编译材质',
-        material_tidy_graph: '整理材质连线',
-
-        // 资产
-        ue_content_import: '导入资产',
-        ue_content_move: '批量移动资产',
-        ue_content_naming_audit: '命名规范检查',
-        ue_content_dependencies: '查看资产依赖',
-        ue_content_migrate: '迁移资产到其他工程',
-        ue_content_set_properties: '修改资产设置',
-        mesh_optimize: '生成网格 LOD / 碰撞',
-        ue_datatable_edit: '修改数据表',
-        ue_content_delete: '删除资产',
-        ue_fixup_redirectors: '修复资产重定向',
         annotate_asset: '添加资产标注',
         delete_assets: '删除素材库资产',
         restore_assets: '恢复素材库资产',
@@ -2351,39 +2202,6 @@ export default {
         create_folders: '新建文件夹',
         rename_folder: '重命名文件夹',
         delete_folders: '删除文件夹',
-
-        // 关卡
-        ue_new_level: '新建关卡',
-        ue_open_level: '打开关卡',
-        ue_save_level: '保存关卡',
-        ue_set_level_streaming: '修改子关卡加载方式',
-        level_organize_actors: '整理关卡 Actor',
-
-        // 编辑器
-        ue_save: '保存',
-        ue_set_config: '修改编辑器设置',
-        ue_input_add_mapping: '添加输入映射',
-        sequence_rebind: '修改序列绑定',
-        ue_collect_garbage: '清理内存',
-        ue_playtest: '运行试玩',
-        ue_restart_editor: '重启编辑器',
-        ue_focus_viewport: '视口对准目标',
-        ue_undo: '撤销上一步',
-
-        // 系统。这三个能干任何事，写死一个具体动作反而是撒谎
-        ue_run_python_script: '在编辑器中执行脚本',
-        ue_run_console_command: '执行控制台命令',
-        // 启停方向在参数里，按方向取 ue_manage_plugin_enable / _disable；
-        // 这条含糊的兜底只给查不到方向的历史旧消息
-        ue_manage_plugin: '启用/停用插件',
-        ue_manage_plugin_enable: '启用插件',
-        ue_manage_plugin_disable: '停用插件',
-
-        // UMG
-        widget_create: '新建控件蓝图',
-        widget_add_child: '添加子控件',
-        widget_make_variable: '将控件设为变量',
-        widget_set_property: '修改控件属性',
 
         // 本地文件与其他
         write_local_file: '写入文件',
@@ -2446,20 +2264,22 @@ export default {
     },
     suggestions: {
       // 智能对话模式建议（默认）
-      blueprintDebug: {
+      knowledge: {
         title: '知识问答',
         desc: '询问问题并获取实时答案',
-        prompt: '虚幻引擎领域最近有哪些新动态？'
+        prompt: 'Godot 4 最近的版本有哪些值得关注的新特性？'
       },
-      materialRender: {
-        title: '场景整理',
-        desc: '批量创建和整理场景中的 Actor',
-        prompt: "在场景中创建 3 个点光源并归类到 'Lighting/Indoor' 文件夹下。"
+      spriteFrames: {
+        title: '像素角色',
+        desc: '生成精灵帧并放进项目',
+        prompt:
+          '生成一套 32×32 的像素风角色行走精灵帧（上下左右各 4 帧），放进项目的 art/characters 文件夹。'
       },
-      buildPackage: {
-        title: '创建蓝图',
-        desc: '快速创建蓝图资产并添加组件',
-        prompt: "创建一个名为 'BP_MyWeapon' 的 Actor 蓝图，并添加一个 StaticMesh 组件。"
+      loopMusic: {
+        title: '背景音乐',
+        desc: '为场景配一段可循环的音乐',
+        prompt:
+          '为一个森林探索场景生成一段 60 秒、可无缝循环的轻松背景音乐，并放进项目的 audio/music 文件夹。'
       },
       // 图片生成模式建议
       imageGen: {
@@ -2619,7 +2439,7 @@ export default {
       tab: '团队任务',
       openTab: '在右侧面板查看团队任务',
       closeTab: '关闭团队任务',
-      selfReportedHint: '由队员自行标记，虚幻盒子未核实；以验收结论为准',
+      selfReportedHint: '由队员自行标记，GDBox 未核实；以验收结论为准',
       objective: '目标',
       noTasks: '任务板为空',
       evidence: '证据：',
@@ -2838,9 +2658,6 @@ export default {
         team_deliver: '提交交付',
         team_hire: '添加队员',
         team_snapshot: '保存工程快照',
-        ue_list: '查看列表',
-        ue_project_asset_ranking: '统计资产占用',
-        ue_find_heavy_assets: '查找大体积资产',
         generate_image: '生成图片',
         search_assets: '搜索资产',
         generate_3d_model: '生成 3D 模型',
@@ -2862,7 +2679,6 @@ export default {
         find_local_files: '查找文件',
         grep_local_files: '搜索文件内容',
         read_document: '读取文档',
-        inspect_uasset_file: '查看资产文件',
         run_shell_command: '运行命令',
         web_search: '搜索网页',
         web_read: '读取网页',
@@ -2879,37 +2695,6 @@ export default {
         search_notebook_sources: '搜索笔记本资料',
         project_list: '查看项目列表',
         list_engines: '查看引擎列表',
-        ue_screenshot: '截图',
-        ue_autoplay: '自动试玩',
-        ue_get_actor: '查看 Actor',
-        ue_get_selection: '查看选中对象',
-        ue_get_current_level: '查看当前关卡',
-        ue_get_levels: '查看关卡列表',
-        ue_get_project_info: '查看工程信息',
-        ue_get_config: '读取编辑器设置',
-        ue_content_search: '搜索工程资产',
-        ue_content_describe: '查看资产',
-        ue_inspect_components: '查看组件',
-        ue_light_census: '灯光普查',
-        ue_datatable_describe: '查看数据表',
-        ue_message_log: '查看消息日志',
-        ue_get_crash_logs: '查看崩溃日志',
-        ue_editor_health: '编辑器健康检查',
-        ue_get_performance_stats: '读取性能数据',
-        ue_list_unsaved: '查看未保存内容',
-        ue_undo_history: '查看撤销历史',
-        ue_inject_input: '模拟输入',
-        ue_input_map: '查看输入映射',
-        ue_input_add_mapping: '添加输入映射',
-        blueprint_describe: '查看蓝图',
-        blueprint_get_graph: '读取蓝图图表',
-        blueprint_search_nodes: '搜索蓝图节点',
-        blueprint_find_usages: '在所有蓝图中查找',
-        material_describe: '查看材质',
-        material_get_graph: '读取材质图表',
-        material_graph_slice: '读取材质片段',
-        material_search_nodes: '搜索材质节点',
-        material_get_referencers: '查看材质引用',
         mesh_describe: '查看网格',
         mesh_optimize: '生成网格 LOD / 碰撞',
         widget_get_hierarchy: '查看控件层级',
@@ -3117,15 +2902,15 @@ export default {
     contextChips: {
       budget: ['为我创建一个月度预算', '分析我的消费习惯', '什么是 50/30/20 法则？'],
       analytics: ['生成仪表盘', '对最近数据进行趋势分析', '为我总结关键洞察'],
-      blueprint: ['定位某个节点问题', '将复杂逻辑重构为函数', '示例事件驱动替代 Tick'],
-      material: ['合并采样节点示例', '开启静态开关优化编译', '性能参数建议'],
-      niagara: ['创建基础粒子系统', '添加碰撞与轨迹', '优化发射器参数'],
-      physics: ['刚体与约束示例', '性能注意事项', '调试碰撞通道'],
-      animation: ['绑定动画蓝图', '使用控制轨编辑', '导出为剪辑'],
-      package: ['平台设置检查', '减小包体建议', 'CI 构建步骤'],
-      performance: ['启用GPU Profiler', '减少Draw Calls建议', 'LOD与流式加载'],
-      ai: ['创建行为树基础结构', '导航网格设置', '黑板变量设计'],
-      input: ['绑定输入映射', '实现组合按键', '设备差异处理'],
+      script: ['定位脚本报错', '把重复逻辑抽成函数', '用信号替代每帧轮询'],
+      shader: ['写一个描边着色器', '把参数暴露给检查器', '着色器性能建议'],
+      particles: ['创建基础粒子效果', '添加碰撞与拖尾', '优化发射参数'],
+      physics: ['刚体与关节示例', '性能注意事项', '调试碰撞层与遮罩'],
+      animation: ['用 AnimationTree 搭状态机', '用 AnimationPlayer 制作关键帧', '整理动画库'],
+      package: ['检查导出预设', '减小包体建议', 'CI 导出步骤'],
+      performance: ['打开性能监视器', '减少绘制调用的建议', '可见性范围与流式加载'],
+      ai: ['用 NavigationAgent 实现寻路', '导航网格设置', '敌人状态机设计'],
+      input: ['配置输入映射', '实现组合按键', '设备差异处理'],
       default: ['继续这个话题', '换一种角度解释', '给出一个示例']
     },
     threeDGeneration: {
@@ -3172,7 +2957,6 @@ export default {
       agentV3Debug: 'Agent V3 调试台',
       notebook: '知识库',
       asset: '资产库',
-      plugin: '插件',
       cli: '命令行',
       objectStorage: '对象存储',
       namingRules: '命名规则',
@@ -3234,12 +3018,12 @@ export default {
       // 挡下时 AI 会拿到「怎么请用户放开」，由它决定要不要转达
       fileAccessScope: '文件访问范围',
 
-      fileAccessScopeUeOnly: '仅虚幻相关',
+      fileAccessScopeUeOnly: '仅游戏开发相关',
       fileAccessScopeFull: '整台电脑',
-      fileAccessScopeUeOnlyHint: '仅限已安装引擎、已导入工程及素材库；受保护的敏感目录除外。',
+      fileAccessScopeUeOnlyHint: '仅限已安装引擎、已导入项目及素材库；受保护的敏感目录除外。',
       fileAccessScopeFullHint: '允许访问本机文件，不含受保护的敏感目录。',
       editorScreenshot: '允许编辑器截图',
-      editorScreenshotDesc: '允许获取虚幻编辑器画面。',
+      editorScreenshotDesc: '允许获取 Godot 编辑器画面。',
       archivedChats: '归档对话',
       archivedChatsDesc: '查看、恢复或删除已归档对话。',
       autoRetitle: '自动生成新标题',
@@ -3249,7 +3033,7 @@ export default {
         '中转服务不稳定时，每 60 秒自动从断点继续，连续失败 30 分钟后停止。失败的重试不保留在对话中。',
       assetReadonlyLock: '修改资产时设为只读',
       assetReadonlyLockDesc:
-        'AI 修改资产期间，将对应的 .uasset 文件设为只读，防止编辑器中的保存覆盖其改动。开启后，这些资产在编辑器中暂时无法保存。',
+        'AI 修改资源期间，将对应的文件设为只读，防止编辑器中的保存覆盖其改动。开启后，这些文件在编辑器中暂时无法保存。',
       browserAllowLocalNetwork: '允许浏览器访问局域网',
       browserAllowLocalNetworkDesc:
         '允许 Agent 浏览器打开本机与局域网地址（如 localhost、192.168.x.x），用于查看本地开发服务器。网页中的链接也将能访问这些地址。',
@@ -3259,7 +3043,7 @@ export default {
       alwaysAllowedRemoveLabel: '移除「{name}」的始终允许',
       goalMaxRounds: '目标模式最大轮数',
       goalMaxRoundsDesc:
-        '使用 /goal 时，复核未通过则继续修改，达到此轮数仍未完成则停止并交由用户处理。每轮额外进行一次复核，可能编译蓝图、运行 PIE。下一条消息起生效，范围 1–50。',
+        '使用 /goal 时，复核未通过则继续修改，达到此轮数仍未完成则停止并交由用户处理。每轮额外进行一次复核，可能运行场景。下一条消息起生效，范围 1–50。',
       openArchivedChats: '打开归档对话',
       // 智能追加提问设置
       followUpSuggestions: '追问建议',
@@ -3298,7 +3082,7 @@ export default {
       instructionsTitle: '给助手的说明',
       instructionsDesc: '应用于所有对话的长期偏好。',
       instructionsPlaceholder:
-        '例如：\n我是游戏公司的地编，主要做大世界场景搭建和优化。\n我不写 C++，蓝图能看懂但不熟，别默认我会。\n结论先说，过程我需要的时候会问。',
+        '例如：\n我是独立游戏开发者，主要做 2D 像素风游戏。\n我写 GDScript，不写 C#，别默认我会。\n结论先说，过程我需要的时候会问。',
       openInstructionsFile: '用默认文本编辑器打开',
       instructionsSaved: '说明已保存',
       instructionsSaveFailed: '说明保存失败'
@@ -3332,10 +3116,10 @@ export default {
         destructive: '不可撤销'
       },
       category: {
-        blueprint: '蓝图',
+        blueprint: '脚本',
         material: '材质',
-        scene: '场景与关卡',
-        content: '内容浏览器',
+        scene: '场景与节点',
+        content: '文件系统',
         editor: '编辑器',
         ui: '界面控件',
         cinematic: '动画与过场',
@@ -3343,7 +3127,7 @@ export default {
         cpp: 'C++ 与编译',
         system: '系统与诊断',
         aigc: 'AI 生成',
-        box: '虚幻盒子内置工具',
+        box: 'GDBox 内置工具',
         other: '其他'
       }
     },
@@ -3427,8 +3211,8 @@ export default {
         scopeGlobal: '所有工程',
         scopeProject: '仅限 {name}',
         engines: '引擎版本',
-        enginesOk: 'UE {versions} 成立',
-        enginesNo: 'UE {versions} 不适用',
+        enginesOk: 'Godot {versions} 成立',
+        enginesNo: 'Godot {versions} 不适用',
         effect: '效果',
         effectValue: '提示 {shown} 次，采用 {adopted} 次，成功 {ok} 次',
         lift: '未提示时成功率 {without}%，提示后 {with}%',
@@ -3542,9 +3326,6 @@ export default {
       deleteConfirmDesc: '删除文件或文件夹前询问；开启后会恢复之前关闭的确认提示。',
       showDependencies: '显示依赖资产',
       showDependenciesDesc: '在资产列表中显示自动收集的依赖资产（关闭后只显示手动导入的资产）',
-      archiveImportAsk: '压缩包导入前询问',
-      archiveImportAskDesc:
-        '将压缩包导入 UE 工程时，询问解压后导入还是原样复制（关闭后一律解压后导入）',
       crossVaultSearch: '跨库搜索',
       crossVaultSearchDesc: 'AI 助手查找素材时同时搜索其他保管库。关闭后仅搜索当前保管库。',
       defaultApps: '默认应用',
@@ -3557,11 +3338,14 @@ export default {
       defaultAppLabel: '默认 (Default)',
       categories: {
         image: '图片 (Image)',
-        video: '视频 (Video)',
-        model: '3D 模型 (Model)',
         audio: '音频 (Audio)',
-        code: '代码 (Code)',
-        uasset: 'UE 资产 (Asset)'
+        model: '3D 模型 (Model)',
+        scene: '场景 (Scene)',
+        resource: '资源 (Resource)',
+        script: '脚本 (Script)',
+        shader: '着色器 (Shader)',
+        font: '字体 (Font)',
+        video: '视频 (Video)'
       },
       // 语义搜索
       semantic: {
@@ -3643,8 +3427,8 @@ export default {
     },
     cli: {
       title: '命令行',
-      description: '从终端调用虚幻引擎能力，供外部 Agent 和自动化脚本使用',
-      intro: '终端操作引擎前请打开目标工程。帮助：uebox --help',
+      description: '从终端调用 Godot 引擎能力，供外部 Agent 和自动化脚本使用',
+      intro: '终端操作引擎前请打开目标工程。帮助：gdbox --help',
       loading: '正在检查…',
       unavailable: '未找到命令行程序，请重新安装应用。',
       location: '程序位置',
@@ -3655,63 +3439,29 @@ export default {
       revealFailed: '打开文件夹失败',
       addToPath: '加入 PATH',
       unsupportedPlatform: '命令行工具随 Windows 和 macOS 安装包分发。',
-      addToPathDesc: '让新开的终端直接使用 uebox；仅影响当前用户，随时可以关闭。',
-      pathAdded: '已加入 PATH，新开的终端可直接使用 uebox。',
+      addToPathDesc: '让新开的终端直接使用 gdbox；仅影响当前用户，随时可以关闭。',
+      pathAdded: '已加入 PATH，新开的终端可直接使用 gdbox。',
       pathRemoved: '已从 PATH 移除',
       pathFailed: '修改 PATH 失败',
       pathFailedWith: '修改 PATH 失败：{error}',
       statusFailed: '读取命令行状态失败：{error}',
       section: '命令行工具',
-      about: 'uebox',
+      about: 'gdbox',
       integration: '系统集成'
     },
     project: {
       title: '项目',
+      godot: 'Godot 编辑器',
+      godotFound: '已找到 Godot {version}',
+      godotNotFound: '没有找到 Godot 4',
+      godotNotFoundDesc: '指定 Godot 编辑器的可执行文件后，才能从 GDBox 打开工程，AI 也才能检查和试玩游戏。',
+      godotAuto: '自动查找（PATH、winget、scoop、Steam）',
+      godotChoose: '指定…',
+      godotUseAuto: '改回自动查找',
+      godotInvalid: '这个文件不是 Godot 4 编辑器，没有保存。',
       openBehavior: '打开行为',
       hideWindowOnLaunch: '打开工程后隐藏主界面',
       hideWindowOnLaunchDesc: '打开工程后收起至托盘，后台任务继续运行。'
-    },
-    plugin: {
-      title: '插件',
-      description: '虚幻引擎连接插件。',
-      // 桥接状态。这一页原来一个状态都不显示，而 AI 连不上引擎时
-      // 会把用户指到这儿来 —— 他到了却问不出「到底连上没有」
-      status: '连接状态',
-      bridgeState: '引擎桥接',
-      bridgeOn: '正常',
-      bridgeOff: '未运行',
-      bridgeListening: '已在端口 {port} 上等待引擎接入。',
-      bridgeOffline: '桥接未运行，虚幻引擎无法连接。',
-      // 还没问到状态时用这两条 —— 没核实过就不许报「没运行」
-      bridgeChecking: '读取中',
-      bridgeUnknown: '正在读取桥接状态…',
-      connectedProjects: '已连接的工程',
-      connectedProjectsDesc:
-        '插件自动连接，断开后每 5 秒重试一次，无需手动连接。若工程已打开但数量始终为 0，通常是该工程未安装插件。',
-      injectionBehavior: '安装方式',
-      resources: '相关资源',
-      autoEnableUnrealAgentLink: '自动安装连接插件',
-      autoEnableUnrealAgentLinkDesc: '打开工程时安装并启用连接插件。',
-      autoEnableUnrealAgentLinkEnabled: '自动安装插件已开启',
-      autoEnableUnrealAgentLinkDisabled: '自动安装插件已关闭',
-      crashRecovery: '崩溃恢复',
-      autoRecoverEditorCrash: '允许 Agent 重开崩溃的编辑器',
-      autoRecoverEditorCrashDesc:
-        'Agent 操作期间编辑器崩溃时，由 Agent 决定是否重开：关闭崩溃报告窗口，备份未保存的自动存档，然后重新打开工程。手动操作期间的崩溃不处理。5 分钟内再次崩溃则不再重开。',
-      repairCleanup: '清理旧版插件',
-      repairCleanupDesc: '清理引擎目录中的旧版连接插件；请先关闭虚幻编辑器。',
-      repairCleanupAction: '清理旧版插件',
-      repairCleanupRunning: '修复中...',
-      repairCleanupSuccess: '已清理 {count} 个引擎的残留插件',
-      repairCleanupNothingToClean: '未发现残留 UnrealAgentLink 插件',
-      repairCleanupPartialFailed:
-        '已清理 {cleaned} 个，{failed} 个失败（如 {engine}）；请关闭编辑器后重试。',
-      repairCleanupFailed: '修复并清理失败',
-      sourceCode: '插件开源项目',
-      sourceCodeDesc: '查看插件代码和更新记录。',
-      sourceCodeOpen: '打开链接',
-      sourceCodeOpenFailed: '打开源码地址失败',
-      settingSaveFailed: '设置保存失败'
     },
 
     voice: {
@@ -3836,14 +3586,14 @@ export default {
     },
     // 关于
     about: {
-      contributors: '由 Unreal Box 贡献者共同打造',
+      contributors: '由 GDBox 贡献者共同打造',
       title: '关于',
-      appName: 'Unreal Box',
+      appName: 'GDBox',
       version: '版本',
-      description: '专为虚幻引擎开发者设计的 AI 助手桌面应用',
+      description: '专为 Godot 开发者设计的 AI 助手桌面应用',
       website: '官方网站',
       github: 'GitHub',
-      copyright: '© Unreal Box. All rights reserved.',
+      copyright: '© GDBox. All rights reserved.',
       checkUpdate: '检查更新',
       termsOfService: '服务条款',
       // 更新相关
@@ -3942,7 +3692,7 @@ export default {
         remove: '删除',
         assetType: '资产类型',
         directory: '目录路径',
-        directoryPlaceholder: '目录路径，如 /Game/Imported/Meshes',
+        directoryPlaceholder: '目录路径，如 res://assets/models',
         example: '示例'
       },
       // 「从资产库导入的目录」那块文案删了：那张表现在没有任何代码路径读得到，
@@ -4343,30 +4093,8 @@ export default {
     // 添加来源弹窗
     addSource: {
       title: '添加来源',
-      description: '添加来源后，虚幻盒子可基于这些信息回答问题。',
-      examples: '（示例：UE 学习笔记、项目文档、会议记录等）',
-      /*
-       * 从工程里抓东西进知识库这一路的提示和来源标题。
-       *
-       * 下面几条 `sourceTitle.*` 会**作为来源的标题存进库里**，不是界面 chrome ——
-       * 所以它在创建那一刻定稿，之后不跟着语言变。这和文件名是一个道理：
-       * 英文用户建的来源就该叫英文名，而不是事后被系统改名。
-       */
-      sourceTitle: {
-        projectInfo: '{project} 项目信息',
-        crashLogs: 'UE 崩溃日志',
-        configFiles: 'UE 项目配置文件'
-      },
-      configSection: {
-        engine: '引擎配置',
-        game: '游戏配置',
-        editor: '编辑器配置',
-        input: '输入配置'
-      },
-      crashLogsFailed: '获取崩溃日志失败，请检查项目路径',
-      noConfigDir: '无法获取项目配置目录',
-      noConfigFiles: '未找到配置文件',
-      configFilesFailed: '获取配置文件失败',
+      description: '添加来源后，GDBox 可基于这些信息回答问题。',
+      examples: '（示例：Godot 学习笔记、项目文档、会议记录等）',
       noSupportedFiles: '未发现支持的文件类型',
       addedFiles: '已添加 {count} 个文件',
       scanning: '正在扫描文件夹...',
@@ -4400,16 +4128,6 @@ export default {
         suffix: '，即可上传',
         supportedTypes:
           '支持的文件类型: PDF, Word（doc, docx）, Excel（xlsx, xls）, csv, txt, Markdown, 图片（jpg, jpeg, png, gif, bmp, webp, ico, tif, tiff, heic, heif, jp2）, 视频（mp4, avi, mov, mkv, wmv, flv, webm, m4v, 3gp）, 音频（mp3, wav, flac, ogg, m4a, aac, wma, opus, aiff, ape）'
-      },
-      ue: {
-        title: 'UE 项目',
-        connected: '已连接',
-        checking: '检测连接中...',
-        notConnected: '未检测到 UE 连接',
-        refresh: '刷新',
-        projectInfo: '项目信息',
-        crashLogs: '崩溃日志',
-        projectConfig: '项目配置'
       },
       links: {
         title: '链接',
@@ -4635,7 +4353,7 @@ export default {
       rootButton: '资产路径',
       createButton: '新建资产库',
       rootNamePlaceholder: '显示名称（如 工程库，留空取目录名）',
-      rootPathPlaceholder: '服务器路径（必填，如 /volume1/UE资产库/Project）',
+      rootPathPlaceholder: '服务器路径（必填，如 /volume1/游戏资产库/Project）',
       creating: '创建中...',
       create: '创建',
       cancel: '取消',
@@ -4846,23 +4564,6 @@ export default {
       baiduyunClickHint: '点击跳转到百度网盘',
       webdavClickHint: '点击跳转到 WebDAV'
     },
-    plugin: {
-      infoTitle: '插件信息',
-      nameLabel: '插件名称',
-      versionLabel: '版本号',
-      experimentalBadge: '实验性',
-      engineVersionLabel: '引擎版本',
-      descriptionLabel: '描述',
-      categoryLabel: '分类',
-      authorLabel: '作者',
-      canContainContentLabel: '包含内容',
-      yes: '是',
-      no: '否',
-      modulesTitle: '模块 ({count})',
-      dependenciesTitle: '依赖插件 ({count})',
-      enabledLabel: '启用',
-      disabledLabel: '禁用'
-    },
     smartTags: {
       label: '智能分类',
       autoDetectedTitle: '自动识别: {name}',
@@ -4881,236 +4582,6 @@ export default {
       deleteOriginalContent: '封面已保存，是否删除原始录制文件？删除后无法恢复。',
       deleteOriginalOk: '删除',
       originalDeleted: '已删除原始录制文件'
-    }
-  },
-  // 「从旧版导入」向导的通用文案（各库自己的部分见 xxxMigration）
-  libraryMigration: {
-    cancel: '取消',
-    importCount: '导入 {count} 个',
-    manualSelect: '手动选择',
-    notFound: '未找到旧版数据库',
-    selectFile: '选择数据库文件',
-    error: '{scope}失败：{reason}',
-    scope: {
-      scan: '查找旧版数据库',
-      preview: '读取旧版数据',
-      import: '导入'
-    },
-    summary: {
-      from: '来自 {folders} 个文件夹',
-      alreadyExists: '· {count} 个已在库中，将跳过'
-    },
-    blocked: {
-      nothingSelected: '未选择任何文件夹。请在「自定义」中选择文件夹，或点击「全选」。'
-    },
-    customize: {
-      toggle: '自定义',
-      folders: '选择要导入的文件夹',
-      selectNone: '全不选',
-      selectAll: '全选',
-      otherFile: '从其他数据库文件导入'
-    },
-    progress: '正在导入 {current} / {total}（{percent}%）',
-    done: {
-      button: '完成',
-      collections: '创建了 {count} 个集合',
-      skipped: '已跳过 {count} 个已存在项'
-    }
-  },
-  blueprintMigration: {
-    title: '从旧版导入蓝图',
-    loading: '正在查找旧版蓝图…',
-    summary: {
-      unit: '个蓝图可导入'
-    },
-    blocked: {
-      allExist: '{count} 个蓝图均已在库中。同一旧库导入一次后不会重复导入。',
-      emptyFile: '该文件中没有蓝图。',
-      otherKindOnly: '该文件中的 {count} 个节点均不是蓝图（材质节点请在材质库中导入）。'
-    },
-    done: {
-      imported: '已导入 {count} 个蓝图'
-    }
-  },
-  materialMigration: {
-    title: '从旧版导入材质',
-    loading: '正在查找旧版材质…',
-    summary: {
-      unit: '个材质可导入'
-    },
-    blocked: {
-      allExist: '{count} 个材质均已在库中。同一旧库导入一次后不会重复导入。',
-      emptyFile: '该文件中没有材质。',
-      otherKindOnly: '该文件中的 {count} 个节点均不是材质（蓝图节点请在蓝图库中导入）。'
-    },
-    done: {
-      imported: '已导入 {count} 个材质'
-    }
-  },
-  // 蓝图库 / 材质库共用组件（library-common）的文案
-  libraryCommon: {
-    close: '关闭',
-    modal: {
-      advanced: '高级设置'
-    }
-  },
-  libraryBrowser: {
-    saveAlert: {
-      title: '{count} 项保存到保管库失败',
-      desc: '后续编辑也将无法保存。常见原因：已切换保管库，或包目录在资源管理器中被重命名或移动。',
-      retry: '重试保存'
-    },
-    allFolders: '全部',
-    searchPlaceholder: '搜索名称、标签…',
-    sort: '排序',
-    sortRecent: '最近修改',
-    sortName: '名称',
-    sortCreated: '创建时间',
-    viewGrid: '网格',
-    viewList: '列表',
-    // 列表模式的表头。列名刻意通用：同一张表要装下蓝图的「UE 5.5」和材质的「混合 · 着色」
-    colName: '名称',
-    colType: '类型',
-    colUpdated: '修改时间',
-    colInfo: '信息',
-    colTags: '标签',
-    loading: '加载中…',
-    emptyTitle: '用于存放可复用的资产',
-    emptyHint: '新建条目，或将文件拖入左侧文件夹',
-    clearSearch: '清除搜索',
-    folderSection: '文件夹',
-    createFolder: '新建文件夹',
-    facetBlendMode: '混合模式',
-    facetShadingModel: '着色模型',
-    newFolderName: '未命名文件夹',
-    folderNameLabel: '文件夹名称',
-    folderNamePlaceholder: '输入文件夹名称…',
-    folderNameConfirm: '保存',
-    folderNameCancel: '取消',
-    renameFolder: '重命名',
-    deleteFolder: '删除文件夹',
-    deleteFolderConfirm: '删除「{name}」？其中的内容将移回「全部」，不会被删除。',
-    selectedCount: '已选择 {count} 项',
-    clearSelection: '取消选择',
-    resizeSidebar: '拖动调整文件夹栏宽度'
-  },
-  blueprintGallery: {
-    header: {
-      title: '蓝图库',
-      subtitle: '管理与复用蓝图节点'
-    },
-    search: {
-      placeholder: '搜索名称、类型、标签',
-      clearTitle: '清除搜索'
-    },
-    filter: {
-      allTypes: '全部类型',
-      favoriteOnlyTitle: '只看收藏',
-      favoriteOnlyLabel: '★ 收藏',
-      clear: '清除'
-    },
-    view: {
-      gridTitle: '网格视图',
-      listTitle: '列表视图'
-    },
-    sort: {
-      recent: '最近使用',
-      name: '蓝图名称',
-      created: '创建时间'
-    },
-    importLegacy: {
-      title: '从旧版导入'
-    },
-    create: {
-      button: '新建蓝图',
-      cardText: '新建蓝图',
-      defaultName: '新建蓝图节点',
-      modalTitle: '新建蓝图',
-      nameLabel: '蓝图名称',
-      namePlaceholder: '默认：新建蓝图节点',
-      advancedHint: '蓝图类型、引擎版本、描述',
-      advancedToggle: '高级设置',
-      typeLabel: '蓝图类型',
-      engineLabel: '引擎版本',
-      descLabel: '描述 (可选)',
-      descPlaceholder: '蓝图的用途和说明...',
-      cancel: '取消',
-      confirm: '创建蓝图'
-    },
-    collection: {
-      badge: '集合',
-      countSuffix: '{count} 个蓝图',
-      empty: '空集合',
-      mergePreviewCount: '{count}个蓝图',
-      typeLabel: '集合'
-    },
-    menu: {
-      changeCover: '🖼 修改封面',
-      recordCover: '⏺ 录制封面',
-      resetCover: '↺ 恢复默认封面',
-      editInfo: '✎ 编辑信息',
-      unfavorite: '☆ 取消收藏',
-      favorite: '★ 收藏',
-      delete: '✕ 删除'
-    },
-    list: {
-      colName: '名称',
-      colType: '蓝图类型',
-      colEngine: '引擎版本',
-      colStats: '统计',
-      colTags: '标签',
-      empty: '没有找到匹配的蓝图',
-      editInfoTitle: '编辑信息',
-      changeCoverTitle: '修改封面',
-      recordCoverTitle: '录制封面',
-      resetCoverTitle: '恢复默认封面',
-      deleteTitle: '删除',
-      favoriteTitleOn: '取消收藏',
-      favoriteTitleOff: '收藏'
-    },
-    rename: {
-      modalTitle: '编辑蓝图信息',
-      closeTitle: '关闭',
-      nameLabel: '蓝图名称',
-      namePlaceholder: '请输入蓝图名称...',
-      descLabel: '描述 (可选)',
-      descPlaceholder: '蓝图的用途和说明...',
-      cancel: '取消',
-      confirm: '确认'
-    },
-    delete: {
-      title: '删除此蓝图？',
-      content: '“{name}”将从蓝图库中移除。此操作目前无法撤销。',
-      okText: '删除',
-      cancelText: '取消',
-      successMessage: '已删除蓝图'
-    },
-    cover: {
-      dialogTitle: '选择蓝图封面',
-      dialogFilterName: '图片或视频',
-      updateSuccess: '已更新蓝图封面',
-      readImageFailed: '读取图片失败',
-      chooseFailed: '选择封面失败',
-      openRecorderFailed: '打开录制器失败',
-      noRecordingAvailable: '暂无可用的录制视频',
-      exportFailed: '导出封面失败',
-      resetSuccess: '已恢复默认封面',
-      modalTitle: '录制封面',
-      notFound: '未找到录制视频',
-      formatLabel: '保存格式',
-      cancel: '取消',
-      confirm: '确定'
-    },
-    empty: {
-      title: '蓝图库为空',
-      hint: '新建蓝图节点，或从旧版导入已有蓝图。'
-    },
-    stats: {
-      functions: '{count} 函数',
-      variables: '{count} 变量',
-      graphs: '{count} 图表',
-      components: '{count} 组件',
-      empty: '空蓝图'
     }
   },
   screenRecorderPanel: {
@@ -5319,104 +4790,6 @@ export default {
     specialGroups: {
       all: '全部',
       selected: '已选择'
-    }
-  },
-  materialGallery: {
-    header: {
-      title: '材质库',
-      subtitle: '保存、检查和复用离线材质节点资产'
-    },
-    search: {
-      placeholder: '搜索名称、路径、标签',
-      clearTitle: '清除搜索'
-    },
-    filter: {
-      favoriteTitle: '只看收藏',
-      textureTitle: '有依赖贴图',
-      clearAll: '清除'
-    },
-    view: {
-      gridTitle: '网格视图',
-      listTitle: '列表视图'
-    },
-    sort: {
-      recent: '最近更新',
-      name: '材质名称',
-      created: '创建时间'
-    },
-    actions: {
-      newMaterial: '新建材质',
-      createMaterialConfirm: '创建材质',
-      favorite: '收藏',
-      unfavorite: '取消收藏',
-      textures: '贴图',
-      editInfo: '编辑信息',
-      removeFromLibrary: '移出材质库'
-    },
-    collection: {
-      badge: '集合',
-      materialCount: '{count} 个材质'
-    },
-    stats: {
-      summary: '参数 {params} · 依赖 {deps}'
-    },
-    list: {
-      colName: '名称',
-      colType: '材质类型',
-      colBlendShading: '混合与着色',
-      colStats: '统计',
-      colPath: '路径'
-    },
-    empty: {
-      listEmpty: '没有找到匹配的材质',
-      title: '未找到匹配材质资产',
-      hint: '可调整筛选条件，或新建离线材质节点条目。'
-    },
-    common: {
-      close: '关闭',
-      cancel: '取消',
-      save: '保存'
-    },
-    form: {
-      nameLabel: '材质名称',
-      namePlaceholder: '默认：新建材质节点',
-      advancedHint: '材质类型、描述',
-      advancedToggle: '高级设置',
-      typeLabel: '材质类型',
-      descriptionLabel: '描述 (可选)',
-      descriptionPlaceholder: '记录此材质节点的用途...',
-      noteLabel: '备注描述',
-      defaultMaterialName: '新建材质节点'
-    },
-    editModal: {
-      title: '编辑材质信息'
-    },
-    entryType: {
-      all: '全部类型',
-      material: '材质',
-      instance: '材质实例',
-      function: '材质函数'
-    },
-    compileStatus: {
-      all: '全部状态',
-      success: '正常',
-      warning: '警告',
-      error: '错误',
-      unknown: '未知'
-    },
-    toast: {
-      invalidName: '名称无效或路径已存在',
-      createdDraft: '已创建材质草稿',
-      updatedInfo: '已更新材质信息',
-      removed: '已移出材质条目',
-      collectionCreated: '已创建材质集合',
-      addedToCollection: '已加入材质集合'
-    },
-    removeConfirm: {
-      title: '移出材质库？',
-      content:
-        '“{name}”将从离线材质库中移除。此操作只影响虚幻盒子的本地库记录，不会删除外部工程文件。',
-      okText: '移出'
     }
   },
   tiptapToolbar: {
@@ -5634,55 +5007,6 @@ export default {
       deregistered: '已从服务器注销资产库「{name}」'
     }
   },
-  materialRenderer: {
-    graph: {
-      nodeCount: '节点',
-      connectionCount: '连线',
-      textureNodeCount: '贴图节点',
-      functionCallCount: '函数调用',
-      copied: '已复制',
-      copyButton: '复制节点文本'
-    },
-    parameters: {
-      title: '参数',
-      description: '按材质参数与可调节点值汇总，值来自离线保存的节点文本或导入记录',
-      tableHead: {
-        name: '名称',
-        type: '类型',
-        value: '值',
-        source: '来源'
-      },
-      empty:
-        '未解析到参数或可调节点值。保存包含 Parameter、Constant 或 Texture Coordinate 的节点文本后会自动汇总。',
-      groups: {
-        scalar: {
-          title: '数值参数',
-          desc: 'Scalar 参数与可调节点数值'
-        },
-        vector: {
-          title: '向量参数',
-          desc: '颜色、向量和多通道值'
-        },
-        texture: {
-          title: '贴图参数',
-          desc: '可替换贴图引用'
-        },
-        boolean: {
-          title: '开关值',
-          desc: 'Static Switch 参数与可调布尔节点值'
-        }
-      },
-      source: {
-        nodeProperty: '节点属性',
-        overridden: '覆盖值',
-        inherited: '继承值',
-        unknown: '未记录'
-      }
-    },
-    toast: {
-      copied: '已复制材质节点文本'
-    }
-  },
   messageDemo: {
     title: '消息管理工具演示',
     subtitle: '点击按钮查看相同消息的去重和计数效果',
@@ -5850,9 +5174,9 @@ export default {
       // 开启完全访问权限前的二次确认。参考 Codex 的做法：
       // 这一步不是走流程，是让用户真的看清自己在放开什么
       confirmTitle: '开启完全访问权限？',
-      confirmIntro: '虚幻盒子将无需批准即可对工程和本机执行以下操作，包括但不限于：',
-      confirmProject: '虚幻工程',
-      confirmProjectDesc: '创建、修改、删除关卡中的 Actor、蓝图、材质与资产',
+      confirmIntro: 'GDBox 将无需批准即可对工程和本机执行以下操作，包括但不限于：',
+      confirmProject: 'Godot 项目',
+      confirmProjectDesc: '创建、修改、删除场景中的节点、脚本、资源与资产',
       confirmFile: '文件和资产库',
       confirmFileDesc: '读取、写入、移动或删除资产库中的文件',
       confirmCommand: '引擎命令与脚本',
@@ -5895,7 +5219,7 @@ export default {
       bilibili: 'B站视频',
       text: '笔记',
       file: '文件',
-      ueProject: 'UE项目'
+      ueProject: '项目'
     },
     toast: {
       loadWikiFailed: '加载知识库列表失败',
@@ -6027,186 +5351,21 @@ export default {
       '已忽略 {count} 个项目：这些是解压软件生成的临时文件，导入后会随临时目录一并清除，请先完整解压'
   },
   importToProjectModal: {
-    engineFilter: 'UE 版本筛选',
-    allEngineVersions: '全部 UE 版本',
-    unknownEngineVersion: '版本未知',
-
-    targetNotConnected: '该工程尚未在 UE 中打开。此类文件需经 UE 转换后才能导入。',
-    // 模型、贴图这类文件要靠 UE 转换：选中的工程没开着时，按钮直接替用户打开再接着导
-    notOpened: '未打开',
-    openAndImport: '打开工程并导入',
-    waitingForEditorButton: '等待 UE 启动…',
-    needsEditorNote: '{format} 需经 UE 转换，将先在 UE 中打开该工程',
-    waitingForEditor: '正在打开「{name}」，UE 启动完成后将自动开始导入。',
-    editorWaitTimeout: 'UE 长时间未连接到虚幻盒子。请确认工程已在 UE 中打开，然后重试。',
-    alreadyRunningNotConnected:
-      '该工程已在 UE 中打开，但未连接到虚幻盒子，通常是因为 UnrealAgentLink 插件未启用。请启用插件并重启编辑器后重试。',
-    openProjectFailed: '打开工程失败：{error}',
-    uprojectMissing: '未找到该工程的 .uproject 文件，文件可能已被移动或删除。',
-    pluginNotInstalled: 'UnrealAgentLink 插件未安装，该工程无法连接到虚幻盒子：{error}',
-    addProject: '添加工程',
-    selected: '已选择',
-    preparing: '准备中…',
-    loadingProjects: '正在读取工程…',
-    loadProjectsFailed: '读取工程列表失败',
-    retry: '重试',
-    sourceItems: '导入 {count} 项（文件夹包含其中的资产）',
-    sourceName: '导入：{name}',
-    sourceFolder: '导入文件夹：{name}',
-    sourceFolderWithCount: '导入文件夹：{name}（{count} 个资产）',
-    targetProject: '导入到：{name}',
-    startImport: '开始导入',
-    checkingVersion: '正在检查版本…',
-    versionConflicts: '{count} 项需要更高版本的引擎，开始导入时将提示选择处理方式',
-    versionPreflightDone: '未发现版本冲突',
-    versionPreflightOther: '外部文件、插件和压缩包是否可用，取决于其内容和目标引擎',
-    compatibilityCheckFailed: '版本检查失败',
-    compatibilityTitle: '部分资产版本过高',
-    compatibilityDetails:
-      '{project} 为 UE {version}，以下 {count} 项需要更高版本：{assets}。仍然导入仅会原样复制文件，不做版本转换，在 UE 中通常无法打开。',
-    blockedAssetsOverflow: '{assets}，等 {rest} 项',
-    chooseCompatibleProject: '更换工程',
-    importCompatibleOnly: '仅导入其余项',
-    forceImport: '仍然导入',
-    forceImportAll: '仍然全部导入',
-    missingPlugins: {
-      title: '需启用 {count} 个插件',
-      desc: '导入的资产依赖以下引擎插件，{project} 尚未启用。未启用时，蓝图编译将报告「无效类型」「找不到函数」等错误。',
-      restartHint: '将写入工程的 .uproject，重启虚幻编辑器后生效。',
-      enable: '启用插件',
-      later: '暂不启用',
-      done: '已启用 {count} 个插件，重启虚幻编辑器后生效',
-      failed: '写入 .uproject 失败：{error}',
-      editorFailed:
-        '已打开的编辑器未能应用 {plugins}，仅写入了文件。请先重启编辑器再修改插件设置，否则此更改将被覆盖',
-      unavailableTitle: '本机缺少 {count} 项',
-      unavailableDesc: '虚幻盒子无法自动启用以下项，安装前相关蓝图将无法打开：',
-      fromProject: '来自「{project}」',
-      projectCode: '「{project}」的工程 C++ 代码',
-      projectCodeUnknown: '原工程的 C++ 代码',
-      onlyModuleName: '仅知模块名，可能来自第三方插件或原工程的 C++ 代码',
-      openFab: '在 Fab 上查看',
-      unavailableHint: '安装插件后重启编辑器；原工程的 C++ 代码需连同源码一并复制并编译。',
-      gotIt: '知道了'
-    },
-
-    title: '导入到工程',
-    archive: {
-      title: '检测到压缩包',
-      question: '选择「{name}」的导入方式',
-      extractOption: '解压后导入：内容解压至工程 Content 目录，可直接在 UE 中查看',
-      copyOption: '原样复制：将压缩包复制到 Content/Imported，需自行解压',
-      extractAction: '解压后导入',
-      copyAction: '原样复制',
-      dontAskAgain: '以后均按此方式处理',
-      taskName: '压缩包导入：{name}',
-      pathNotFound: '未找到该压缩包的文件路径',
-      extractDone: '已解压 {count} 个文件到 {dir}',
-      extractHintAfter: '如压缩包内含 FBX 或贴图，需在 UE 中再次导入',
-      copyDone: '压缩包已复制到 {dir}',
-      unsupportedTitle: '虚幻盒子不支持解压此格式',
-      unsupportedContent:
-        '虚幻盒子仅支持解压 ZIP。{format} 格式请先使用解压软件解压，再将文件夹导入资产库。',
-      unsupportedOk: '知道了'
-    },
-    searchPlaceholder: '搜索名称或路径',
-    progress: {
-      processed: '已处理 {count}/{total}',
-      success: '成功 {count}',
-      existing: '已存在 {count}',
-      error: '失败 {count}'
-    },
-    unnamedProject: '未命名项目',
-    connected: '已连接',
-    emptyNoMatch: '没有匹配的工程',
-    emptyNoProjects: '暂无工程，请点击右上角「添加工程」',
-    emptyNoProjectsInGroup: '该分组中暂无工程',
+    title: '导入到项目',
+    sourceItems: '已选 {count} 项',
+    sourceSingle: '已选「{name}」',
+    targetLabel: '目标文件夹',
+    targetPlaceholder: '选择项目中的文件夹',
+    chooseFolder: '选择文件夹',
+    hint: '文件按原名复制，项目中已有的同名文件会跳过，不会覆盖。',
     cancel: '取消',
-    confirm: '确认',
-    importPathTooltip: '资产在工程中的导入路径，例如 Imported',
-    importPathLabel: '导入路径',
-    normalizedImport: '规范化导入',
-    fileTypes: {
-      model: '模型',
-      texture: '贴图',
-      audio: '音频',
-      video: '视频'
-    },
-    classifyConfirmTitle: '本次导入包含：',
-    classifyUnrealCount: '虚幻资产 {count} 个',
-    defaultFileTypesDesc: '未知类型',
-    classifyExternalCount: '外部文件 {count} 个（{types}）',
-    importAllHint: '引擎未连接，外部文件将直接复制到 Content/Imported',
-    engineNotConnectedTitle: '引擎未连接，请选择导入方式',
-    importUnrealOnly: '仅导入虚幻资产',
-    importAllKeepNative: '全部导入，保留原格式',
-    chooseModeTitle: '外部文件处理方式',
-    connectedUnrealCount: '虚幻资产 {count} 个',
-    nativeMediaCount: '图片音视频 {count} 个',
-    externalCountWithTypes: '待转换 {count} 个（{types}）',
-    convertToUEOption: '转换为虚幻资产：导入到 /Game/Imported',
-    keepNativeOption: '保留原格式：直接复制到 Content/Imported',
-    chooseModeModalTitle: '选择导入方式',
-    convertToUE: '转换为虚幻资产',
-    keepNative: '保留原格式',
-    normalizedImportOnlyUAsset: '规范化导入仅支持 .uasset / .umap 文件',
-    normalizedImportTooltip: '将资产规范化导入到 {path}',
-    taskName: '导入 {count} 个资产到工程',
-    unknownProject: '未知项目',
-    stagePreparing: '正在准备导入…',
-    importFailed: '导入失败',
-    importingProgress: '正在导入 {processed}/{total}',
-    copyingFiles: '{base} · 已写入 {files}/{totalFiles} 个文件（{bytes}/{totalBytes}）',
-    stageCancelling: '正在中止，等待当前文件写入完成…',
-    doneCancelled: '已中止：成功 {success}，已存在 {existing}',
-    projectPathNotFound: '未找到工程路径',
-    copyFailed: '复制失败：{name}',
-    copiedToProject: '已复制 {count} 个文件到工程',
-    copyFailedCount: '{count} 个文件复制失败',
-    copyError: '复制文件失败：{error}',
-    ueNotConnectedFile: 'UE 未连接，无法导入 {name}',
-    doneSummary: '导入完成：成功 {success}，已存在 {existing}，失败 {error}',
-    doneWithWarnings: '导入完成，{count} 条警告',
-    doneWithIssues: '导入完成，但存在未解决的问题',
-    doneWithFailures: '导入完成，{count} 个资产未完整导入',
-    doneImported: '导入完成：已复制 {copied}/{total} 个文件，{existing} 个已存在',
-    singleTaskName: '导入 {name}',
-    importingExternal: '正在导入外部文件…',
-    doneImportedFiles: '已导入 {count} 个文件',
-    ueNotConnected: 'UE 未连接',
-    ueNotConnectedImportFailed: 'UE 未连接，无法导入',
-    copyingUnrealAssets: '正在复制虚幻资产…',
-    assetExists: '资产已存在于工程中',
-    doneCopied: '已复制 {copied}/{total} 个文件',
-    importException: '导入异常',
-    selectProjectFirst: '请先选择工程',
-    noImportableAssets: '没有可导入的资产',
-    needUEConnection: {
-      title: '需要连接 UE',
-      content: '规范化导入需要连接 UE 引擎，请先在工程中启用虚幻盒子插件并打开工程。',
-      okText: '知道了'
-    },
-    folderKeyNotFound: '未找到文件夹标识',
-    noUAssetFiles: '未找到 .uasset 或 .umap 文件',
-    normalizedImporting: '正在导入 {count} 个文件…',
-    normalizedImportDone: '导入完成：成功 {success} 个，失败 {error} 个',
-    normalizedImportWarnings: '导入完成，但有警告：{warnings}',
-    normalizedImportUENotConnected: 'UE 未连接，无法导入',
-    normalizedImportFailed: '规范化导入失败',
-    normalizedImportException: '规范化导入异常：{error}',
-    pluginPathNotFound: '未找到插件文件路径',
-    vaultPathNotFound: '未找到保管库根路径',
-    pluginFolderKeyNotFound: '未找到插件文件夹标识',
-    pluginFolderEmpty: '插件文件夹为空',
-    assetPathNotFound: '未找到资产路径',
-    pluginDirNotFound: '未找到插件目录',
-    sourceOrProjectPathNotFound: '未找到插件源目录或工程路径',
-    pluginImported: '插件 {name} 已导入到 {path}',
-    pluginImportFailed: '插件导入失败：{error}',
-    unknownError: '未知错误',
-    pluginImportException: '插件导入异常：{error}',
-    quickPathInfo: '正在复制 {count} 个 UE 资产…',
-    unknownAsset: '未知资产'
+    confirm: '复制到项目',
+    noFiles: '没有可复制的文件',
+    copied: '已复制 {count} 个文件',
+    copiedWithSkipped: '已复制 {count} 个文件，{skipped} 个同名文件已跳过',
+    allSkipped: '{count} 个文件在项目中已存在，均已跳过',
+    copyFailed: '{count} 个文件复制失败',
+    loadFailed: '读取待导入资产失败'
   },
   graphManageModal: {
     title: '管理图',
@@ -6302,7 +5461,7 @@ export default {
     }
   },
   bridgeBanner: {
-    title: '引擎桥接启动失败'
+    title: 'Godot 编辑器连接服务未能启动'
   },
   modelViewer: {
     loading: '正在加载模型…',
@@ -6447,44 +5606,6 @@ export default {
     sessionProject: {
       none: '未归属项目',
       pick: '归入项目'
-    },
-    // 顶栏状态监控（工程胶囊左边那个心跳按钮）
-    statusMonitor: {
-      title: '状态监控',
-      tooltipIssues: '状态监控 · {n} 项偏离预期',
-      attention: '需要注意',
-      expect: '预期 {expect}',
-      ask: '问 AI',
-      askPrompt: '状态监控里「{label}」是 {value}（预期 {expect}），请排查原因。',
-      refresh: '刷新',
-      updatedAt: '更新于 {time}',
-      loading: '正在读取…',
-      loadFailed: '读取编辑器状态失败，请稍后点击刷新重试。',
-      pluginOutdated: '工程里的 UnrealAgentLink 插件版本较旧，更新插件并重启编辑器后可用。',
-      pending: '暂无数据',
-      unsupported: '此版本不提供',
-      unit: {
-        seconds: '{n} 秒',
-        minutesSeconds: '{m} 分 {s} 秒'
-      },
-      group: {
-        startup: '编辑器',
-        pie: '试玩（PIE）',
-        cache: '缓存',
-        memory: '内存'
-      },
-      item: {
-        startup: '打开编辑器',
-        assetRegistry: '资产注册表扫描',
-        pluginCount: '已启用插件',
-        editorHitch: '编辑器卡顿率',
-        pieFirstEnter: '首次进入',
-        pieEnter: '最近一次进入',
-        pieHitch: 'PIE 卡顿率',
-        localCacheHit: '本地缓存命中',
-        cacheDisk: '本地缓存占盘',
-        availableMemory: '可用内存'
-      }
     }
   },
   notebookNoteChatPanel: {
@@ -6579,34 +5700,6 @@ export default {
       desc: '创建标签组以分类管理标签',
       action: '创建标签组'
     }
-  },
-  blueprintCollectionOverlay: {
-    untitled: '未命名集合',
-    renameTitle: '重命名集合',
-    countLabel: '{count} 个蓝图',
-    stats: {
-      functionCount: '{count} 函数',
-      variableCount: '{count} 变量',
-      graphCount: '{count} 图表',
-      componentCount: '{count} 组件',
-      empty: '空蓝图'
-    },
-    removedToast: '已从集合移出',
-    contextMenu: {
-      open: '📂 打开蓝图',
-      remove: '✕ 从集合移除'
-    }
-  },
-  materialCollectionOverlay: {
-    renameTitle: '重命名集合',
-    entryCount: '{count} 个材质条目',
-    close: '关闭',
-    remove: '移出集合',
-    untitled: '未命名集合',
-    contextMenu: {
-      open: '打开材质'
-    },
-    empty: '此集合为空'
   },
   notebookBrainstormViewer: {
     /*
@@ -6705,7 +5798,6 @@ export default {
     locateFailed: '未能定位到该文件，请刷新列表后重试。',
     loading: '加载中…',
     modifiedTime: '修改时间：{time}',
-    engineVersion: '引擎版本：{version}',
     browsePathUnavailable: '无法打开所在路径，请检查文件是否仍存在',
     folderUploading: '正在上传文件夹…',
     folderEmpty: '文件夹为空',
@@ -6932,7 +6024,7 @@ export default {
   },
   markdownRendererLinkConfirm: {
     title: '安全提示',
-    confirmText: '即将离开虚幻盒子并跳转至外部链接，请注意甄别网站真伪。',
+    confirmText: '即将离开 GDBox 并跳转至外部链接，请注意甄别网站真伪。',
     cancelButton: '取消',
     continueButton: '继续访问'
   },
@@ -6965,57 +6057,6 @@ export default {
     clearButton: '清空',
     saveButton: '保存',
     editorPlaceholder: '开始编写 Markdown 笔记...'
-  },
-  materialEditor: {
-    copiedLibraryPath: '已复制库路径',
-    copiedTexturePath: '已复制贴图路径',
-    sections: {
-      graph: '节点图',
-      textureDependencies: '贴图依赖',
-      functionDependencies: '函数依赖'
-    },
-    actions: {
-      back: '返回',
-      copyPathTitle: '点击复制路径',
-      focusModeTitle: '专注模式 (F)',
-      exitFocusMode: '退出专注',
-      focusMode: '专注模式',
-      favorited: '★ 已收藏',
-      favorite: '☆ 收藏'
-    },
-    sidebar: {
-      title: '材质结构',
-      collapseTitle: '折叠面板',
-      expandTitle: '展开 材质结构'
-    },
-    parameters: {
-      sectionLabel: '参数 / 可调值',
-      materialGroupLabel: '材质参数',
-      nodeGroupLabel: '节点可调值',
-      nodeCountTitle: '{owner}: {count} 个可调值',
-      emptyState: '暂无参数或可调节点值'
-    },
-    textureDependencies: {
-      heading: '贴图依赖',
-      stats: '共 {total} 项 · 已记录 {recorded} · 缺失 {missing}',
-      copyTitle: '复制 {path}',
-      sourceAsset: '资产库匹配',
-      sourceNode: '节点文本引用',
-      emptyState: '未解析到贴图依赖。保存包含 TextureSample 的材质节点文本后会自动汇总。'
-    },
-    functionDependencies: {
-      heading: '函数与集合依赖',
-      count: '{count} 项',
-      emptyState: '暂无函数与集合依赖'
-    },
-    status: {
-      missing: '缺失',
-      recorded: '已记录'
-    },
-    notFound: {
-      title: '材质不存在',
-      backButton: '返回材质库'
-    }
   },
   miniSensitiveConfirm: {
     header: {
@@ -7092,15 +6133,6 @@ export default {
       sub: '按 ESC 退出'
     }
   },
-  blueprintComponentsEditor: {
-    title: '虚幻引擎蓝图编辑器',
-    toggleModeButton: '切换{mode}模式',
-    mode: {
-      dark: '暗色',
-      light: '亮色'
-    },
-    fullscreenOption: '全屏'
-  },
   componentsUpload: {
     modal: {
       title: '图片裁剪',
@@ -7155,128 +6187,6 @@ export default {
     unknownName: '未知',
     moreHidden: '还有 {count} 个资产未显示'
   },
-  snippetCapture: {
-    title: '从引擎保存片段',
-    prompt:
-      '将当前 UE 工程中的一段蓝图逻辑保存到蓝图库。' +
-      '先用 blueprint_get_graph 读取我指定的图表并列出节点，' +
-      '待我确认要保存的节点和名称后，再用 blueprint_library_save 保存。' +
-      '如无法保存，请完整列出受阻的节点及原因，不要只报告失败。',
-    failed: '发起失败：{reason}'
-  },
-  snippetDetail: {
-    back: '返回',
-    formBadge: '片段',
-    applyToProject: '应用到当前工程',
-    nodes: '节点',
-    connections: '连线',
-    openPorts: '悬空端口',
-    nodeTypes: '使用的节点类型',
-    source: '来自',
-    openPortsTitle: '存在悬空端口',
-    openPortsHint:
-      '这些引脚原本连接到选区外部，在片段中处于断开状态。应用到工程后，需在 UE 中手动连接。',
-    noCanvasTitle: '为何不显示节点图',
-    noCanvasHint:
-      '片段保存的是 UE 导出文本，库中的渲染器可以读取，但该渲染器是编辑器，拖动节点即会修改内容，而片段无处保存这些修改，看似可编辑，修改实际会全部丢失。需先为其增加真正的只读模式才能接入。如需了解该片段的内容，可询问右侧助手，助手已获取该片段的全部内容。',
-    applyPrompt:
-      '将蓝图库中的片段「{name}」（entry_id: {id}）应用到当前工程。' +
-      '先用 library_search 确认该条目，再询问我要写入哪个蓝图的哪张空图，然后用 blueprint_library_apply 写入。',
-    applyFailed: '应用到工程失败：{reason}'
-  },
-  blueprintEditor: {
-    topbar: {
-      back: '返回',
-      focusModeTitle: '专注模式 (F)',
-      exitFocus: '退出专注',
-      focusMode: '专注模式',
-      favorited: '★ 已收藏',
-      favorite: '☆ 收藏'
-    },
-    sections: {
-      graph: '图表',
-      function: '函数',
-      variable: '变量',
-      component: '组件',
-      eventDispatcher: '事件分发器',
-      macro: '宏',
-      element: '元素'
-    },
-    defaultNames: {
-      graph: '新事件图表_{n}',
-      function: '新函数_{n}',
-      variable: '新变量_{n}',
-      component: '新组件_{n}',
-      eventDispatcher: '新分发器_{n}',
-      macro: '新宏_{n}'
-    },
-    deleteConfirm: {
-      title: '删除{type}？',
-      content: '“{name}”将从当前蓝图中移除。此操作目前无法撤销。',
-      okText: '删除',
-      cancelText: '取消'
-    },
-    dragHint: {
-      dropForFunctionCall: '松开以创建函数调用节点',
-      dropForSet: '松开以创建 Set 节点',
-      dropForGet: '松开以创建 Get 节点',
-      functionCallSubtitle: '将按函数签名生成调用节点',
-      shiftForSetSubtitle: '按住 Shift 拖拽可放置 Set 节点',
-      shiftToSetSubtitle: '按住 Shift 再松开可改为 Set 节点',
-      treeItemVariable: '拖到画布中创建节点，按住 Shift 可创建 Set 节点',
-      treeItemFunction: '拖到画布中创建函数调用节点'
-    },
-    sidebar: {
-      myBlueprint: '我的蓝图',
-      collapsePanel: '折叠面板',
-      searchPlaceholder: '搜索图表、变量...',
-      filterAll: '全部',
-      filterGraphs: '图表',
-      filterUsedVars: '当前变量',
-      filterUnusedVars: '未使用',
-      noMatches: '未找到匹配项',
-      clearFilters: '清除过滤',
-      add: '添加',
-      notUsedInGraph: '未被当前图表引用',
-      delete: '删除',
-      expandTitle: '展开 我的蓝图'
-    },
-    varTooltip: {
-      type: '类型',
-      subType: '子类型',
-      container: '容器',
-      defaultValue: '默认值',
-      referencedIn: '引用于',
-      listSeparator: '、'
-    },
-    canvasEmpty: {
-      title: '此图表暂无节点',
-      desc: '从左侧拖入变量，或使用 AI 生成一段逻辑'
-    },
-    emptyState: {
-      title: '选择一个图表、函数或宏开始编辑',
-      desc: '从左侧面板选择元素'
-    },
-    notFound: {
-      text: '蓝图不存在',
-      backButton: '返回蓝图库'
-    }
-  },
-  blueprintManagerCommentBox: {
-    colorButtonTitle: '更改注释框颜色',
-    customColorTitle: '自定义颜色',
-    autoArrangeTitle: '自动排列框内节点',
-    colors: {
-      slate: '石墨',
-      rose: '玫红',
-      orange: '橙色',
-      amber: '琥珀',
-      emerald: '翠绿',
-      teal: '青绿',
-      sky: '天蓝',
-      violet: '紫罗兰'
-    }
-  },
   notebookKnowledgeGraphViewer: {
     title: '知识图谱',
     emptyState: '暂无数据',
@@ -7296,7 +6206,7 @@ export default {
       bilibili: 'B站视频',
       text: '笔记',
       file: '文件',
-      ueProject: 'UE项目'
+      ueProject: '项目'
     }
   },
   spotlightWindow: {
@@ -7431,11 +6341,7 @@ export default {
       folderDoneWithFailures: '{count} 个文件夹导入失败：{names}',
       folderDoneWithFailuresShort: '{count} 个文件夹导入失败',
       successItems: '导入完成，共 {count} 项',
-      unrealImportStarted: '正在导入 {count} 个 UE 项目…',
-      unrealImportDone: '已导入 {count} 个 UE 项目',
-      unrealImportTaskName: '从虚幻导入',
-      unrealImportTaskDone: '导入完成：{count} 个资产',
-      unrealImportTaskFailed: '导入失败：{error}',
+      agentImportDone: '已导入 {count} 项',
       modeV1: 'V1 批量',
       modeV2: 'V2 分片',
       modeSuffix: '（{mode}）',
@@ -7698,7 +6604,6 @@ export default {
     mainAssetsOnly: '只看主资产',
     typeGroups: {
       common: '常用',
-      blueprint: '蓝图',
       material: '材质',
       mesh: '网格体',
       animation: '动画',
@@ -7740,93 +6645,9 @@ export default {
     viewDetail: '查看详情',
     detecting: '检测中'
   },
-  importResultModal: {
-    title: '导入到「{name}」不完整',
-    headlinePlanErrors: '{count} 个资产未能开始导入',
-    headlineOrphans: '{count} 个依赖文件未能写入工程',
-    headlineUnattributed: '{count} 个缺失依赖无法确定引用方',
-    noDetail: '本次导入不完整，但没有更多详细信息。',
-    separator: '，',
-    listSeparator: '、',
-    sectionPlanErrors: '未能开始导入的资产',
-    headlineMissing: '缺失 {count} 个依赖',
-    headlineFiles: '{count} 个文件未写入工程',
-    headlineUnconfirmed: '{count} 个资产无法确认是否完整导入',
-    headlineConflicts: '{count} 处目标路径冲突',
-    sectionMissing: '缺失的依赖',
-    sectionFiles: '未能写入工程的文件',
-    sectionUnconfirmed: '无法确认是否完整导入',
-    sectionConflicts: '目标路径冲突',
-    unconfirmedNote: '这些资产的依赖过多，未能全部检查；且本批次中确实存在问题，因此不能视为正常。',
-    state: {
-      'not-in-vault': '保管库中不存在',
-      'source-missing': '库中有记录，但源文件缺失',
-      unresolved: '库中有记录且源文件存在，但无法定位'
-    },
-    affected: '{count} 个资产引用了此项：{sample}',
-    affectedMore: '{count} 个资产引用了此项：{sample} 等 {more} 个',
-    conflictKept: '仅保留了先写入的一项，另一来源：{rejected}',
-    findInVault: '在资产库中查找',
-    copyPath: '复制路径',
-    copied: '已复制',
-    copyFailed: '复制失败',
-    andMore: '……另有 {count} 条，详见日志',
-    retry: '重试导入',
-    retrySucceeded: '已全部导入',
-    retrying: '正在重试导入…',
-    retryPartial: '.uasset 部分已全部导入；外部文件（FBX/贴图等）需在工程打开时才能重试',
-    retryStillFailing: '仍未全部导入，详情已更新',
-    close: '关闭'
-  },
   webdavHeader: {
     title: 'WebDAV 连接',
     desc: '连接到 WebDAV 服务器以管理远程资产'
-  },
-  libraryAIPanel: {
-    title: 'AI 助手',
-    expandTooltip: '展开 AI 助手',
-    collapsedLabel: 'AI 助手',
-    dockTooltip: '停靠',
-    overlayTooltip: '悬浮',
-    collapseTooltip: '折叠',
-    selectedNodes: '已选中 {count} 个节点，提问时将一并发送',
-    suggestions: {
-      blueprint: {
-        explain: {
-          title: '解释逻辑',
-          desc: '功能与执行顺序',
-          prompt: '解释{subject}这段逻辑的功能，按执行顺序说明，并标出关键节点。'
-        },
-        review: {
-          title: '问题检查',
-          desc: '每帧开销、空引用、可简化之处',
-          prompt: '检查{subject}是否存在性能或健壮性问题：每帧开销、空引用、可简化之处。'
-        },
-        apply: {
-          title: '应用到当前工程',
-          desc: '写入空图，编译并保存',
-          prompt: '将{subject}应用到当前工程。先说明要写入哪个蓝图的哪张图，经我确认后再执行。'
-        }
-      },
-      material: {
-        explain: {
-          title: '解释材质',
-          desc: '节点结构和数据流',
-          prompt: '解释{subject}的节点结构和数据流，指出关键节点和难以维护之处。'
-        },
-        performance: {
-          title: '性能检查',
-          desc: '采样数、指令数、混合模式',
-          prompt:
-            '分析{subject}的性能风险：贴图采样、指令数、透明混合、函数调用，并给出可执行的优化建议。'
-        },
-        dependencies: {
-          title: '检查依赖',
-          desc: '贴图、材质函数、参数集合',
-          prompt: '检查{subject}的贴图、材质函数和参数集合依赖，找出缺失、重复或可疑的引用。'
-        }
-      }
-    }
   },
   codeBlockComponent: {
     copyTooltip: '复制代码'
@@ -8067,36 +6888,10 @@ export default {
       excel: '表格'
     },
     snapshotNodes: '{count} 个节点',
-    snapshotActors: '{count} 个 Actor',
+    snapshotActors: '{count} 个节点',
     snapshotAssets: '{count} 个资产',
     snapshotEmpty: '发送时未选中任何内容',
     snapshotTitle: '发送时（{time}）AI 获取的编辑器状态'
-  },
-  blueprintLibraryRenderer: {
-    loadingText: '加载蓝图渲染器…',
-    loadError: '渲染器加载失败: {message}'
-  },
-  blueprintLibraryStore: {
-    // 新建蓝图时自带的那张图。名字会存进包里，创建那一刻定稿
-    defaultGraph: {
-      name: '新事件图表',
-      description: '默认事件图表'
-    },
-    /*
-     * 空库时塞进去的四条示例蓝图。
-     *
-     * 英文用户第一次打开蓝图库，看到的四条示例全是中文描述。
-     * （「要不要有示例数据」是另一个问题，见评审 4.6；这里只负责别让它只有中文。）
-     */
-    samples: {
-      damageSystem: '通用伤害计算系统，支持物理和魔法伤害',
-      calculateDamage: '计算最终伤害值',
-      damageMultiplier: '伤害倍率',
-      isActive: '是否激活',
-      characterController: '角色移动控制蓝图，包含跳跃、冲刺、攀爬',
-      mainMenu: '主菜单 UI 蓝图',
-      networkManager: '网络同步管理器'
-    }
   },
   miniChatWindow: {
     sendButton: '发送',
@@ -8143,7 +6938,7 @@ export default {
       text: '文本来源',
       note: '笔记',
       file: '文件来源',
-      ueProject: 'UE 项目',
+      ueProject: '项目',
       default: '来源'
     },
     openOriginalLink: '打开原链接'
@@ -8157,7 +6952,7 @@ export default {
     },
     form: {
       appNamePlaceholder: '路径名称（例如 模型资产）',
-      uploadPathPlaceholder: '完整上传路径，例如 /apps/unreal-agent/文件名'
+      uploadPathPlaceholder: '完整上传路径，例如 /apps/应用目录/文件名'
     },
     actions: {
       chooseFile: '选择文件',

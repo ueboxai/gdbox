@@ -318,7 +318,7 @@ function projectGroupSessions(group: ChatSessionGroup): ChatSession[] {
 
 function groupTooltip(group: ChatSessionGroup): string {
   const parts = [group.projectName]
-  if (group.engineVersion) parts.push(`UE ${group.engineVersion}`)
+  if (group.engineVersion) parts.push(`Godot ${group.engineVersion}`)
   if (group.projectPath) parts.push(group.projectPath)
   const count = projectGroupSessions(group).filter((session) => !session.archived).length
   parts.push(t('chatSidebar.projectSessionCount', { count }))
@@ -963,7 +963,7 @@ function getChatInitial(title: string): string {
                 :aria-expanded="!isCollapsed(entry.group.key)"
                 @click="toggleCollapsed(entry.group.key)"
               >
-                <!-- 展开/收起看文件夹开没开；连着编辑器的工程把图标染成 UE 蓝 -->
+                <!-- 展开/收起看文件夹开没开；连着编辑器的工程图标加深一档 -->
                 <PhFolderOpen
                   v-if="!isCollapsed(entry.group.key)"
                   :class="['chat-group-icon', { connected: entry.group.connected }]"
@@ -1529,9 +1529,9 @@ function getChatInitial(title: string): string {
   height: var(--sidebar-icon-size);
 }
 
-// UE 蓝：连着编辑器的工程一眼能挑出来
+// 连着编辑器的工程图标加深一档（中性色），一眼能挑出来
 .chat-group-icon.connected {
-  color: var(--color-accent-text);
+  color: var(--color-text-primary);
 }
 
 .chat-group-title {

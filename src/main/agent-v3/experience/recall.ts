@@ -14,7 +14,7 @@
  *
  * ## 两层
  *
- * 本工程的（`<工程>/.uebox/experience/`）和通用的（`<userData>/experience/`）一起查，
+ * 本工程的（`<工程>/.gdbox/experience/`）和通用的（`<userData>/experience/`）一起查，
  * 本工程的排前面：同一个错，工程自己踩出来的做法比通用做法更贴近现场。
  * 通用经验在「照着做了还是同一个错」的引擎版本上不出场（`notFor`）。
  */
@@ -42,7 +42,7 @@ export function matchEntries(
   tool: string,
   normalizedError: string,
   engine?: string,
-  /** 这一次报错在说的 API（上帝工具才有，见 `symbolOf`） */
+  /** 这一次报错在说的 API（验证工具才有，见 `symbolOf`） */
   symbol?: string
 ): LayeredEntry[] {
   const rank = (entry: LayeredEntry): number =>
@@ -55,8 +55,8 @@ export function matchEntries(
         // 不只是「含有」：片段还得对这一次的报错足够具体（见 specificity.ts）。
         // 这一道也兜住手改过的、以及这条规则之前写下的旧经验
         patternProblem(tool, entry.errorPattern, normalizedError) === undefined &&
-        // 上帝工具：说的得是同一个 API。经验记着 `character.is_hidden`，
-        // 这次报的是 `character.get_actor_label`，片段再像也不是一回事
+        // 验证工具：说的得是同一个 API。经验记着 `packedscene.instance`，
+        // 这次报的是 `packedscene.get_state`，片段再像也不是一回事
         (!entry.symbol || entry.symbol === symbol) &&
         !(engine && entry.notFor?.includes(engine))
     )
@@ -70,15 +70,17 @@ function describe(entry: LayeredEntry, engine: string | undefined): string {
     const engines = entry.engines ?? []
     if (engine && !engines.includes(engine) && engines.length > 0) {
       // 跨版本：照样给，但说清楚没在这个版本上验证过 —— API 一个大版本就可能变
-      facts.push(`general; worked on UE ${engines.join(', ')}, not yet confirmed on UE ${engine}`)
+      facts.push(
+        `general; worked on Godot ${engines.join(', ')}, not yet confirmed on Godot ${engine}`
+      )
     } else {
-      facts.push(engines.length ? `general; worked on UE ${engines.join(', ')}` : 'general')
+      facts.push(engines.length ? `general; worked on Godot ${engines.join(', ')}` : 'general')
     }
   } else {
     facts.push('this project')
     if (entry.verified) {
       facts.push(
-        `verified ${entry.verified.date}${entry.verified.engine ? ` on UE ${entry.verified.engine}` : ''}`
+        `verified ${entry.verified.date}${entry.verified.engine ? ` on Godot ${entry.verified.engine}` : ''}`
       )
     }
   }

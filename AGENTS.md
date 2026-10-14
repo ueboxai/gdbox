@@ -146,7 +146,7 @@ until it is met:
 | Agent tools | `src/main/agent-v3/tools/` | Define with `defineTool` (editor calls go through `tools/editorRpc.ts`) and register in `registry.ts`; mind the `appSettingsManager` trap in §7 |
 | Runtime skills (loaded by the in-app agent and the CLI) | `resources/skills/**`, `packages/cli/skills/**` | Conform to `resources/skills/SKILL_STANDARD.md` — gate step `verify:skills` |
 | Godot editor addon | `resources/godot/addons/gdbox_link/` | GDScript, shipped with the app and copied into projects on open. Its wire format matches `src/main/services/websocket`; adding a command means changing both sides and running it once in a real editor (the windowed-editor test under `.local/`) |
-| `uebox` CLI | `packages/cli/` | Typechecked by the gate via `tsconfig.cli.json`; `pnpm verify:cli-package` (build + package check) is not in the gate — run it before publishing the package |
+| `gdbox` CLI | `packages/cli/` | Typechecked by the gate via `tsconfig.cli.json`; `pnpm verify:cli-package` (build + package check) is not in the gate — run it before publishing the package |
 
 ## 5. Hard rules
 

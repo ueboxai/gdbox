@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest'
 // animation (especially one with backwards fill and a delay) blanks them again.
 // Test the compiled page CSS; local spinners, hover and thumbnail effects are outside this guard.
 const pages = [
-  ['Home/Home.vue', ['tools-section', 'engine-section', 'project-section']],
+  ['Home/Home.vue', ['tools-section', 'project-section']],
   ['Notebook/NotebookList.vue', ['gallery-header', 'content-area']],
   [
     'AssetManagement/index.vue',
@@ -17,9 +17,7 @@ const pages = [
   [
     'AIGCStudio/index.vue',
     ['input-panel-container', 'preview-container', 'history-panel-container']
-  ],
-  ['library-common/components/LibraryGrid.vue', ['library-grid']],
-  ['library-common/components/LibraryListTable.vue', ['library-list']]
+  ]
 ] as const
 
 describe('skeleton to content handoff', () => {

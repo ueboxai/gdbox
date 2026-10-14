@@ -1798,49 +1798,6 @@ const api = {
     assertChannelAllowed(channel, GENERIC_EVENT_CHANNELS, 'api.off')
     ipcRenderer.removeListener(channel, handler)
   },
-  projectTemplate: {
-    list: () => ipcRenderer.invoke('projectTemplate:list'),
-    createFromTemplate: (params: {
-      templatePath: string
-      targetDir: string
-      projectName: string
-    }) => ipcRenderer.invoke('projectTemplate:createFromTemplate', params),
-    addCustomTemplate: (params: { sourceProjectPath: string; templateName: string }) =>
-      ipcRenderer.invoke('projectTemplate:addCustomTemplate', params),
-    /** 列出社区模板源 */
-    listSources: () => ipcRenderer.invoke('projectTemplate:listSources'),
-    /** 启用 / 禁用一个源。启用之前不会发出任何网络请求 */
-    setSourceEnabled: (params: { id: string; enabled: boolean }) =>
-      ipcRenderer.invoke('projectTemplate:setSourceEnabled', params),
-    /** 添加自定义源 */
-    addSource: (params: { name: string; url: string }) =>
-      ipcRenderer.invoke('projectTemplate:addSource', params),
-    /** 删除自定义源（内置源不可删） */
-    removeSource: (params: { id: string }) =>
-      ipcRenderer.invoke('projectTemplate:removeSource', params),
-    /** 抓取所有已启用源的清单 */
-    fetchCommunity: () => ipcRenderer.invoke('projectTemplate:fetchCommunity'),
-    /** 下载一条社区模板到本地模板库 */
-    downloadCommunity: (params: { sourceId: string; template: unknown }) =>
-      ipcRenderer.invoke('projectTemplate:downloadCommunity', params),
-    /** 取消一个进行中的下载 */
-    cancelDownload: (params: { sourceId: string; templateId: string }) =>
-      ipcRenderer.invoke('projectTemplate:cancelDownload', params),
-    /** 订阅下载进度，返回取消订阅函数 */
-    onDownloadProgress: (
-      listener: (payload: {
-        sourceId: string
-        templateId: string
-        received: number
-        total: number
-        percent: number
-      }) => void
-    ) => {
-      const handler = (_: Electron.IpcRendererEvent, payload: any): void => listener(payload)
-      ipcRenderer.on('projectTemplate:downloadProgress', handler)
-      return () => ipcRenderer.removeListener('projectTemplate:downloadProgress', handler)
-    }
-  },
   /**
    * Epic Launcher 引擎项目读取 API
    */
@@ -3061,6 +3018,8 @@ const api = {
       notifyApprovalRequired: boolean
       notifyQuestionRequired: boolean
       hideWindowOnProjectLaunch: boolean
+      /** Godot 可执行文件；空串 = 自动查找 */
+      godotPath: string
       autoRecoverEditorCrash: boolean
       /** agent 搜素材时看不看别的保管库，默认关 */
       assetCrossVaultSearch: boolean
@@ -3086,6 +3045,7 @@ const api = {
       notifyApprovalRequired?: boolean
       notifyQuestionRequired?: boolean
       hideWindowOnProjectLaunch?: boolean
+      godotPath?: string
       autoRecoverEditorCrash?: boolean
       assetCrossVaultSearch?: boolean
       assetReadonlyLock?: boolean
@@ -3096,6 +3056,9 @@ const api = {
      */
     setAutoLaunch: (enabled: boolean): Promise<{ success: boolean }> =>
       ipcRenderer.invoke('app-settings:setAutoLaunch', enabled),
+    /** 按设置找 Godot 4（设置为空就自动查找）。找不到回 null */
+    locateGodot: (): Promise<{ path: string; version: string } | null> =>
+      ipcRenderer.invoke('app-settings:locateGodot'),
     /**
      * 设置启用智能追加提问建议
      */

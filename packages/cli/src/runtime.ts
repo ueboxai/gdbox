@@ -15,14 +15,18 @@ import {
   withDeadline,
   type Session
 } from './connection.js'
-import { UeboxError } from './errors.js'
+import { GdboxError } from './errors.js'
 import { interruptSignal } from './interrupt.js'
-import type { RegisteredProject, ResolvedProject } from './project.js'
-import { resolveProject } from './project.js'
-import { fetchCatalog, requireSupported, type CatalogTool } from './tools.js'
+import {
+  localProject,
+  pickConnected,
+  type RegisteredProject,
+  type ResolvedProject
+} from './project.js'
+import { fetchCatalog, type CatalogTool } from './tools.js'
 
-/** 会话体检工具。`projects list` 和 `doctor` 都靠它拿连接清单 */
-const SESSION_HEALTH_TOOL = 'ue_session_health'
+/** 「我的项目」清单工具。`projects list`、`doctor` 和第 3 级工程解析都靠它 */
+export const PROJECT_LIST_TOOL = 'project_list'
 
 export interface RuntimeOptions {
   configPath?: string
@@ -83,9 +87,9 @@ export async function open(options: RuntimeOptions = {}): Promise<Runtime> {
  * 等于替引擎宣布一件没看见的事；调用方据此重发，就可能把一个已经成功的操作
  * 做第二遍。
  */
-function timeoutError(what: string, seconds: number | undefined): UeboxError {
+function timeoutError(what: string, seconds: number | undefined): GdboxError {
   const limit = seconds ?? DEFAULT_TIMEOUT_SECONDS
-  return new UeboxError(
+  return new GdboxError(
     'TIMEOUT',
     `等待「${what}」超过 ${limit} 秒。`,
     '请求可能已经发到引擎了，结果无法确认。先去核实现场，不要直接重发；' +
@@ -146,7 +150,7 @@ export async function callTool(
       })
     } catch (error) {
       throw isSdkTimeout(error)
-        ? new UeboxError(
+        ? new GdboxError(
             'TIMEOUT',
             `${name} 超过 ${runtime.timeoutSeconds} 秒没有任何进度。`,
             '子任务可能还在盒子里跑，也可能已经做了一部分。先去核实现场，不要直接重发；' +
@@ -193,21 +197,21 @@ export interface ToolCallResult {
  * 认不出来的一律归 `TOOL_FAILED` 并**保留原始诊断** —— 不去按中文字符串
  * 猜更精细的类别，那是在编造分类（§6.2）。
  */
-function toolFailure(name: string, result: ToolCallResult, code: string | undefined): UeboxError {
+function toolFailure(name: string, result: ToolCallResult, code: string | undefined): GdboxError {
   const message = textOf(result) || `${name} 执行失败`
 
   // 「按这个条件没查到」不是故障。归成一个专用码，让调用点自己决定怎么读它
   if (code === 'ENGINE_NOT_FOUND') {
-    return new UeboxError('ENGINE_NOT_FOUND', message, undefined, 'not_started')
+    return new GdboxError('ENGINE_NOT_FOUND', message, undefined, 'not_started')
   }
 
   // 引擎那侧等超时了。**这不是失败**：请求已经到引擎，操作可能已经生效。
   //
   // 外部评审抓到的：写工具内部等 60 秒，比 CLI 默认的 120 秒先到，所以真机上
   // 超时几乎总是走这条路。原来它掉进下面的 default 被标成 `failed`，
-  // 调用方据此重试就可能生成第二个 Actor —— §12 整套规则要防的正是这个。
+  // 调用方据此重试就可能把同一件事做第二遍 —— §12 整套规则要防的正是这个。
   if (code === 'ENGINE_TIMEOUT') {
-    return new UeboxError(
+    return new GdboxError(
       'TIMEOUT',
       message,
       '引擎在超时前没有回话，操作可能已经生效。先去核实，不要直接重发。',
@@ -220,11 +224,11 @@ function toolFailure(name: string, result: ToolCallResult, code: string | undefi
     case 'PROJECT_AMBIGUOUS':
     case 'TOOL_UNAVAILABLE':
     case 'INVALID_ARGUMENT':
-      return new UeboxError(code, message, undefined, 'not_started')
+      return new GdboxError(code, message, undefined, 'not_started')
     default:
       // 引擎那侧明确回了失败，所以是 failed 而不是 unknown。
       // 但 failed **不承诺副作用已经回滚**。
-      return new UeboxError('TOOL_FAILED', message, undefined, 'failed')
+      return new GdboxError('TOOL_FAILED', message, undefined, 'failed')
   }
 }
 
@@ -237,42 +241,64 @@ export function textOf(result: ToolCallResult): string {
 }
 
 /**
- * 盒子当前注册着哪些工程。
+ * 「我的项目」里登记着哪些工程，以及哪些工程的编辑器连着。
  *
- * 复用 `ue_session_health` 而不是另开一个网络接口：那份连接数据已经有了，
+ * 复用 `project_list` 而不是另开一个网络接口：那份数据盒子已经有了，
  * 再做一个只会多一处会漂移的真相。
+ *
+ * **只读结构化结果**，不去拆它那段给模型看的文字 —— 那是今天能跑、
+ * 改一个标点就静默失效的接口。
+ *
+ * @returns 盒子没开放这个工具、或者没给结构化结果时为 undefined（由调用方决定怎么报）
  */
-export async function registeredProjects(runtime: Runtime): Promise<RegisteredProject[]> {
-  const tools = await catalog(runtime)
-  requireSupported(tools, SESSION_HEALTH_TOOL)
+export async function listProjects(
+  runtime: Runtime,
+  tools?: CatalogTool[]
+): Promise<RegisteredProject[] | undefined> {
+  const all = tools ?? (await catalog(runtime))
+  if (!all.some((tool) => tool.name === PROJECT_LIST_TOOL)) return undefined
 
-  const result = await callTool(runtime, SESSION_HEALTH_TOOL, {})
-  const connections = result.structuredContent?.connections
+  const result = await callTool(runtime, PROJECT_LIST_TOOL, {})
+  const projects = result.structuredContent?.projects
+  if (!Array.isArray(projects)) return undefined
 
-  if (!Array.isArray(connections)) {
-    throw new UeboxError(
-      'INCOMPATIBLE_SERVER',
-      '虚幻盒子没有返回结构化的连接清单。',
-      '升级虚幻盒子 —— 旧版本只把连接情况写在一段文字里，没法当接口用。'
-    )
-  }
-
-  return connections
+  return projects
     .map((entry) => entry as Record<string, unknown>)
-    .filter(
-      (entry) => typeof entry.connectionId === 'string' && typeof entry.projectPath === 'string'
-    )
+    .filter((entry) => typeof entry.path === 'string' && entry.path !== '')
     .map((entry) => ({
-      connectionId: entry.connectionId as string,
-      name: typeof entry.projectName === 'string' ? entry.projectName : '(未知工程名)',
-      path: entry.projectPath as string
+      name: typeof entry.name === 'string' && entry.name ? entry.name : '(未命名工程)',
+      path: entry.path as string,
+      godotVersion:
+        typeof entry.godotVersion === 'string' && entry.godotVersion ? entry.godotVersion : null,
+      onDisk: typeof entry.onDisk === 'boolean' ? entry.onDisk : null,
+      editorConnected: entry.editorConnected === true,
+      projectKey: typeof entry.projectKey === 'string' ? entry.projectKey : null
     }))
 }
 
-/** 定下这一条命令的目标工程 */
+/** `listProjects` 拿不到结构化清单时的报错，`projects list` 和 `doctor` 共用 */
+export function projectListUnavailable(): GdboxError {
+  return new GdboxError(
+    'INCOMPATIBLE_SERVER',
+    'GDBox 没有返回结构化的工程清单（project_list）。',
+    '升级 GDBox。在那之前用 --project 指定工程目录，其余命令照常可用。'
+  )
+}
+
+/**
+ * 定下这一条命令的目标工程（三级顺序见 `project.ts`）。
+ *
+ * @returns 前两级没有线索、而盒子又给不出结构化清单时为 undefined ——
+ *   这时候不猜，由调用方决定是不带目标发出去（让盒子自己判），还是报错
+ */
 export async function targetProject(
   runtime: Runtime,
-  explicit: string | undefined
-): Promise<ResolvedProject> {
-  return resolveProject(explicit, await registeredProjects(runtime))
+  explicit: string | undefined,
+  tools?: CatalogTool[]
+): Promise<ResolvedProject | undefined> {
+  const local = await localProject(explicit)
+  if (local) return local
+
+  const registered = await listProjects(runtime, tools)
+  return registered ? pickConnected(registered) : undefined
 }

@@ -4,79 +4,42 @@ import { findLessonCandidates, validateLesson } from './curator'
 import { normalizeError } from './errorSignature'
 import type { ExperienceEntry } from './experienceFile'
 import { matchEntries, type LayeredEntry } from './recall'
-import { errorProblem, patternProblem } from './specificity'
+import { patternProblem } from './specificity'
 import type { TrailCall } from './trail'
 
-// 报错样本照 2026-09-30 真实会话里的形状写
-const py = (exception: string): string =>
-  normalizeError(
-    `ue_run_python_script 失败：Traceback (most recent call last): File "<ua-script>", line 5, in <module> ${exception} 详情：{}`
-  )
+// 报错样本照 Godot 4 的原文写，经 godot_check 交回的形状
+const gd = (message: string): string =>
+  normalizeError(`SCRIPT ERROR: ${message}\nat: _ready (res://main.gd:5)`)
 
-const HIDDEN = py("AttributeError: 'Character' object has no attribute 'is_hidden'")
-const MOVEMENT = py("AttributeError: 'Character' object has no attribute 'get_character_movement'")
-const CONVERT = py(
-  "TypeError: AssetRegistry: Failed to convert parameter 'class_path_name' when calling function 'AssetRegistry.GetAssetsByClass' on 'AssetRegistryImpl_0'"
-)
-
-describe('patternProblem：上帝工具', () => {
-  const tool = 'ue_run_python_script'
-
-  it('带着名字、覆盖大半的片段可以', () => {
-    expect(patternProblem(tool, "object has no attribute 'is_hidden'", HIDDEN)).toBeUndefined()
-    expect(
-      patternProblem(
-        tool,
-        "failed to convert parameter 'class_path_name' when calling function 'assetregistry.getassetsbyclass'",
-        CONVERT
-      )
-    ).toBeUndefined()
-  })
-
-  it('只有通用词、没带名字、只占一小截 —— 太宽', () => {
-    expect(patternProblem(tool, 'object has no attribute', HIDDEN)).toBe('generic')
-    // 带了名字、也够长，但缺了报错在说的那个属性名：对角色的任何属性都成立
-    expect(patternProblem(tool, "'character' object has no attribute", HIDDEN)).toBe('too-wide')
-    expect(patternProblem(tool, "attribute 'is_hidden'", HIDDEN)).toBe('too-wide')
-    expect(patternProblem(tool, 'failed to convert parameter', CONVERT)).toBe('generic')
-  })
-
-  it('脚本自己的 bug、不是 Python 异常的失败，都不学', () => {
-    const typo = py("NameError: name 'rcmd' is not defined")
-    expect(errorProblem(tool, typo)).toBe('script-bug')
-    expect(patternProblem(tool, "name 'rcmd' is not defined", typo)).toBe('script-bug')
-    expect(errorProblem(tool, normalizeError('ue_run_python_script 失败：主线程卡住了'))).toBe(
-      'no-exception'
-    )
-  })
-})
+const INSTANCE = gd("Invalid call. Nonexistent function 'instance' in base 'PackedScene'.")
+const GET_STATE = gd("Invalid call. Nonexistent function 'get_staet' in base 'PackedScene'.")
 
 describe('patternProblem：普通工具', () => {
   it('短于 12 个字或全是通用词不行；有一个实词就行', () => {
-    const save = normalizeError(
-      'ue_save 失败：/Game/UI/WBP_Card：File is read-only on disk (checked out to someone else)'
+    const missing = normalizeError(
+      "godot_editor_set_property 失败：节点 'Player/Sprite' 上没有属性 'flip_hh'"
     )
-    expect(patternProblem('ue_save', 'not found', save)).toBe('too-short')
-    expect(patternProblem('ue_save', 'file is read-only on disk', save)).toBeUndefined()
-    const pin = normalizeError(
-      "blueprint_apply_graph 失败：整批已回滚。 1. connections[3]: pin 'AsPlayer Controller' not found on 'castPC'"
-    )
-    expect(patternProblem('blueprint_apply_graph', 'not found on', pin)).toBe('generic')
+    expect(patternProblem('godot_editor_set_property', '没有属性', missing)).toBe('too-short')
     expect(
-      patternProblem('blueprint_apply_graph', "pin 'asplayer controller' not found", pin)
+      patternProblem('godot_editor_set_property', "上没有属性 'flip_hh'", missing)
     ).toBeUndefined()
+    const node = normalizeError(
+      "godot_editor_add_node 失败：parent 'World/Enemies' not found in scene"
+    )
+    expect(patternProblem('godot_editor_add_node', 'not found in scene', node)).toBeUndefined()
+    expect(patternProblem('godot_editor_add_node', 'not found in the', node)).toBe('not-in-error')
   })
 })
 
 describe('召回兜底：旧的宽片段不再命中', () => {
-  it('一条写成 has no attribute 的旧经验，对哪个属性错误都不出场', () => {
+  it('一条写成 nonexistent function 的旧经验，对哪个方法都不出场', () => {
     const wide: LayeredEntry = {
       id: 'e-wide',
       title: '宽',
-      tool: 'ue_run_python_script',
-      errorPattern: "has no attribute '",
-      advice: '先 dir()',
-      expect: { param: 'script' },
+      tool: 'godot_check',
+      errorPattern: 'invalid call. nonexistent function',
+      advice: '查文档',
+      expect: { tool: 'edit_local_file' },
       source: '',
       status: 'proven',
       layer: 'global'
@@ -84,11 +47,31 @@ describe('召回兜底：旧的宽片段不再命中', () => {
     const narrow: LayeredEntry = {
       ...wide,
       id: 'e-narrow',
-      errorPattern: "object has no attribute 'is_hidden'"
+      errorPattern: "nonexistent function 'instance' in base 'packedscene'"
     }
-    expect(matchEntries([wide, narrow], wide.tool, HIDDEN).map((e) => e.id)).toEqual(['e-narrow'])
-    // 换一个属性：窄的那条也不出场 —— 它说的是 is_hidden
-    expect(matchEntries([wide, narrow], wide.tool, MOVEMENT)).toEqual([])
+    expect(matchEntries([wide, narrow], wide.tool, INSTANCE).map((e) => e.id)).toEqual(['e-narrow'])
+    // 换一个方法：窄的那条也不出场 —— 它说的是 instance
+    expect(matchEntries([wide, narrow], wide.tool, GET_STATE)).toEqual([])
+  })
+
+  it('说的不是同一个 API，片段再像也不出场', () => {
+    const entry: LayeredEntry = {
+      id: 'e',
+      title: 't',
+      tool: 'godot_check',
+      errorPattern: "nonexistent function 'instance' in base",
+      advice: 'a',
+      expect: { tool: 'edit_local_file' },
+      source: '',
+      status: 'trial',
+      layer: 'global',
+      symbol: 'packedscene.instance'
+    }
+    const other = gd("Invalid call. Nonexistent function 'instance' in base 'Node2D'.")
+    expect(
+      matchEntries([entry], entry.tool, INSTANCE, undefined, 'packedscene.instance')
+    ).toHaveLength(1)
+    expect(matchEntries([entry], entry.tool, other, undefined, 'node2d.instance')).toEqual([])
   })
 })
 
@@ -97,50 +80,50 @@ describe('整理员：同一次会话里别的报错也对得上，就太宽', (
     kind: 'call',
     agent: 's1',
     i,
-    tool: 'ue_run_python_script',
+    tool: 'godot_check',
     ok: true,
     args: '{}',
     ...over
   })
+  const edit = (i: number): TrailCall =>
+    call(i, {
+      tool: 'edit_local_file',
+      path: 'H:/G/main.gd',
+      old: 's.instance()',
+      code: 's.instantiate()'
+    })
   const calls = [
-    call(1, { ok: false, args: '{"script":"a"}', error: HIDDEN, fp: HIDDEN.slice(0, 120) }),
-    call(2, { args: '{"script":"b"}' }),
-    call(3, { ok: false, args: '{"script":"c"}', error: MOVEMENT, fp: MOVEMENT.slice(0, 120) })
+    call(1, { ok: false, error: INSTANCE, fp: INSTANCE.slice(0, 120) }),
+    edit(2),
+    call(3, {}),
+    call(4, { ok: false, error: GET_STATE, fp: GET_STATE.slice(0, 120) })
   ]
 
-  it('片段能同时对上 is_hidden 和 get_character_movement 两个错，丢掉', () => {
+  it('片段能同时对上 instance 和 get_staet 两个错，丢掉', () => {
     const [candidate] = findLessonCandidates(calls, [] as ExperienceEntry[])
-    expect(candidate.siblings).toEqual([MOVEMENT])
-    const lesson = {
-      index: 0,
-      title: 't',
-      advice: '先 dir() 看有哪些属性',
-      expect: { param: 'script' }
-    }
+    expect(candidate.siblings).toEqual([GET_STATE])
+    const lesson = { index: 0, title: 't', advice: '改用 instantiate()', expect: {} }
     expect(
       validateLesson(
-        { ...lesson, errorPattern: "'character' object has no attribute '" },
+        { ...lesson, errorPattern: 'invalid call. nonexistent function' },
         candidate,
         new Set()
       )
     ).toBeUndefined()
     expect(
       validateLesson(
-        { ...lesson, errorPattern: "object has no attribute 'is_hidden'" },
+        { ...lesson, errorPattern: "nonexistent function 'instance' in base 'packedscene'" },
         candidate,
         new Set()
       )
-    ).toBeDefined()
+    ).toMatchObject({ expect: { tool: 'edit_local_file' } })
   })
 
-  it('脚本自己的 bug 连候选都进不去，不花模型调用', () => {
-    const typo = py("NameError: name 'rcmd' is not defined")
+  it('笔误连候选都进不去，不花模型调用', () => {
+    const typo = gd('Parse Error: Identifier "velocity_y" not declared in the current scope.')
     expect(
       findLessonCandidates(
-        [
-          call(1, { ok: false, args: '{"script":"a"}', error: typo, fp: typo }),
-          call(2, { args: '{"script":"b"}' })
-        ],
+        [call(1, { ok: false, error: typo, fp: typo }), edit(2), call(3, {})],
         []
       )
     ).toEqual([])

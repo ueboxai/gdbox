@@ -28,175 +28,171 @@
 
 export type Lang = 'zh-CN' | 'en-US'
 
-const ZH = `虚幻盒子 CLI —— 从终端调用虚幻引擎能力
+const ZH = `GDBox CLI —— 从终端调用 GDBox 的 Godot 能力
 
 用法：
-  uebox <命令> [选项]
+  gdbox <命令> [选项]
 
-  虚幻盒子开着就能直接用；连不上就跑 uebox doctor。
+  GDBox 开着就能直接用；连不上就跑 gdbox doctor。
 
 命令：
-  ask "<要做的事>"          把一件事交给盒子的 Agent 做完，拿回结论
-  doctor                    逐层体检：连接、接口契约、工具范围、工程注册
-  projects list             列出已注册且在线的 UE 工程
+  ask "<要做的事>"          把一件事交给 GDBox 的 Agent 做完，拿回结论
+  doctor                    逐层体检：连接、接口契约、工具范围、工程
+  projects list             列出「我的项目」里的 Godot 工程和编辑器连接
   tools list                列出能调用的工具（加 --allow-write 连写工具一起列）
   tools show <name>         某个工具的完整描述和参数定义
   tools call <name>         调用一个工具
-  viewport screenshot       把视口画面存成 PNG 文件
+  screenshot                无头运行游戏，把画面存成 PNG 文件
 
 示例：
-  uebox ask "列出当前关卡里所有点光源和它们的强度"
-  uebox ask "把所有点光源的强度调低一半" --allow-write
-  uebox doctor
-  uebox tools list --search actor
-  uebox tools call ue_get_selection
-  uebox tools call search_assets --args-file args.json
-  uebox tools call ue_set_transform --args-file move.json --allow-write
-  uebox viewport screenshot --output shot.png --overwrite
+  gdbox ask "检查主场景里的脚本有没有报错"
+  gdbox ask "给主角加二段跳并验证" --allow-write
+  gdbox doctor
+  gdbox tools list --search editor
+  gdbox tools call editor_scene_tree
+  gdbox tools call godot_check --args-file check.json
+  gdbox tools call search_assets --args-file args.json
+  gdbox tools call editor_save_all --allow-write
+  gdbox screenshot --output shot.png --overwrite
 
   --args 里直接写 JSON 要按所在 shell 转义，裸 JSON 两边都会被吃掉引号：
-    PowerShell   --args '{\\"name\\":\\"Floor\\"}'
-    cmd          --args "{""name"":""Floor""}"
+    PowerShell   --args '{\\"max_depth\\":3}'
+    cmd          --args "{""max_depth"":3}"
   嫌绕就用 --args-file <文件>，或 --args-file - 从标准输入读。
 
 选项（写在命令前面或后面都行）：
   --json                    stdout 只输出一个 JSON 对象；诊断走 stderr
-  --project <path>          目标工程，.uproject 文件或其所在目录都行
+  --project <path>          目标工程，project.godot 文件或其所在目录都行
   --allow-write             允许这条命令改动工程
   --search <text>           tools list 按名字或描述筛选
   --args <JSON>             tools call 的参数
   --args-file <path>        从文件读参数；写 - 表示从标准输入读
   --name <tool>             工具名，位置参数不好传时用
   --output <path>           截图存到哪，只接受 .png，相对路径按当前目录算
-  --world auto|editor       截图拍哪个世界，默认 auto：PIE 在跑就拍游戏
+  --scene <res://...>       截图拍哪个场景，默认主场景
+  --frames <n>              截图前跑多少帧（60 fps），默认 30
   --overwrite               截图允许覆盖已存在的文件
-  --config <path>           盒子的配置文件，装在别处时用；或设 UEBOX_HOST_CONFIG
+  --config <path>           GDBox 的配置文件，装在别处时用；
+                            或设 GDBOX_HOST_CONFIG
   --timeout <seconds>       整条命令的期限，默认 120
   --lang zh-CN|en-US        帮助与提示用哪种语言
   -h, --help                看这段
   -v, --version             看版本号
 
 ask：
-  用的是盒子里配置的模型，费用记在那个模型的账上。子任务只碰引擎、
-  素材库和工程库；shell、本地文件、浏览器、第三方 MCP 一律不给。
+  用的是 GDBox 里配置的模型，费用记在那个模型的账上。子任务只碰 Godot 工具、
+  工程文件、素材库和工程库；shell、浏览器、第三方 MCP 一律不给。
   不加 --allow-write 时它只能查，不能改。进度打在 stderr 上；
   --timeout 对它算的是多久没有任何进度，不是总时长。
 
 写操作：
-  不加 --allow-write 只调只读工具。加了之后，盒子自己的 AI 助手能用的工具
+  不加 --allow-write 只调只读工具。加了之后，GDBox 自己的助手能用的工具
   这里都能调，要求逐次人工审批的除外。
   超时不要直接重发：请求可能已经生效，先用只读工具查清楚再决定。
-  撤销用 tools call ue_undo --allow-write，args 一定带 {"steps":1}，
-  不带 steps 会把整条栈全撤；编辑器里按 Ctrl+Z 碰不到这一步。
 
-目标工程按这个顺序定：--project，从当前目录往上最近的 .uproject，
-恰好只有一个工程在线时用它。前两步定出的工程没连着就直接失败。
-
-截图的明暗只在场景锁了手动曝光时可信，看 data.exposure；自动曝光时先锁再判断。
+目标工程按这个顺序定：--project，从当前目录往上最近的 project.godot，
+恰好只有一个 Godot 编辑器连着时用它。editor_* 工具要那个工程的编辑器连着
+（GDBox Link 插件）；godot_check、godot_run、screenshot 不需要编辑器。
 
 退出码：
   0     成功
   2     参数或输出位置要改
   3     配置或认证
-  4     盒子不可达，或版本不支持
-  5     定不下唯一的目标工程
+  4     GDBox 不可达，或版本不支持
+  5     定不下唯一的目标工程，或它的编辑器没连着
   6     工具超出范围，或是写工具但没加 --allow-write
-  7     超时。请求可能已经到引擎，结果不明，先核实再重发
-  8     引擎操作失败，或文件没交付
-  130   用户中断。不代表引擎已经撤销操作
+  7     超时。请求可能已经发出，结果不明，先核实再重发
+  8     工具执行失败，或文件没交付
+  130   用户中断。不代表已经发出的操作被撤销
 
   不会返回 1。真收到 1 说明进程在 CLI 接手之前就崩了。
 
-需要虚幻盒子正在运行（对外服务默认开着，除非你在设置里关过）。
-引擎类命令还要求目标 UE 编辑器已打开并完成插件握手；列工具不要求。`
+需要 GDBox 正在运行（对外服务默认开着，除非你在设置里关过）。`
 
-const EN = `Unreal Box CLI — drive Unreal Engine from your terminal
+const EN = `GDBox CLI — drive GDBox's Godot tools from your terminal
 
 Usage:
-  uebox <command> [options]
+  gdbox <command> [options]
 
-  Works while Unreal Box is running; run uebox doctor when it can't connect.
+  Works while GDBox is running; run gdbox doctor when it can't connect.
 
 Commands:
-  ask "<task>"              Hand a task to the box's own agent, get the result
+  ask "<task>"              Hand a task to GDBox's own agent, get the result
   doctor                    Layered check: connection, contract, scope, projects
-  projects list             List registered, online UE projects
+  projects list             List Godot projects in My Projects and editor links
   tools list                List callable tools (--allow-write adds writers)
   tools show <name>         Full description and input schema for one tool
   tools call <name>         Call one tool
-  viewport screenshot       Save the viewport image to a PNG file
+  screenshot                Run the game headless, save the frame as a PNG
 
 Examples:
-  uebox ask "list every point light in the level with its intensity"
-  uebox ask "halve the intensity of every point light" --allow-write
-  uebox doctor
-  uebox tools list --search actor
-  uebox tools call ue_get_selection
-  uebox tools call search_assets --args-file args.json
-  uebox tools call ue_set_transform --args-file move.json --allow-write
-  uebox viewport screenshot --output shot.png --overwrite
+  gdbox ask "check the main scene's scripts for errors"
+  gdbox ask "add a double jump to the player and verify it" --allow-write
+  gdbox doctor
+  gdbox tools list --search editor
+  gdbox tools call editor_scene_tree
+  gdbox tools call godot_check --args-file check.json
+  gdbox tools call search_assets --args-file args.json
+  gdbox tools call editor_save_all --allow-write
+  gdbox screenshot --output shot.png --overwrite
 
   Inline JSON in --args must be escaped for your shell; both eat bare quotes:
-    PowerShell   --args '{\\"name\\":\\"Floor\\"}'
-    cmd          --args "{""name"":""Floor""}"
+    PowerShell   --args '{\\"max_depth\\":3}'
+    cmd          --args "{""max_depth"":3}"
   Or skip it: --args-file <file>, or --args-file - to read stdin.
 
 Options (before or after the command):
   --json                    Emit one JSON object on stdout; diagnostics stderr
-  --project <path>          Target project; .uproject or its directory
+  --project <path>          Target project; project.godot or its directory
   --allow-write             Let this command change the project
   --search <text>           tools list: filter by name or description
   --args <JSON>             tools call: arguments
   --args-file <path>        Read arguments from a file; - means stdin
   --name <tool>             Tool name, when a positional is awkward to pass
   --output <path>           Screenshot file, .png only, relative to cwd
-  --world auto|editor       Which world to capture; auto captures PIE if running
+  --scene <res://...>       Scene to capture; default the main scene
+  --frames <n>              Frames to run first (60 fps), default 30
   --overwrite               Let the screenshot replace an existing file
-  --config <path>           The box's config file if installed elsewhere;
-                            or set UEBOX_HOST_CONFIG
+  --config <path>           GDBox's config file if installed elsewhere;
+                            or set GDBOX_HOST_CONFIG
   --timeout <seconds>       Deadline for the whole command, default 120
   --lang zh-CN|en-US        Language for help and CLI-generated messages
   -h, --help                Show this
   -v, --version             Show the version
 
 ask:
-  Runs on the model configured in the box, billed to that model. The subtask
-  only touches the engine and the asset and project libraries; shell, local
-  files, browser and third-party MCP are never given. Without --allow-write it
+  Runs on the model configured in GDBox, billed to that model. The subtask only
+  touches Godot tools, project files and the asset and project libraries;
+  shell, browser and third-party MCP are never given. Without --allow-write it
   can look but not change. Progress goes to stderr; for ask, --timeout means
   how long without any progress, not total time.
 
 Writes:
-  Without --allow-write only read-only tools are called. With it, anything the
-  box's own assistant can use is callable, except tools needing per-call
+  Without --allow-write only read-only tools are called. With it, anything
+  GDBox's own assistant can use is callable, except tools needing per-call
   human approval.
   Never blind-retry after a timeout: it may have taken effect; check first.
-  Undo with tools call ue_undo --allow-write and args {"steps":1};
-  without steps it undoes the whole stack. Editor Ctrl+Z won't reach it.
 
-The target project is: --project, else the nearest .uproject above the current
-directory, else the one online project if there is exactly one. A project from
-the first two that is not connected fails the command.
-
-Screenshot brightness is only reliable when the scene uses manual exposure;
-check data.exposure, and lock it before judging exposure.
+The target project is: --project, else the nearest project.godot above the
+current directory, else the one connected Godot editor if there is exactly
+one. editor_* tools need that project's editor connected (GDBox Link addon);
+godot_check, godot_run and screenshot do not need an editor.
 
 Exit codes:
   0     ok
   2     fix the arguments or the output location
   3     config or auth
-  4     box unreachable, or incompatible version
-  5     no single target project
+  4     GDBox unreachable, or incompatible version
+  5     no single target project, or its editor is not connected
   6     tool out of scope, or --allow-write missing
-  7     timeout. The request may have reached the engine; verify before retry
-  8     engine operation failed, or the file was not delivered
-  130   interrupted. Does not mean the engine rolled anything back
+  7     timeout. The request may have been sent; verify before retry
+  8     tool failed, or the file was not delivered
+  130   interrupted. Does not mean anything sent was rolled back
 
   1 is never returned. Seeing 1 means the process died before the CLI ran.
 
-Requires Unreal Box running (its service is on by default unless you turned it
-off). Engine commands also need the target editor open with the plugin
-connected; listing tools does not.`
+Requires GDBox running (its service is on by default unless you turned it
+off).`
 
 export function helpText(lang: Lang): string {
   return lang === 'en-US' ? EN : ZH

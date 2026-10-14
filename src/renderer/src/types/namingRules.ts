@@ -84,136 +84,123 @@ export interface NamingRulesConfig {
 }
 
 /**
- * 默认配置（基于 UE5 标准）
+ * 默认配置（按 Godot 官方风格指南）
+ *
+ * - 文件和目录一律 snake_case，不加类型前缀（Godot 项目里类型看扩展名就够了）
+ * - 节点名用 PascalCase，那是场景里的事，不归这张表管
+ * - 纹理通道用小写后缀，和 snake_case 文件名保持一致
+ * - 目录是 `res://` 下的相对位置
  */
 export const DEFAULT_NAMING_RULES_CONFIG: NamingRulesConfig = {
-  version: '1.0.0',
-  assetPrefixes: {
-    StaticMesh: 'SM_',
-    SkeletalMesh: 'SK_',
-    Texture: 'T_',
-    Material: 'M_',
-    MaterialInstance: 'MI_',
-    SoundWave: 'A_',
-    SoundCue: 'A_',
-    MediaSource: 'MS_',
-    FileMediaSource: 'MS_',
-    Blueprint: 'BP_',
-    ParticleSystem: 'PS_',
-    AnimSequence: 'A_',
-    AnimMontage: 'AM_'
-  },
+  version: '2.0.0',
+  assetPrefixes: {},
   textureSuffixPatterns: [
     {
       pattern: '[-_](diffuse|albedo|basecolor|base_color|color|col|diff|d)$',
-      suffix: '_D',
+      suffix: '_albedo',
       type: 'Albedo',
       enabled: true
     },
     {
       pattern: '[-_](normal|norm|nrm|n)$',
-      suffix: '_N',
+      suffix: '_normal',
       type: 'Normal',
       enabled: true
     },
     {
       pattern: '[-_](roughness|rough|rgh|r)$',
-      suffix: '_R',
+      suffix: '_roughness',
       type: 'Roughness',
       enabled: true
     },
     {
       pattern: '[-_](metallic|metal|met|m)$',
-      suffix: '_M',
+      suffix: '_metallic',
       type: 'Metallic',
       enabled: true
     },
     {
       pattern: '[-_](ao|ambient|occlusion|occ|o)$',
-      suffix: '_AO',
+      suffix: '_ao',
       type: 'AO',
       enabled: true
     },
     {
       pattern: '[-_](height|displacement|disp|h)$',
-      suffix: '_H',
+      suffix: '_height',
       type: 'Height',
       enabled: true
     },
     {
-      pattern: '[-_](emissive|emit|e)$',
-      suffix: '_E',
+      pattern: '[-_](emissive|emission|emit|e)$',
+      suffix: '_emission',
       type: 'Emissive',
       enabled: true
     },
     {
       pattern: '[-_](opacity|alpha|a)$',
-      suffix: '_A',
+      suffix: '_alpha',
       type: 'Opacity',
       enabled: true
     },
     {
       pattern: '[-_](mask)$',
-      suffix: '_Mask',
+      suffix: '_mask',
       type: 'Mask',
       enabled: true
     }
   ],
   assetTypeToDirectory: {
-    StaticMesh: '/Game/Imported/Meshes/Static',
-    SkeletalMesh: '/Game/Imported/Meshes/Skeletal',
-    Texture: '/Game/Imported/Textures',
-    Material: '/Game/Imported/Materials',
-    MaterialInstance: '/Game/Imported/Materials/Instances',
-    SoundWave: '/Game/Imported/Audio/SFX',
-    SoundCue: '/Game/Imported/Audio/Cues',
-    FileMediaSource: '/Game/Imported/Media/Video',
-    Blueprint: '/Game/Imported/Blueprints',
-    ParticleSystem: '/Game/Imported/Effects',
-    AnimSequence: '/Game/Imported/Animations',
-    AnimMontage: '/Game/Imported/Animations/Montages'
+    Model: 'res://assets/models',
+    Texture: 'res://assets/textures',
+    Material: 'res://assets/materials',
+    Audio: 'res://assets/audio',
+    Video: 'res://assets/video',
+    Font: 'res://assets/fonts',
+    Shader: 'res://shaders',
+    Script: 'res://scripts',
+    Scene: 'res://scenes'
   },
   libraryAssetTypeToDirectory: {
-    StaticMesh: 'Meshes/Static',
-    SkeletalMesh: 'Meshes/Skeletal',
-    Texture: 'Textures',
-    Material: 'Materials',
-    MaterialInstance: 'Materials/Instances',
-    SoundWave: 'Audio/SFX',
-    SoundCue: 'Audio/Cues',
-    FileMediaSource: 'Media/Video',
-    Blueprint: 'Blueprints',
-    ParticleSystem: 'Effects',
-    AnimSequence: 'Animations',
-    AnimMontage: 'Animations/Montages',
-    World: 'Levels'
+    Model: 'models',
+    Texture: 'textures',
+    Material: 'materials',
+    Audio: 'audio',
+    Video: 'video',
+    Font: 'fonts',
+    Shader: 'shaders',
+    Script: 'scripts',
+    Scene: 'scenes'
   },
   extensionToAssetType: {
-    fbx: 'StaticMesh',
-    obj: 'StaticMesh',
-    glb: 'StaticMesh',
-    gltf: 'StaticMesh',
+    glb: 'Model',
+    gltf: 'Model',
+    fbx: 'Model',
+    obj: 'Model',
+    blend: 'Model',
     png: 'Texture',
     jpg: 'Texture',
     jpeg: 'Texture',
+    webp: 'Texture',
+    svg: 'Texture',
     tga: 'Texture',
     exr: 'Texture',
     hdr: 'Texture',
     bmp: 'Texture',
-    tiff: 'Texture',
-    wav: 'SoundWave',
-    mp3: 'SoundWave',
-    ogg: 'SoundWave',
-    flac: 'SoundWave',
-    mp4: 'FileMediaSource',
-    mov: 'FileMediaSource',
-    avi: 'FileMediaSource',
-    wmv: 'FileMediaSource',
-    mkv: 'FileMediaSource',
-    webm: 'FileMediaSource'
+    wav: 'Audio',
+    ogg: 'Audio',
+    mp3: 'Audio',
+    ogv: 'Video',
+    ttf: 'Font',
+    otf: 'Font',
+    woff2: 'Font',
+    gdshader: 'Shader',
+    gd: 'Script',
+    tscn: 'Scene',
+    tres: 'Material'
   },
-  namingConvention: 'pascalCase',
-  autoAddPrefix: true,
+  namingConvention: 'snake_case',
+  autoAddPrefix: false,
   autoDetectTextureType: true,
   customRules: []
 }

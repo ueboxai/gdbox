@@ -7,7 +7,8 @@
  *
  * 它复刻的是真盒子对外的那一层协议形状：会话隔离、Bearer 校验、
  * `capabilities.experimental.unrealBox`、工具清单里的 `_meta.unrealBox`、
- * 以及 `structuredContent`。**不复刻业务逻辑** —— 那些由主仓库自己的测试盯着。
+ * `structuredContent`，以及「点名的工程编辑器没连着就在执行前拒绝」
+ * （`externalTarget.ts`）。**不复刻业务逻辑** —— 那些由主仓库自己的测试盯着。
  *
  * 有了它，CLI 的退出码、信封形状、工程解析、旧盒子提示这些才能真的跑一遍，
  * 而不是靠打桩假装跑过。
@@ -32,6 +33,8 @@ import {
 export interface FakeTool {
   name: string
   description?: string
+  /** 参数定义。不给就是一个没有属性的对象 */
+  inputSchema?: Record<string, unknown>
   meta?: {
     namespace: string
     risk: string
@@ -65,6 +68,11 @@ export interface FakeBoxOptions {
   /** false 表示扮演旧盒子：不声明 unrealBox 能力 */
   declareContract?: boolean
   contractVersion?: number
+  /**
+   * 编辑器连着的工程目录。给了就像真盒子那样核对请求元数据里的 `projectPath`：
+   * 不在里面就在执行前回 `PROJECT_NOT_CONNECTED`，工具的 handle 不会被调用
+   */
+  connectedProjects?: string[]
 }
 
 export interface FakeBox {
@@ -91,7 +99,7 @@ export async function startFakeBox(options: FakeBoxOptions): Promise<FakeBox> {
           }
 
     const mcp = new Server(
-      { name: 'fake-unreal-box', version: '1.0.0' },
+      { name: 'fake-gdbox', version: '1.0.0' },
       { capabilities: { tools: {}, ...experimental } }
     )
 
@@ -99,7 +107,7 @@ export async function startFakeBox(options: FakeBoxOptions): Promise<FakeBox> {
       tools: options.tools.map((tool) => ({
         name: tool.name,
         description: tool.description ?? `假工具 ${tool.name}`,
-        inputSchema: { type: 'object' as const, properties: {} },
+        inputSchema: { type: 'object' as const, properties: {}, ...tool.inputSchema },
         ...(tool.meta
           ? {
               _meta: {
@@ -126,6 +134,17 @@ export async function startFakeBox(options: FakeBoxOptions): Promise<FakeBox> {
       }
 
       const meta = request.params._meta?.unrealBox as { projectPath?: string } | undefined
+      if (
+        meta?.projectPath &&
+        options.connectedProjects &&
+        !options.connectedProjects.some((path) => samePath(path, meta.projectPath!))
+      ) {
+        return {
+          content: [{ type: 'text', text: `工程 ${meta.projectPath} 当前没有连接到 GDBox。` }],
+          isError: true,
+          _meta: { unrealBox: { errorCode: 'PROJECT_NOT_CONNECTED' } }
+        }
+      }
       const token = request.params._meta?.progressToken
       let sent = 0
       const progress = async (message: string): Promise<void> => {
@@ -202,6 +221,37 @@ export async function startFakeBox(options: FakeBoxOptions): Promise<FakeBox> {
       await Promise.all(servers.map((s) => s.close().catch(() => undefined)))
       await new Promise<void>((resolve) => http.close(() => resolve()))
     }
+  }
+}
+
+function samePath(a: string, b: string): boolean {
+  const key = (value: string): string => value.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()
+  return key(a) === key(b)
+}
+
+/** 「我的项目」清单，形状同真盒子 `project_list` 的公共结果 */
+export function projectListTool(
+  projects: Array<{ name: string; path: string; editorConnected?: boolean }>
+): FakeTool {
+  return {
+    name: 'project_list',
+    description: '列出「我的项目」里登记的 Godot 工程。',
+    meta: { namespace: 'project', risk: 'safe', projectScoped: false },
+    handle: () => ({
+      content: [{ type: 'text', text: `${projects.length} 个工程` }],
+      structuredContent: {
+        projects: projects.map((project, index) => ({
+          projectKey: `key-${index}`,
+          name: project.name,
+          godotVersion: '4.4',
+          path: project.path,
+          onDisk: true,
+          editorConnected: project.editorConnected === true,
+          pinned: false
+        })),
+        collections: []
+      }
+    })
   }
 }
 

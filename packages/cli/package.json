@@ -1,11 +1,11 @@
 {
-  "name": "uebox-cli",
+  "name": "gdbox-cli",
   "version": "0.1.0",
   "private": true,
-  "description": "Unreal Box CLI — 让外部 Agent、开发者和脚本通过终端调用虚幻盒子的 UE 能力",
+  "description": "GDBox CLI — 让外部 Agent、开发者和脚本通过终端调用 GDBox 的 Godot 能力",
   "type": "module",
   "bin": {
-    "uebox": "./dist/index.js"
+    "gdbox": "./dist/index.js"
   },
   "files": ["dist", "skills", "README.md"],
   "engines": {

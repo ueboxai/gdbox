@@ -67,8 +67,11 @@ function sanitizeConfig(config: NamingRulesConfig): NamingRulesConfig {
       libraryAssetTypeToDirectory: parsed.libraryAssetTypeToDirectory || {},
       extensionToAssetType: parsed.extensionToAssetType || {},
       namingConvention: (parsed.namingConvention ||
-        'pascalCase') as NamingRulesConfig['namingConvention'],
-      autoAddPrefix: parsed.autoAddPrefix !== undefined ? Boolean(parsed.autoAddPrefix) : true,
+        DEFAULT_NAMING_RULES_CONFIG.namingConvention) as NamingRulesConfig['namingConvention'],
+      autoAddPrefix:
+        parsed.autoAddPrefix !== undefined
+          ? Boolean(parsed.autoAddPrefix)
+          : DEFAULT_NAMING_RULES_CONFIG.autoAddPrefix,
       autoDetectTextureType:
         parsed.autoDetectTextureType !== undefined ? Boolean(parsed.autoDetectTextureType) : true,
       customRules: (parsed.customRules || []).map((rule) => ({

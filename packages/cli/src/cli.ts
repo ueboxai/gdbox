@@ -10,10 +10,10 @@ import { assertArgsInputExclusive, parse, type ParsedArgs } from './args.js'
 import { runAsk } from './commands/ask.js'
 import { runDoctor } from './commands/doctor.js'
 import { runProjectsList } from './commands/projects.js'
-import { runViewportScreenshot } from './commands/screenshot.js'
+import { runScreenshot } from './commands/screenshot.js'
 import { runToolsCall, runToolsList, runToolsShow } from './commands/tools.js'
 import { failure, writeJson, type Envelope } from './envelope.js'
-import { exitCodeFor, toUeboxError, UeboxError } from './errors.js'
+import { exitCodeFor, toGdboxError, GdboxError } from './errors.js'
 import { helpText, type Lang } from './help.js'
 import { markSettled } from './interrupt.js'
 import { render } from './render.js'
@@ -57,13 +57,13 @@ export async function run(
 
   // --help / --version 不读凭据、不连服务（§4）。
   //
-  // 版本要判在最前面：`uebox --version` 没有位置参数，先判「有没有给命令」
+  // 版本要判在最前面：`gdbox --version` 没有位置参数，先判「有没有给命令」
   // 的话它会掉进用法错误那条路 —— 一条最常用的命令报退出码 2。
   if (parsed.version) {
     return { exitCode: 0, stdout: `${VERSION}\n`, stderr: '' }
   }
 
-  // 光敲 `uebox` 等同于 `uebox --help`。这不是用法错误 —— 用户什么都没说错，
+  // 光敲 `gdbox` 等同于 `gdbox --help`。这不是用法错误 —— 用户什么都没说错，
   // 他只是还没说要干什么，这时候该给他看清单，不是给他一个非零退出码。
   if (parsed.help || parsed.command.length === 0) {
     return { exitCode: 0, stdout: `${helpText(lang)}\n`, stderr: '' }
@@ -76,11 +76,7 @@ export async function run(
   }
 }
 
-async function dispatch(
-  parsed: ParsedArgs,
-  env: NodeJS.ProcessEnv,
-  io: RunIO
-): Promise<Envelope> {
+async function dispatch(parsed: ParsedArgs, env: NodeJS.ProcessEnv, io: RunIO): Promise<Envelope> {
   const [group, sub] = parsed.command
   const shared = {
     ...(parsed.configPath ? { configPath: parsed.configPath } : {}),
@@ -90,7 +86,7 @@ async function dispatch(
 
   switch (group) {
     case 'ask':
-      // 位置参数全拼起来：`uebox ask 把灯调暗` 不加引号也能用
+      // 位置参数全拼起来：`gdbox ask 给主角加二段跳` 不加引号也能用
       return runAsk({
         ...shared,
         prompt: parsed.command.slice(1).join(' '),
@@ -110,23 +106,24 @@ async function dispatch(
     case 'tools':
       return dispatchTools(parsed, sub, shared, parsed.allowWrite)
 
-    case 'viewport':
-      if (sub !== 'screenshot') throw unknownCommand(['viewport screenshot'])
+    case 'screenshot':
+      requireNoSubcommand(parsed, 'screenshot')
       if (!parsed.output) {
         // 这条命令交付的是文件，没有目标位置就无事可做 —— 与其挑一个默认
         // 路径把图丢在那儿让用户去找，不如让他说清楚
-        throw new UeboxError(
+        throw new GdboxError(
           'INVALID_ARGUMENT',
-          'viewport screenshot 需要 --output 指定保存到哪个 .png 文件。',
-          '例如：uebox viewport screenshot --output .\\artifacts\\viewport.png'
+          'screenshot 需要 --output 指定保存到哪个 .png 文件。',
+          '例如：gdbox screenshot --output .\\artifacts\\shot.png'
         )
       }
-      return runViewportScreenshot({
+      return runScreenshot({
         ...shared,
         output: parsed.output,
         overwrite: parsed.overwrite,
         ...(parsed.project ? { project: parsed.project } : {}),
-        ...(parsed.world ? { world: parsed.world } : {})
+        ...(parsed.scene ? { scene: parsed.scene } : {}),
+        ...(parsed.frames ? { frames: parsed.frames } : {})
       })
 
     default:
@@ -137,7 +134,7 @@ async function dispatch(
         'tools list',
         'tools show <name>',
         'tools call <name>',
-        'viewport screenshot'
+        'screenshot'
       ])
   }
 }
@@ -183,10 +180,10 @@ async function dispatchTools(
 function requireToolName(parsed: ParsedArgs, command: string): string {
   const name = parsed.command[2] ?? parsed.name
   if (!name) {
-    throw new UeboxError(
+    throw new GdboxError(
       'INVALID_ARGUMENT',
       `${command} 需要一个工具名。`,
-      '运行 uebox tools list 看有哪些可用。'
+      '运行 gdbox tools list 看有哪些可用。'
     )
   }
   return name
@@ -194,20 +191,20 @@ function requireToolName(parsed: ParsedArgs, command: string): string {
 
 function requireNoSubcommand(parsed: ParsedArgs, command: string): void {
   if (parsed.command.length > 1) {
-    throw new UeboxError('INVALID_ARGUMENT', `${command} 不接受子命令：${parsed.command[1]}`)
+    throw new GdboxError('INVALID_ARGUMENT', `${command} 不接受子命令：${parsed.command[1]}`)
   }
 }
 
-function unknownCommand(available: string[]): UeboxError {
-  return new UeboxError(
+function unknownCommand(available: string[]): GdboxError {
+  return new GdboxError(
     'INVALID_ARGUMENT',
     '不认识这条命令。',
-    `可用的命令：${available.join('、')}。完整说明见 uebox --help。`
+    `可用的命令：${available.join('、')}。完整说明见 gdbox --help。`
   )
 }
 
 function toEnvelope(error: unknown): Envelope {
-  const failed = toUeboxError(error)
+  const failed = toGdboxError(error)
   return failure({
     code: failed.code,
     message: failed.message,
@@ -232,7 +229,7 @@ function output(envelope: Envelope, json: boolean): RunResult {
   }
 
   const text = render(envelope)
-  // 默认模式下失败信息走 stderr：`uebox projects list > out.txt` 之后
+  // 默认模式下失败信息走 stderr：`gdbox projects list > out.txt` 之后
   // 用户还能在终端上看见出了什么事
   return envelope.ok
     ? { exitCode, stdout: `${text}\n`, stderr: '' }

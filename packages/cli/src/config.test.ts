@@ -1,5 +1,5 @@
 /** @vitest-environment node */
-import { promises as fs } from 'node:fs'
+import { existsSync, promises as fs } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -10,11 +10,10 @@ import {
   discoverHostConfig,
   hostConfigCandidates,
   isLoopbackHost,
-  legacyCliConfigPath,
   readHostConfig,
   resolveConnection
 } from './config.js'
-import { exitCodeFor, type UeboxError } from './errors.js'
+import { exitCodeFor, type GdboxError } from './errors.js'
 
 const dirs: string[] = []
 
@@ -22,7 +21,7 @@ afterEach(async () => {
   await Promise.all(dirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })))
 })
 
-async function tempDir(name = 'uebox-'): Promise<string> {
+async function tempDir(name = 'gdbox-'): Promise<string> {
   const dir = await fs.mkdtemp(join(tmpdir(), name))
   dirs.push(dir)
   return dir
@@ -37,9 +36,8 @@ describe('hostConfigCandidates', () => {
     const candidates = hostConfigCandidates({ APPDATA: 'C:/Users/x/AppData/Roaming' })
 
     expect(candidates).toHaveLength(2)
-    expect(candidates.some((p) => p.includes('unreal-box'))).toBe(true)
-    expect(candidates.some((p) => p.includes('虚幻盒子'))).toBe(true)
-    expect(candidates.every((p) => p.endsWith('mcp-server.json'))).toBe(true)
+    expect(candidates[0]).toMatch(/[\\/]gdbox[\\/]mcp-server\.json$/)
+    expect(candidates[1]).toMatch(/[\\/]GDBox[\\/]mcp-server\.json$/)
   })
 })
 
@@ -47,10 +45,10 @@ describe('readHostConfig', () => {
   it('从端口拼出回环地址，并取出令牌', async () => {
     const dir = await tempDir()
     const path = join(dir, 'mcp-server.json')
-    await fs.writeFile(path, JSON.stringify({ enabled: true, port: 17861, token: 'abc123' }))
+    await fs.writeFile(path, JSON.stringify({ enabled: true, port: 17871, token: 'abc123' }))
 
     expect(await readHostConfig(path)).toMatchObject({
-      url: 'http://127.0.0.1:17861/',
+      url: 'http://127.0.0.1:17871/',
       token: 'abc123'
     })
   })
@@ -59,7 +57,7 @@ describe('readHostConfig', () => {
   it('带 BOM 的配置也读得了', async () => {
     const dir = await tempDir()
     const path = join(dir, 'mcp-server.json')
-    await fs.writeFile(path, `\uFEFF${JSON.stringify({ port: 17861, token: 'abc' })}`, 'utf8')
+    await fs.writeFile(path, `\uFEFF${JSON.stringify({ port: 17871, token: 'abc' })}`, 'utf8')
 
     expect((await readHostConfig(path)).token).toBe('abc')
   })
@@ -70,8 +68,8 @@ describe('readHostConfig', () => {
       await readHostConfig(join(dir, 'nope.json'))
       expect.unreachable('应该抛出')
     } catch (error) {
-      expect((error as UeboxError).code).toBe('CONFIG_MISSING')
-      expect((error as UeboxError).hint).toContain('--config')
+      expect((error as GdboxError).code).toBe('CONFIG_MISSING')
+      expect((error as GdboxError).hint).toContain('--config')
     }
   })
 
@@ -88,7 +86,7 @@ describe('readHostConfig', () => {
       await readHostConfig(dir)
       expect.unreachable('应该抛出')
     } catch (error) {
-      const failed = error as UeboxError
+      const failed = error as GdboxError
       expect(failed.code).toBe('CONFIG_UNREADABLE')
       expect(failed.message).not.toContain('还没有配置过')
       expect(failed.message).toContain('目录')
@@ -114,7 +112,7 @@ describe('readHostConfig', () => {
   it('没有令牌时明确报出来', async () => {
     const dir = await tempDir()
     const path = join(dir, 'mcp-server.json')
-    await fs.writeFile(path, JSON.stringify({ port: 17861, token: '   ' }))
+    await fs.writeFile(path, JSON.stringify({ port: 17871, token: '   ' }))
 
     await expect(readHostConfig(path)).rejects.toThrow(/没有访问令牌/)
   })
@@ -130,14 +128,14 @@ describe('connectionFromEnv', () => {
    * 所以只设一个是配置错误，不是「另一半去文件里找」。
    */
   it('只设一个时报错，不去文件里补另一半', () => {
-    expect(() => connectionFromEnv({ UEBOX_URL: 'http://127.0.0.1:1/' })).toThrow(/必须同时提供/)
-    expect(() => connectionFromEnv({ UEBOX_TOKEN: 'x' })).toThrow(/必须同时提供/)
+    expect(() => connectionFromEnv({ GDBOX_URL: 'http://127.0.0.1:1/' })).toThrow(/必须同时提供/)
+    expect(() => connectionFromEnv({ GDBOX_TOKEN: 'x' })).toThrow(/必须同时提供/)
   })
 
   it('成对时用它，并标明来源不是文件', () => {
     const connection = connectionFromEnv({
-      UEBOX_URL: 'http://127.0.0.1:17861/',
-      UEBOX_TOKEN: 'tok'
+      GDBOX_URL: 'http://127.0.0.1:17871/',
+      GDBOX_TOKEN: 'tok'
     })
 
     expect(connection).toMatchObject({ token: 'tok' })
@@ -147,8 +145,8 @@ describe('connectionFromEnv', () => {
 
   /** 盒子只监听回环。出现别的地址只可能是配错或被人改过，不能把令牌发过去 */
   it('非回环地址一律拒绝', () => {
-    for (const url of ['http://192.168.1.5:17861/', 'http://example.com/', 'https://10.0.0.1/']) {
-      expect(() => connectionFromEnv({ UEBOX_URL: url, UEBOX_TOKEN: 'tok' })).toThrow(/回环/)
+    for (const url of ['http://192.168.1.5:17871/', 'http://example.com/', 'https://10.0.0.1/']) {
+      expect(() => connectionFromEnv({ GDBOX_URL: url, GDBOX_TOKEN: 'tok' })).toThrow(/回环/)
     }
   })
 
@@ -160,13 +158,21 @@ describe('connectionFromEnv', () => {
   })
 })
 
+/**
+ * 临时目录所在的文件系统分不分大小写。
+ *
+ * 分不出大小写时 `gdbox/` 和 `GDBox/` 是同一个目录，开发版和正式版共用一份配置 ——
+ * 「两份配置」那几条用例在这种机器上根本摆不出来。
+ */
+const caseInsensitive = existsSync(tmpdir().toUpperCase()) && existsSync(tmpdir().toLowerCase())
+
 /** 在临时目录里摆出盒子配置，`APPDATA` 指过去，就是一台假机器 */
 async function machine(installs: Array<'dev' | 'installed'>): Promise<NodeJS.ProcessEnv> {
-  const root = await tempDir('uebox 中文-')
+  const root = await tempDir('gdbox 中文-')
   // 非 Windows 上 appDataDir 不看 APPDATA，看 XDG_CONFIG_HOME；两个都给
   const env = { APPDATA: root, XDG_CONFIG_HOME: root, HOME: root }
   const [dev, installed] = hostConfigCandidates(env)
-  const ports = { dev: 17861, installed: 17862 }
+  const ports = { dev: 17871, installed: 17872 }
   for (const which of installs) {
     const path = which === 'dev' ? dev! : installed!
     await fs.mkdir(join(path, '..'), { recursive: true })
@@ -183,25 +189,39 @@ describe('零配置找盒子', () => {
     const env = await machine(['installed'])
     const host = await resolveConnection({ env, bundled: false })
 
-    expect(host.url).toBe('http://127.0.0.1:17862/')
+    expect(host.url).toBe('http://127.0.0.1:17872/')
     expect(host.token).toBe('t-installed')
   })
 
-  it.skipIf(onMac)('两个都装着时不替用户挑，报错并给出两条指定办法', async () => {
-    const env = await machine(['dev', 'installed'])
+  /**
+   * Windows / macOS 上 `gdbox` 和 `GDBox` 是同一个目录。按路径字符串去重的话，
+   * 一份配置会被数成两份，零配置当场失效。
+   */
+  it.skipIf(onMac || !caseInsensitive)('大小写不敏感时两个候选是同一份，直接用', async () => {
+    const env = await machine(['installed'])
+    const host = await resolveConnection({ env, bundled: false })
 
-    try {
-      await discoverHostConfig(env, false)
-      expect.unreachable('应该抛出')
-    } catch (error) {
-      expect((error as UeboxError).code).toBe('CONFIG_INVALID')
-      expect((error as UeboxError).hint).toContain('--config')
-      expect((error as UeboxError).hint).toContain('UEBOX_HOST_CONFIG')
-    }
+    expect(host.token).toBe('t-installed')
   })
 
+  it.skipIf(onMac || caseInsensitive)(
+    '两个都装着时不替用户挑，报错并给出两条指定办法',
+    async () => {
+      const env = await machine(['dev', 'installed'])
+
+      try {
+        await discoverHostConfig(env, false)
+        expect.unreachable('应该抛出')
+      } catch (error) {
+        expect((error as GdboxError).code).toBe('CONFIG_INVALID')
+        expect((error as GdboxError).hint).toContain('--config')
+        expect((error as GdboxError).hint).toContain('GDBOX_HOST_CONFIG')
+      }
+    }
+  )
+
   /** 装机版是用正式版的 exe 启动的，属于哪个盒子没有疑问 */
-  it.skipIf(onMac)('装机版 CLI 在两个都装着时用正式版', async () => {
+  it.skipIf(onMac || caseInsensitive)('装机版 CLI 在两个都装着时用正式版', async () => {
     const env = await machine(['dev', 'installed'])
     const host = await resolveConnection({ env, bundled: true })
 
@@ -215,50 +235,19 @@ describe('零配置找盒子', () => {
       await discoverHostConfig(env, false)
       expect.unreachable('应该抛出')
     } catch (error) {
-      expect((error as UeboxError).code).toBe('CONFIG_MISSING')
-      expect((error as UeboxError).message).toContain('mcp-server.json')
+      expect((error as GdboxError).code).toBe('CONFIG_MISSING')
+      expect((error as GdboxError).message).toContain('mcp-server.json')
     }
   })
 
-  it.skipIf(onMac)('UEBOX_HOST_CONFIG 和 --config 优先于自动查找', async () => {
-    const env = await machine(['dev', 'installed'])
-    const [dev] = hostConfigCandidates(env)
-
-    expect((await resolveConnection({ env: { ...env, UEBOX_HOST_CONFIG: dev } })).token).toBe(
-      't-dev'
-    )
-    expect((await resolveConnection({ env, configPath: dev })).token).toBe('t-dev')
-  })
-
-  /** 旧版 setup 在两个都装着的机器上记下过用户的选择，照旧尊重它 */
-  it.skipIf(onMac)('旧版 setup 留下的记录还在就用它', async () => {
-    const env = await machine(['dev', 'installed'])
-    const [dev] = hostConfigCandidates(env)
-    const legacy = legacyCliConfigPath(env)
-    await fs.mkdir(join(legacy, '..'), { recursive: true })
-    await fs.writeFile(legacy, JSON.stringify({ version: 1, hostConfigPath: dev }))
-
-    expect((await resolveConnection({ env, bundled: true })).token).toBe('t-dev')
-  })
-
-  /** 记录只是偏好：它指向的盒子卸载了，不该让本来找得到的盒子连不上 */
-  it.skipIf(onMac)('旧记录指向的文件没了就当没有，接着自动找', async () => {
+  it.skipIf(onMac)('GDBOX_HOST_CONFIG 和 --config 优先于自动查找', async () => {
     const env = await machine(['installed'])
-    const legacy = legacyCliConfigPath(env)
-    await fs.mkdir(join(legacy, '..'), { recursive: true })
-    await fs.writeFile(legacy, JSON.stringify({ version: 1, hostConfigPath: 'Z:/gone.json' }))
+    const elsewhere = join(await tempDir(), 'mcp-server.json')
+    await fs.writeFile(elsewhere, JSON.stringify({ port: 17873, token: 't-elsewhere' }))
 
-    expect((await resolveConnection({ env, bundled: false })).token).toBe('t-installed')
-  })
-
-  /** 有人把 --config 指到旧版 CLI 配置上时，顺着它记的路径找过去 */
-  it('--config 指到旧版 CLI 配置也能用', async () => {
-    const dir = await tempDir()
-    const host = join(dir, 'mcp-server.json')
-    const cli = join(dir, 'config.json')
-    await fs.writeFile(host, JSON.stringify({ port: 17863, token: 'abc' }))
-    await fs.writeFile(cli, JSON.stringify({ version: 1, hostConfigPath: host }))
-
-    expect((await readHostConfig(cli)).token).toBe('abc')
+    expect((await resolveConnection({ env: { ...env, GDBOX_HOST_CONFIG: elsewhere } })).token).toBe(
+      't-elsewhere'
+    )
+    expect((await resolveConnection({ env, configPath: elsewhere })).token).toBe('t-elsewhere')
   })
 })

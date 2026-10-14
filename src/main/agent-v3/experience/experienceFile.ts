@@ -14,21 +14,21 @@
  * ## 格式
  *
  * ```markdown
- * ## 材质参数名要用引擎里的真实名字
+ * ## Godot 4 里实例化场景用 instantiate()
  * <!-- id: e-1a2b3c -->
- * - key: ue_set_material_parameter · "parameter not found"
- * - advice: 先调 ue_get_material_parameters 取真实参数名
- * - expect: tool=ue_get_material_parameters
+ * - key: godot_check · "nonexistent function 'instance' in base 'packedscene'"
+ * - advice: PackedScene 在 Godot 4 里用 instantiate()，不是 instance()
+ * - expect: tool=edit_local_file
  * - source: 2026-09-28 · session a1b2 · failed twice, then succeeded
- * - verified: 2026-09-28 · UE 5.5
+ * - verified: 2026-09-28 · Godot 4.3
  * - status: trial
  * ```
  *
  * 通用层（`<userData>/experience/`）的经验多两个字段，工程层的没有：
  *
  * ```markdown
- * - engines: 5.5, 5.6      在这些引擎版本上被照着做并且成功过
- * - not-for: 5.7           在这些版本上照着做了还是同一个错
+ * - engines: 4.2, 4.3      在这些引擎版本上被照着做并且成功过
+ * - not-for: 4.4           在这些版本上照着做了还是同一个错
  * ```
  *
  * 字段名用英文、固定小写：解析要稳，而界面上显示的是翻译过的标签，不是这几个词。
@@ -70,18 +70,18 @@ export interface ExperienceEntry {
   /** 通用层：在哪些引擎版本上照着做了还是同一个错 —— 这些版本上不再出场 */
   notFor?: string[]
   /**
-   * 上帝工具才有：报错在说的那个 API（`character.is_hidden`）。召回时新报错得说的是同一个 API。
+   * 验证工具才有：报错在说的那个 API（`packedscene.instance`）。召回时新报错得说的是同一个 API。
    * 见 `specificity.ts` 的 `symbolOf`
    */
   symbol?: string
   /**
-   * 脚本里的错误写法（`.is_hidden`），从「失败那次删掉、成功那次没有」的行里确定性抽出来。
+   * 脚本里的错误写法（`.instance`、`kinematicbody2d`），从「改文件时删掉、改完没有」的行里确定性抽出来。
    * 已验证的经验据此在执行前提醒（见 `precheck.ts`）
    */
   avoid?: string
 }
 
-/** `5.5.4` / `UE 5.5` → `5.5`。拿不出 major.minor 的回 undefined */
+/** `4.3.stable` / `Godot 4.3` → `4.3`。拿不出 major.minor 的回 undefined */
 export function engineMinor(version: string | undefined): string | undefined {
   const match = version?.match(/(\d+)\.(\d+)/)
   return match ? `${match[1]}.${match[2]}` : undefined
@@ -118,7 +118,7 @@ function parseExpect(value: string): ExpectedAction {
 function parseVerified(value: string): ExperienceEntry['verified'] {
   const [date, engine] = value.split('·').map((s) => s.trim())
   if (!date) return undefined
-  const version = engine?.replace(/^UE\s*/i, '')
+  const version = engine?.replace(/^(UE|Godot)\s*/i, '')
   return version ? { date, engine: version } : { date }
 }
 
@@ -190,7 +190,7 @@ function formatExpect(expect: ExpectedAction): string {
 export function serializeExperienceFile(tool: string, entries: ExperienceEntry[]): string {
   const header =
     `# ${tool}\n\n` +
-    '<!-- Written by Unreal Box from real engine results. Edit or delete freely; ' +
+    '<!-- Written by GDBox from real engine results. Edit or delete freely; ' +
     'statistics live in .ledger.json. -->\n'
   const body = entries.map((entry) => {
     const lines = [
@@ -202,7 +202,7 @@ export function serializeExperienceFile(tool: string, entries: ExperienceEntry[]
       `- source: ${oneLine(entry.source)}`,
       ...(entry.verified
         ? [
-            `- verified: ${entry.verified.date}${entry.verified.engine ? ` · UE ${entry.verified.engine}` : ''}`
+            `- verified: ${entry.verified.date}${entry.verified.engine ? ` · Godot ${entry.verified.engine}` : ''}`
           ]
         : []),
       `- status: ${entry.status}`,

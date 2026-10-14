@@ -5,12 +5,13 @@ import { join } from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import type { UeboxError } from './errors.js'
+import type { GdboxError } from './errors.js'
 import {
   canonicalizeProjectPath,
   findProjectUpwards,
-  normalize,
-  resolveProject,
+  localProject,
+  pickConnected,
+  projectName,
   type RegisteredProject
 } from './project.js'
 
@@ -20,21 +21,29 @@ afterEach(async () => {
   await Promise.all(dirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })))
 })
 
-async function projectDir(name = 'Demo'): Promise<string> {
+async function projectDir(name = 'Demo', godotName?: string): Promise<string> {
   // 目录名带空格和中文：真机上这两样最容易出问题，而它们完全是常态
-  const root = await fs.mkdtemp(join(tmpdir(), 'uebox 工程-'))
+  const root = await fs.mkdtemp(join(tmpdir(), 'gdbox 工程-'))
   dirs.push(root)
   const dir = join(root, name)
   await fs.mkdir(dir, { recursive: true })
-  await fs.writeFile(join(dir, `${name}.uproject`), '{}')
+  await fs.writeFile(
+    join(dir, 'project.godot'),
+    godotName ? `[application]\n\nconfig/name="${godotName}"\n` : '[application]\n'
+  )
   return dir.replace(/\\/g, '/')
 }
 
-function registered(...paths: string[]): RegisteredProject[] {
-  return paths.map((path, index) => ({
-    connectionId: `conn-${index}`,
-    name: path.split('/').pop() ?? 'Demo',
-    path
+function registered(
+  ...entries: Array<{ path: string; editorConnected?: boolean }>
+): RegisteredProject[] {
+  return entries.map((entry, index) => ({
+    name: entry.path.split('/').pop() ?? `P${index}`,
+    path: entry.path,
+    godotVersion: '4.4',
+    onDisk: true,
+    editorConnected: entry.editorConnected === true,
+    projectKey: `key-${index}`
   }))
 }
 
@@ -45,9 +54,9 @@ describe('canonicalizeProjectPath', () => {
   })
 
   /** 用户手上有哪个就给哪个，逼他先想清楚该给哪种是没必要的负担 */
-  it('给 .uproject 文件就落到它所在的目录', async () => {
+  it('给 project.godot 文件就落到它所在的目录', async () => {
     const dir = await projectDir()
-    expect(await canonicalizeProjectPath(join(dir, 'Demo.uproject'))).toBe(dir)
+    expect(await canonicalizeProjectPath(join(dir, 'project.godot'))).toBe(dir)
   })
 
   it('带空格和中文的路径照常处理', async () => {
@@ -58,153 +67,106 @@ describe('canonicalizeProjectPath', () => {
 
   it('路径不存在时报 INVALID_ARGUMENT', async () => {
     try {
-      await canonicalizeProjectPath(join(tmpdir(), 'uebox-不存在-12345'))
+      await canonicalizeProjectPath(join(tmpdir(), 'gdbox-不存在-12345'))
       expect.unreachable('应该抛出')
     } catch (error) {
-      expect((error as UeboxError).code).toBe('INVALID_ARGUMENT')
+      expect((error as GdboxError).code).toBe('INVALID_ARGUMENT')
     }
   })
 
-  it('目录里没有 .uproject 时说清楚', async () => {
-    const root = await fs.mkdtemp(join(tmpdir(), 'uebox-empty-'))
+  it('目录里没有 project.godot 时说清楚', async () => {
+    const root = await fs.mkdtemp(join(tmpdir(), 'gdbox-empty-'))
     dirs.push(root)
 
-    await expect(canonicalizeProjectPath(root)).rejects.toThrow(/没有 \.uproject/)
+    await expect(canonicalizeProjectPath(root)).rejects.toThrow(/没有 project\.godot/)
   })
 
-  it('一个目录里有两个 .uproject 时报歧义，并教用户指到文件', async () => {
+  it('指到别的文件上时拒绝', async () => {
     const dir = await projectDir()
-    await fs.writeFile(join(dir, 'Second.uproject'), '{}')
+    await fs.writeFile(join(dir, 'main.tscn'), '')
 
-    try {
-      await canonicalizeProjectPath(dir)
-      expect.unreachable('应该抛出')
-    } catch (error) {
-      expect((error as UeboxError).code).toBe('PROJECT_AMBIGUOUS')
-      expect((error as UeboxError).hint).toContain('--project')
-    }
+    await expect(canonicalizeProjectPath(join(dir, 'main.tscn'))).rejects.toThrow(
+      /不是 project\.godot/
+    )
   })
 })
 
 describe('findProjectUpwards', () => {
-  it('从子目录逐层往上找到工程根', async () => {
+  it('从子目录往上找到最近的工程', async () => {
     const dir = await projectDir()
-    const deep = join(dir, 'Content', 'Maps')
+    const deep = join(dir, 'scenes', 'levels')
     await fs.mkdir(deep, { recursive: true })
 
     expect(await findProjectUpwards(deep)).toBe(dir)
   })
 
-  /** 找不到不是错误，只是「这次没有本地线索」，会落到第三级 */
-  it('一直到根都没有时返回 undefined，不报错', async () => {
-    const root = await fs.mkdtemp(join(tmpdir(), 'uebox-nowhere-'))
+  it('找到根还没有就返回 undefined，不是报错', async () => {
+    const root = await fs.mkdtemp(join(tmpdir(), 'gdbox-none-'))
     dirs.push(root)
 
     expect(await findProjectUpwards(root)).toBeUndefined()
   })
 })
 
-describe('resolveProject', () => {
-  it('显式路径在线时就用它', async () => {
-    const dir = await projectDir()
-    const result = await resolveProject(dir, registered(dir))
-
-    expect(result).toMatchObject({ path: dir, source: 'explicit' })
+describe('projectName', () => {
+  it('用 project.godot 里的 config/name', async () => {
+    const dir = await projectDir('folder', '跳跳乐')
+    expect(await projectName(dir)).toBe('跳跳乐')
   })
 
-  /**
-   * 这是整个模块最重要的一条。
-   *
-   * 用户说了「这个工程」，那就是这个工程。旁边另一个工程在线不是改发给它的
-   * 理由 —— 那一幕的表现是：命令返回成功，用户回到编辑器发现什么都没变，
-   * 而他另一个项目的关卡被动了。
-   */
-  it('显式指定的工程没连上时失败，绝不回退到另一个在线工程', async () => {
-    const mine = await projectDir('Mine')
-    const other = await projectDir('Other')
-
-    try {
-      await resolveProject(mine, registered(other))
-      expect.unreachable('应该抛出')
-    } catch (error) {
-      expect((error as UeboxError).code).toBe('PROJECT_NOT_CONNECTED')
-      expect((error as UeboxError).hint).toContain('不会改发给别的工程')
-    }
-  })
-
-  it('当前目录识别出的工程没连上时，同样不回退', async () => {
-    const mine = await projectDir('Mine')
-    const other = await projectDir('Other')
-    const deep = join(mine, 'Content')
-    await fs.mkdir(deep, { recursive: true })
-
-    await expect(resolveProject(undefined, registered(other), deep)).rejects.toThrow(/没有连接/)
-  })
-
-  it('从当前目录往上找到并且在线时，source 是 cwd', async () => {
-    const dir = await projectDir()
-    const deep = join(dir, 'Content')
-    await fs.mkdir(deep, { recursive: true })
-
-    expect(await resolveProject(undefined, registered(dir), deep)).toMatchObject({
-      path: dir,
-      source: 'cwd'
-    })
-  })
-
-  /** 「恰好一个」意味着没有别的选项，猜不错 */
-  it('没有本地线索但只有一个工程在线时自动采用', async () => {
-    const nowhere = await fs.mkdtemp(join(tmpdir(), 'uebox-nowhere-'))
-    dirs.push(nowhere)
-    const online = await projectDir()
-
-    expect(await resolveProject(undefined, registered(online), nowhere)).toMatchObject({
-      source: 'single'
-    })
-  })
-
-  it('没有本地线索且两个工程在线时报歧义，不挑一个', async () => {
-    const nowhere = await fs.mkdtemp(join(tmpdir(), 'uebox-nowhere-'))
-    dirs.push(nowhere)
-    const a = await projectDir('A')
-    const b = await projectDir('B')
-
-    try {
-      await resolveProject(undefined, registered(a, b), nowhere)
-      expect.unreachable('应该抛出')
-    } catch (error) {
-      expect((error as UeboxError).code).toBe('PROJECT_AMBIGUOUS')
-      expect((error as UeboxError).hint).toContain('uebox projects list')
-    }
-  })
-
-  it('一个工程都没连时报 PROJECT_NOT_CONNECTED', async () => {
-    const nowhere = await fs.mkdtemp(join(tmpdir(), 'uebox-nowhere-'))
-    dirs.push(nowhere)
-
-    try {
-      await resolveProject(undefined, [], nowhere)
-      expect.unreachable('应该抛出')
-    } catch (error) {
-      expect((error as UeboxError).code).toBe('PROJECT_NOT_CONNECTED')
-    }
-  })
-
-  it('同一路径匹配到多条连接时不猜', async () => {
-    const dir = await projectDir()
-
-    await expect(resolveProject(dir, registered(dir, dir))).rejects.toThrow(/匹配到 2 条/)
+  it('没写名字时退回目录名', async () => {
+    const dir = await projectDir('folder')
+    expect(await projectName(dir)).toBe('folder')
   })
 })
 
-describe('normalize', () => {
-  it('抹平斜杠方向和结尾斜杠', () => {
-    expect(normalize('D:\\Games\\Demo\\')).toBe(normalize('D:/Games/Demo'))
+describe('localProject', () => {
+  it('显式 --project 优先于当前目录', async () => {
+    const mine = await projectDir('Mine')
+    const here = await projectDir('Here')
+
+    expect(await localProject(mine, here)).toMatchObject({ path: mine, source: 'explicit' })
   })
 
-  /** 规则要和服务端 externalTarget.ts 保持一致：Windows 不分大小写，别的平台分 */
-  it('大小写按平台处理', () => {
-    const same = normalize('D:/Games/DEMO') === normalize('D:/Games/demo')
-    expect(same).toBe(process.platform === 'win32')
+  it('没给 --project 时用当前目录所在的工程', async () => {
+    const dir = await projectDir()
+    expect(await localProject(undefined, join(dir))).toMatchObject({ path: dir, source: 'cwd' })
+  })
+
+  it('两级都没有线索时返回 undefined', async () => {
+    const root = await fs.mkdtemp(join(tmpdir(), 'gdbox-none-'))
+    dirs.push(root)
+    expect(await localProject(undefined, root)).toBeUndefined()
+  })
+})
+
+describe('pickConnected', () => {
+  it('恰好一个编辑器连着就用它', () => {
+    const picked = pickConnected(
+      registered({ path: 'D:/A', editorConnected: true }, { path: 'D:/B' })
+    )
+    expect(picked).toMatchObject({ path: 'D:/A', source: 'single' })
+  })
+
+  /** 登记了但编辑器没开的工程不算候选 —— 「只登记一个」不等于用户要的就是它 */
+  it('一个编辑器都没连着时报 PROJECT_NOT_CONNECTED', () => {
+    try {
+      pickConnected(registered({ path: 'D:/A' }))
+      expect.unreachable('应该抛出')
+    } catch (error) {
+      expect((error as GdboxError).code).toBe('PROJECT_NOT_CONNECTED')
+      expect((error as GdboxError).hint).toContain('--project')
+    }
+  })
+
+  it('两个编辑器连着时报歧义，不挑', () => {
+    try {
+      pickConnected(
+        registered({ path: 'D:/A', editorConnected: true }, { path: 'D:/B', editorConnected: true })
+      )
+      expect.unreachable('应该抛出')
+    } catch (error) {
+      expect((error as GdboxError).code).toBe('PROJECT_AMBIGUOUS')
+    }
   })
 })

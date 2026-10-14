@@ -16,7 +16,7 @@ type DroppedEntry = {
 }
 
 function isUprojectFile(filePath: string): boolean {
-  return /\.uproject$/i.test(filePath)
+  return /(^|[\\/])project\.godot$/i.test(filePath)
 }
 
 async function getDroppedEntries(event: DragEvent): Promise<DroppedEntry[]> {

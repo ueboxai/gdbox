@@ -336,9 +336,9 @@ export async function buildUEProjectContextForProject(
     contextMessage: {
       role: 'user',
       content:
-        `【当前打开的 UE 工程上下文 - ${projectInfo.projectName}】\n` +
+        `【当前打开的工程上下文 - ${projectInfo.projectName}】\n` +
         `${buildProjectContextText(projectInfo)}\n\n` +
-        '以上信息来自当前已打开并连接的 Unreal Engine 工程。请在回答时结合这些实时工程信息与知识库内容；如果两者冲突，请明确区分“知识库资料”和“当前工程状态”。'
+        '以上信息来自当前已打开并连接的 Godot 项目。请在回答时结合这些实时工程信息与知识库内容；如果两者冲突，请明确区分“知识库资料”和“当前工程状态”。'
     }
   }
 }

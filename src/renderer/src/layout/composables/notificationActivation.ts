@@ -25,16 +25,13 @@ import type { NotificationActivatePayload } from '@core/shared/agentNotification
 
 /** 笔记本里那条私有对话的对话 id 前缀。见 NotebookDetail 挂 AssistantWelcome 的地方 */
 const NOTEBOOK_CHAT_PREFIX = 'notebook-chat-'
-/** 蓝图库 / 材质库详情页里那条对话的前缀。见 LibraryAIPanel 挂 AssistantWelcome 的地方 */
-const BLUEPRINT_CHAT_PREFIX = 'library-chat-blueprint-'
-const MATERIAL_CHAT_PREFIX = 'library-chat-material-'
 
 /**
  * 这条对话该跳去哪。
  *
  * 页面内嵌的那几条对话单独走：它们是**那个页面的一部分**，被刻意排除在标签页和
  * 侧边栏之外（`chatSessions` 的 `listableSessions`）。按普通对话跳的话会把它拽成
- * 一个光秃秃的助手标签页 —— 没有来源面板、没有笔记编辑器、没有蓝图画布，
+ * 一个光秃秃的助手标签页 —— 没有来源面板、没有笔记编辑器，
  * 而侧边栏又拒绝列出它，用户回不去。所以回它自己的页面。
  */
 function routeForChatSession(
@@ -43,12 +40,6 @@ function routeForChatSession(
 ): Parameters<Router['push']>[0] {
   if (chatSid.startsWith(NOTEBOOK_CHAT_PREFIX)) {
     return { name: 'NotebookDetail', params: { id: chatSid.slice(NOTEBOOK_CHAT_PREFIX.length) } }
-  }
-  if (chatSid.startsWith(BLUEPRINT_CHAT_PREFIX)) {
-    return { name: 'BlueprintEditor', params: { id: chatSid.slice(BLUEPRINT_CHAT_PREFIX.length) } }
-  }
-  if (chatSid.startsWith(MATERIAL_CHAT_PREFIX)) {
-    return { name: 'MaterialEditor', params: { id: chatSid.slice(MATERIAL_CHAT_PREFIX.length) } }
   }
   return chatSessionRoute(chatSid, openTabPaths)
 }

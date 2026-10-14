@@ -45,14 +45,9 @@ describe('TopNav exports', () => {
     expect(wrapper.emitted('side-question')).toHaveLength(1)
   })
 
-  it('把 chatSid 透传给 SessionProjectChip 和 EditorStatusMonitor', () => {
+  it('把 chatSid 透传给 SessionProjectChip', () => {
     const chipStub = {
       name: 'SessionProjectChip',
-      props: { chatSid: { type: String, default: '' } },
-      template: '<div />'
-    }
-    const monitorStub = {
-      name: 'EditorStatusMonitor',
       props: { chatSid: { type: String, default: '' } },
       template: '<div />'
     }
@@ -61,7 +56,6 @@ describe('TopNav exports', () => {
       global: {
         stubs: {
           SessionProjectChip: chipStub,
-          EditorStatusMonitor: monitorStub,
           AppDropdown: passthrough,
           AppMenu: passthrough,
           AppMenuItem: menuItem,
@@ -71,6 +65,5 @@ describe('TopNav exports', () => {
     })
 
     expect(wrapper.findComponent(chipStub).props('chatSid')).toBe('chat-7')
-    expect(wrapper.findComponent(monitorStub).props('chatSid')).toBe('chat-7')
   })
 })

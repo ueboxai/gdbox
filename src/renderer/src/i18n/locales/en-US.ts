@@ -1,9 +1,9 @@
 export default {
   mediaPermissions: {
     macScreenDenied:
-      'Screen recording access is blocked. In System Settings → Privacy & Security → Screen Recording (or Screen & System Audio Recording), allow Unreal Box, then restart the app.',
+      'Screen recording access is blocked. In System Settings → Privacy & Security → Screen Recording (or Screen & System Audio Recording), allow GDBox, then restart the app.',
     macMicrophoneDenied:
-      'Microphone access is blocked. In System Settings → Privacy & Security → Microphone, allow Unreal Box, then restart the app.',
+      'Microphone access is blocked. In System Settings → Privacy & Security → Microphone, allow GDBox, then restart the app.',
     sourcesFailed: 'Could not load screen sources: {error}',
     previewFailed: 'Could not preview the screen: {error}'
   },
@@ -11,11 +11,6 @@ export default {
     projectLib: 'Project Library',
     assetLib: 'Asset Lib',
     assetDependency: 'Dependency Graph',
-    blueprintLib: 'Blueprint Hub',
-    blueprintDetail: 'Blueprint Detail',
-    materialLib: 'Material Library',
-    materialDetail: 'Material Detail',
-    coCreateMarket: 'Co-Create Market',
     explore: 'Explore',
     assets: 'Assets',
     talents: 'Developers',
@@ -34,7 +29,7 @@ export default {
     model3dStudio: '3D Studio',
     aigcStudio: 'AIGC Studio',
     serverManagement: 'Server Management',
-    appName: 'Unreal Box'
+    appName: 'GDBox'
   },
   // Sidebar tool customization: pinned list and the "More" group
   sidebarTools: {
@@ -53,7 +48,7 @@ export default {
     projectSessionCount: 'Chats: {count}',
     newChatInProject: 'New chat in this project',
     unassigned: 'Chats',
-    unassignedHint: 'Chats not tied to any UE project',
+    unassignedHint: 'Chats not tied to any project',
     connected: 'Connected',
     taskDone: 'Task finished — not opened yet',
     running: 'Running',
@@ -74,13 +69,13 @@ export default {
       title: 'Add project',
       typeLabel: 'Project type',
       folder: 'Local folder',
-      folderDesc: 'Pick a UE project folder on this computer',
+      folderDesc: 'Pick a Godot project folder on this computer',
       imported: 'Imported project',
       importedDesc: 'Pick from projects already imported',
       importedEmpty: 'No imported projects yet',
       searchPlaceholder: 'Search project name or path',
       searchEmpty: 'No matching projects',
-      pickFolderTitle: 'Select a UE project folder',
+      pickFolderTitle: 'Select a Godot project folder',
       pickFolderFailed: 'Could not open the folder picker',
       next: 'Next',
       back: 'Back',
@@ -89,7 +84,7 @@ export default {
     empty: 'No chats',
     loadMore: 'Show more',
     organize: 'Organize sidebar',
-    groupByProject: 'By UE project',
+    groupByProject: 'By project',
     groupFlat: 'In one list',
     sortBy: 'Sort chats by',
     sortRecent: 'Last updated',
@@ -108,7 +103,7 @@ export default {
     moveToProject: 'Move to project',
     removeFromProject: 'Work outside a project',
     newProjectGroup: 'New project group…',
-    projectNamePlaceholder: 'Enter the UE project name',
+    projectNamePlaceholder: 'Enter the project name',
     delete: 'Delete',
     deleteTitle: 'Delete chat',
     deleteContent: 'Delete "{title}"? This cannot be undone.',
@@ -133,7 +128,7 @@ export default {
   },
   ai: {
     followUpSystemPrompt:
-      "You are a senior Unreal Engine technical assistant. Output only JSON and must strictly follow the schema. The field is followUps (array), containing 2-3 follow-up questions for the assistant from the user's perspective, within 15 words each in {lang}. Each must be a complete sentence that can be asked directly. Do not output any other content or explanations.",
+      "You are a senior Godot game development assistant. Output only JSON and must strictly follow the schema. The field is followUps (array), containing 2-3 follow-up questions for the assistant from the user's perspective, within 15 words each in {lang}. Each must be a complete sentence that can be asked directly. Do not output any other content or explanations.",
     followUpUserPrompt:
       "Based on the chat above, generate follow-up questions for the assistant from the user's perspective in {lang}.",
     sessionTitleSystemPrompt:
@@ -153,7 +148,7 @@ export default {
     conflict: '{path} is being modified by "{session}"; nothing was changed',
     dismiss: 'Dismiss',
     unknownChat: 'another chat',
-    currentLevel: 'Current level'
+    currentLevel: 'Current scene'
   },
   agentV3Debug: {
     title: 'Agent V3 Debug Console',
@@ -202,7 +197,7 @@ export default {
       // Used by the page header. The panel no longer repeats the title, so the
       // long description has nowhere to live.
       shortDescription:
-        'Give the assistant third-party capabilities, or open Unreal Engine to external clients.',
+        'Give the assistant third-party capabilities, or open the engine tools to external clients.',
       empty: 'No MCP servers configured yet.',
       configPath: 'Config file: {path}',
       // Two groups: what the box installed vs what the user added. Mixed together,
@@ -213,29 +208,6 @@ export default {
       manualEmpty: 'No manually configured servers yet.',
       unsaved: 'Unsaved changes',
       newServer: 'New server'
-    },
-    epicSetup: {
-      title: "Turn on Unreal Engine's built-in AI toolsets",
-      // Row title. Once the card collapses to a line, it must sit next to a status.
-      rowTitle: 'Unreal Engine',
-      // noProject is written for the drawer; too long to hang off a row.
-      noProjectShort: 'No project connected · open one from the home page',
-      checking: 'Checking…',
-      enable: 'Turn on',
-      start: 'Start server',
-      working: 'Working…',
-      loading: 'Checking connected projects…',
-      // UE cannot hot-load new plugin modules, so there is no way around this one.
-      needsRestart: 'Configured · restart the editor',
-      unsupported: 'Engine too old · needs 5.8+',
-      ready: 'Enabled · running',
-      readyHint:
-        'The engine service is running; the box will connect automatically the next time you chat.',
-      // The most common reason the button "disappears" — say it instead of showing nothing.
-      noProject:
-        'No Unreal Engine project is connected yet. Open a project from the home page and its status will show here.',
-      failed: 'Check failed: {error}. If you just updated the app, restart it and try again.',
-      hint: 'Updates the project file and editor preferences. Disable it in Unreal Engine under Edit > Plugins.'
     },
     blenderSetup: {
       title: 'Connect Blender (official Blender Lab MCP)',
@@ -285,29 +257,16 @@ export default {
         }
       }
     },
-    engine: {
-      title: "Unreal Engine's built-in toolsets",
-      // Something appears that the user never configured — say where it came from.
-      description:
-        'Automatically connected to the official Unreal Engine 5.8 MCP tools in your connected project.',
-      hint: 'To change the connection, add a configuration with the same ID below.',
-      readOnly: 'Auto-discovered',
-      // "3 tools" reads as a broken connection — this was a real "why only three?" question.
-      connected: 'Connected · {count} entry points',
-      retry: 'Retry connection',
-      retrying: 'Connecting…',
-      twoTier: 'Each entry provides multiple engine operations for the assistant to use as needed.'
-    },
     server: {
-      title: 'Share Unreal Engine capabilities',
+      title: 'Share engine capabilities',
       label: 'Open to external clients',
       // One line at the top level; the permission settings show full details when writable.
       shortNote:
-        "Give Codex or Claude Code every tool Unreal Box's assistant has. Loopback only, token required, writable by default.",
+        "Give Codex or Claude Code every tool GDBox's assistant has. Loopback only, token required, writable by default.",
       securityNote:
-        "External clients get the same tools as Unreal Box's assistant, including local file access and shell commands. Unreal Box shows no approval prompt; the client's own approval settings decide what gets stopped. If the token leaks, whoever has it can change your project and the files on this computer.",
+        "External clients get the same tools as GDBox's assistant, including local file access and shell commands. GDBox shows no approval prompt; the client's own approval settings decide what gets stopped. If the token leaks, whoever has it can change your project and the files on this computer.",
       securityNoteIdle:
-        "Once enabled, external clients get the same tools as Unreal Box's assistant, including local file access and shell commands. Unreal Box shows no approval prompt; the client's own approval settings decide what gets stopped. If the token leaks, whoever has it can change your project and the files on this computer.",
+        "Once enabled, external clients get the same tools as GDBox's assistant, including local file access and shell commands. GDBox shows no approval prompt; the client's own approval settings decide what gets stopped. If the token leaks, whoever has it can change your project and the files on this computer.",
       includeMutating: 'External client permissions',
       scopeReadOnly: 'Currently read-only. Turn on to allow creating, editing, and deleting.',
       scopeWritable:
@@ -970,7 +929,7 @@ export default {
       className: 'Class Name',
       assetClass: 'Asset Class',
       softPath: 'Soft Path',
-      softPathTooltip: '\\n\\nClick to copy, usable for locating asset in UE Content Browser',
+      softPathTooltip: ' - Click to copy',
       format: 'Format',
       created: 'Created',
       modified: 'Modified',
@@ -1057,18 +1016,19 @@ export default {
       formatVideo: 'Video',
       formatModel: '3D Model',
       formatAudio: 'Audio',
-      formatCode: 'Code',
-      formatUAsset: 'UE Asset',
+      formatScene: 'Scene',
+      formatResource: 'Resource',
+      formatScript: 'Script',
+      formatShader: 'Shader',
+      formatFont: 'Font',
       // Asset type mappings
       assetTypeMaterialInstance: 'Material Instance',
       assetTypeStaticMesh: 'Static Mesh',
-      assetTypeBlueprint: 'Blueprint',
       assetTypeTexture2D: 'Texture 2D',
       assetTypeMaterial: 'Material',
       assetTypeSkeletalMesh: 'Skeletal Mesh',
       assetTypeAnimation: 'Animation',
       assetTypeSound: 'Sound',
-      assetTypeWorld: 'World',
       assetTypeDataTable: 'Data Table',
       assetTypeCurve: 'Curve',
       assetTypeFont: 'Font',
@@ -1193,8 +1153,6 @@ export default {
       issueCountText: 'Issues: {count}',
       errorReportNote: 'A detailed issue report has been written to a JSON file',
       openErrorReport: 'Reveal report in folder',
-      unrealImportStarted: 'Importing {count} item(s) from Unreal, please wait…',
-      unrealImportDone: 'Unreal import finished: {count} asset(s)',
       skipReason: {
         user_skip: 'You chose to skip',
         user_skip_all: 'You chose to skip all',
@@ -1253,7 +1211,6 @@ export default {
       addTags: 'Add Tags',
       importToProject: 'Import to Project',
       pullProjectArchive: 'Pull project archive…',
-      importPluginToProject: 'Import Plugin to Project',
       delete: 'Delete',
       refresh: 'Refresh',
       newFolder: 'New Folder',
@@ -1439,8 +1396,8 @@ export default {
     project: {
       importOk: 'Project imported',
       importedCount: 'Imported {count} project(s)',
-      pickUproject: 'Choose a .uproject file',
-      pickUprojectDir: 'Choose a folder containing a .uproject',
+      pickUproject: 'Choose a project.godot file',
+      pickUprojectDir: 'Choose a folder containing project.godot',
       alreadyRunning: 'The project is already running',
       launch: 'Launch',
       assetImported: 'Asset imported: {path}',
@@ -1478,7 +1435,7 @@ export default {
         'Cloud drives feed local libraries; drag files in to import into a server library',
       tagInUse: 'This tag is on {count} asset(s); remove it from them first',
       tagFavorite: 'Server-library tags have no favourites',
-      trash: 'The server keeps deleted assets; they cannot be viewed in Unreal Box yet',
+      trash: 'The server keeps deleted assets; they cannot be viewed in GDBox yet',
       scan: 'Server libraries need no scan; changes arrive by themselves',
       folderSearch: 'The server does not search folder names yet',
       dependencyGraph:
@@ -1565,11 +1522,11 @@ export default {
     },
     download: {
       title: 'Import {count} assets to a project',
-      lead: 'Fetches the files through Lore and copies them, with their dependencies, to the target (Content/… maps to /Game/…).',
+      lead: 'Fetches the files through Lore and copies them, with their dependencies, to the target.',
       more: '{count} more',
       target: 'Put into',
       targets: {
-        project: 'UE project',
+        project: 'Godot project',
         folder: 'Folder'
       },
       pickProject: 'Choose a project',
@@ -1592,7 +1549,7 @@ export default {
       pickRepository: 'Choose a repository',
       message: 'Commit message',
       messagePlaceholder: 'Optional',
-      hint: '.uexp and .ubulk files next to a .uasset or .umap are committed with it. After the push, assets appear once the server has indexed them.',
+      hint: 'After the push, assets appear once the server has indexed them.',
       start: 'Import'
     },
     jobs: {
@@ -1625,7 +1582,7 @@ export default {
         'The certificate fingerprint does not match. This may be a different server. Connection refused.',
       'ca-file-not-ca': 'This file is not a CA certificate.',
       'ca-file-not-pem': 'This file is not a PEM certificate.',
-      'not-a-catalog': 'This address is not an Unreal Box asset server.',
+      'not-a-catalog': 'This address is not a GDBox asset server.',
       'no-member-surface': 'This server has no account sign-in. Paste an identity token instead.',
       'missing-password': 'Enter the password.',
       'missing-token': 'Paste the identity token.',
@@ -1701,7 +1658,7 @@ export default {
     userInfo: 'User Info',
     settings: 'Settings',
     language: 'Language',
-    trayQuitTitle: 'Quit Unreal Box?',
+    trayQuitTitle: 'Quit GDBox?',
     trayQuitContent:
       'The AI still has {count} operation(s) in progress — quitting will interrupt them.',
     trayQuitOk: 'Quit anyway',
@@ -1739,64 +1696,12 @@ export default {
         subtitle: 'Frequently used operations for better efficiency',
         building: 'Feature under development'
       },
-      // Engine section
-      engine: {
-        title: 'Engine Versions',
-        refresh: 'Refresh',
-        lastOpened: 'Recently Opened',
-        running: 'Running',
-        default: 'Default',
-        start: 'Launch',
-        more: 'More',
-        setDefault: 'Set as Default',
-        unsetDefault: 'Unset Default',
-        openRoot: 'Install Directory',
-        openPlugins: 'Plugins Directory',
-        remove: 'Remove Engine',
-        // The engine list can be empty on first run — it used to render nothing,
-        // leaving a new user unable to tell "none found" from "broken"
-        emptyTitle: 'No Unreal Engine installation found',
-        emptyDesc: 'Drop an engine folder here, or use the + button above to add one.',
-        // A failed scan and a genuinely empty machine are different things;
-        // only the latter earns the line above. scanFailed is the toast for an
-        // explicit refresh; the two below stay on screen when the list is empty
-        scanFailed: 'Engine scan failed, so this list may be incomplete.',
-        staleList: 'List may be stale',
-        scanFailedTitle: 'Could not read the engine list',
-        scanFailedDesc:
-          'This does not mean you have no engines — the scan just did not come back. Hit refresh to retry.',
-        dropTitle: 'Drop to add custom engine',
-        dropDesc: 'Drop engine root directory (containing Engine/Binaries/Win64/UnrealEditor.exe)',
-        addSuccess: 'Added {count} custom engine(s)',
-        addFailed: 'Failed to add custom engine',
-        notValidRoot: 'No valid engine detected',
-        startSuccess: 'Starting UE {version}…',
-        startFailed: 'Failed to start UE {version}',
-        removeConfirmTitle: 'Confirm Remove Engine',
-        removeConfirmContent:
-          'Are you sure you want to remove engine {version}? This will only remove it from the list, not delete engine files.',
-        removeSuccess: 'Removed UE {version}',
-        removeFailed: 'Failed to remove engine',
-        setDefaultSuccess: 'Set UE {version} as default',
-        unsetDefaultSuccess: 'Unset default engine',
-        openPathFailed: 'Failed to open directory',
-        selectEngineDir: 'Select Engine Directory',
-        refreshSuccess: 'Engine list refreshed',
-        cleanupNone: 'No invalid engine records found',
-        cleanupConfirmTitle: 'Found {count} invalid engine records',
-        cleanupConfirmContent:
-          'Remove these invalid engines from the list? This will not delete any files on disk.',
-        cleanupSuccess: 'Cleaned up {count} invalid engine(s)',
-        cleanupFailed: 'Failed to refresh engine list',
-        cleanupMore: 'and {count} more',
-        epicManaged: 'Manage Epic-installed engines in Epic Games Launcher'
-      },
       // Project section
       project: {
         title: 'My Projects',
-        subtitle: 'Manage and launch your Unreal projects',
+        subtitle: 'Manage and launch your Godot projects',
         empty: 'No Projects',
-        emptyDesc: 'Drag .uproject files or project directories here to import',
+        emptyDesc: 'Drag project.godot files or project folders here to import',
         // No match is not the same as nothing imported — only the latter needs import advice
         loadFailedTitle: 'Could not read your project list',
         loadFailedDesc:
@@ -1818,7 +1723,7 @@ export default {
         importFailed: 'Failed to import project',
         scanComplete: 'Imported {count} project(s)',
         scanFailed: 'Failed to scan directory',
-        noProjectFound: 'No .uproject file found',
+        noProjectFound: 'No project.godot found',
         multiProjectTip: 'Directory contains {count} projects, please use Asset Library to import',
         multiProjectConfirmTitle: 'Bulk Import Projects',
         multiProjectConfirmContent: 'This directory contains {count} projects. Import all of them?',
@@ -1826,7 +1731,7 @@ export default {
         importError: 'Import error',
         dropHint: 'Drop to import assets',
         dropHintDesc: 'Supports folder and file drag-and-drop import',
-        invalidDrop: 'No UE project found. Drop a project folder or .uproject file.',
+        invalidDrop: 'No Godot project found. Drop a project folder or a project.godot file.',
         searchPlaceholder: 'Search my projects',
         engineFilter: 'Filter by engine version',
         allEngineVersions: 'All versions',
@@ -1856,19 +1761,19 @@ export default {
           refresh: 'Refresh'
         },
         ualink: {
-          removeTitle: 'Remove UnrealAgentLink from this project?',
+          removeTitle: 'Remove the GDBox addon from this project?',
           removeContent:
-            'This deletes Plugins/UnrealAgentLink from the project and removes the plugin entry from the .uproject. Unreal Box will stop installing it for this project automatically; you can add it back from the context menu at any time.',
-          removeSuccess: 'UnrealAgentLink removed. It will not be installed again automatically.',
-          removeFailed: 'Failed to remove UnrealAgentLink',
-          installing: 'Installing UnrealAgentLink...',
-          installSuccess: 'UnrealAgentLink installed',
-          installFailed: 'Failed to install UnrealAgentLink'
+            "This deletes the GDBox addon from the project's addons folder and disables it in Project Settings. GDBox will stop installing it for this project automatically; you can reinstall it from the context menu.",
+          removeSuccess: 'GDBox addon removed. It will not be installed again automatically.',
+          removeFailed: 'Failed to remove the GDBox addon',
+          installing: 'Installing the GDBox addon…',
+          installSuccess: 'GDBox addon installed',
+          installFailed: 'Failed to install the GDBox addon'
         },
         pluginFailure: {
           dialogTitle: 'Project imported, but the AI cannot reach this engine',
           title:
-            'Reason: {reason}. Without UnrealAgentLink the AI cannot see anything inside the engine.',
+            'Reason: {reason}. Without the GDBox addon the AI cannot see anything inside the editor.',
           askAi: 'Let the AI look into it',
           dismiss: 'Got it',
           pathUnknown: '(the box did not get the project file path)',
@@ -1882,15 +1787,11 @@ export default {
            * turns around and asks the user questions they cannot answer
            * (see the file header of hooks/usePluginInstallNotice.ts).
            */
-          aiPrompt: `UnrealAgentLink could not be installed into the project "{project}". Find out why, and fix it if you can.
-
-Project file: {path}
-Reason reported by the box: {reason}
-
-Places to start: whether this .uproject can be read at all and which EngineAssociation it declares; whether Plugins/UnrealAgentLink/ exists in the project directory and contains UnrealAgentLink.uplugin; whether the matching engine version is installed on this machine. Then tell me in one sentence what is wrong.`,
-          noEngineAssociation: 'this .uproject does not specify an engine version',
+          aiPrompt:
+            'The GDBox addon could not be installed into the project "{project}". Find out why, and fix it if you can.\n\nProject file: {path}\nReason reported: {reason}\n\nPlaces to start: whether this project.godot can be read and which Godot version it declares; whether the addons/ folder in the project contains the GDBox addon and its plugin.cfg; whether that Godot version is installed on this machine. Once you know, tell me the cause in one sentence.',
+          noEngineAssociation: 'this project.godot does not specify a Godot version',
           filesMissing: 'no bundled plugin for this engine version',
-          uprojectUnreadable: 'this .uproject could not be read; it may be damaged'
+          uprojectUnreadable: 'this project.godot could not be read; it may be damaged'
         },
         /*
          * Toasts for drag-drop / pick-a-folder import.
@@ -1904,7 +1805,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
           fileFailed: 'Could not import project: {path}',
           fileError: 'Project import failed: {reason}',
           scanFailed: 'Could not scan folder: {path}',
-          noUproject: 'No .uproject found in: {path}',
+          noUproject: 'No project.godot found in: {path}',
           dirOk: 'Imported {count} project(s)',
           dirError: 'Folder import failed: {reason}',
           pickAtLeastOne: 'Select at least one project',
@@ -1912,7 +1813,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
           allDone: 'All projects imported',
           allFailed: 'Every project failed to import',
           cancelled: 'Import cancelled',
-          nothingFound: 'No Unreal project found. Drop a project folder or a .uproject file.',
+          nothingFound: 'No Godot project found. Drop a project folder or a project.godot file.',
           // The drag overlay caption. Decided at dragenter, so it must be translated here
           dropCounted: 'Drop to import {count} item(s)',
           dropPlain: 'Drop to import',
@@ -1943,7 +1844,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
         // so failures usually come in batches — summarised, details in the log
         pluginUpgradeFailure: {
           title:
-            'UnrealAgentLink could not be updated in {count} project(s) ({project}: {reason}). They are still on the old plugin.'
+            'The GDBox addon could not be updated in {count} project(s) ({project}: {reason}). They are still on the old addon.'
         },
         messages: {
           slnNotFound: 'sln file not found',
@@ -1959,7 +1860,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
           removeFailed: 'Failed to remove',
           removeFromCollectionSuccess: 'Removed from group',
           removeFromCollectionFailed: 'Failed to remove from group',
-          uprojectNotFound: '.uproject file not found',
+          uprojectNotFound: 'project.godot file not found',
           projectMissingTitle: 'This project is no longer on your computer',
           projectMissingContent:
             'The project file could not be found: {path}\nIt may have been deleted or moved. Remove this entry from the list?',
@@ -2021,16 +1922,16 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
           okText: 'Create',
           cancelText: 'Cancel',
           nameLabel: 'Project Name',
-          uprojectLabel: '.uproject File',
-          uprojectPlaceholder: 'Enter or select the .uproject file path',
+          uprojectLabel: 'project.godot file',
+          uprojectPlaceholder: 'Enter or select the project.godot file path',
           pickFile: 'Browse',
           dirLabel: 'Project Directory',
           dirPlaceholder: 'Enter or select the project directory',
           pickDir: 'Browse',
-          hint: 'Provide at least one of the .uproject file or the project directory. Picking a .uproject file fills in the directory automatically.',
+          hint: 'Provide at least one of the project.godot file or the project folder. Picking a project.godot file fills in the folder automatically.',
           nameRequired: 'Please enter the project name',
-          pathRequired: 'Please provide the .uproject file or the project directory',
-          dialogTitle: 'Select .uproject File',
+          pathRequired: 'Please provide the project.godot file or the project folder',
+          dialogTitle: 'Select project.godot file',
           dialogDirTitle: 'Select Project Directory'
         },
         // Create project from template modal
@@ -2091,7 +1992,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
           // First run
           onboardTitle: 'No templates yet',
           onboardDesc:
-            'Templates live in online sources. Unreal Box runs fully offline by default and makes no network request until you enable a source. The official library is hosted on both GitHub and a China mirror — enabling turns on both, whichever reaches you.',
+            'Templates live in online sources. GDBox runs fully offline by default and makes no network request until you enable a source. The official library is hosted on both GitHub and a China mirror — enabling turns on both, whichever reaches you.',
           onboardPickSource: 'Use another source',
           // Community templates
           communityOfflineDesc:
@@ -2149,9 +2050,9 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
           subtitle: 'Pick from projects your local engines opened recently',
           subtitleIntoCollection:
             'Pick from projects your local engines opened recently. Imports go into "{name}"',
-          pickFile: 'Choose .uproject file',
+          pickFile: 'Choose project.godot file',
           dropHint:
-            'Not listed? Choose the file yourself, or drag a .uproject onto the project library',
+            'Not listed? Choose the file yourself, or drag a project.godot onto the project library',
           searchPlaceholder: 'Search project name...',
           allVersions: 'All versions',
           importAll: 'Import all ({count})',
@@ -2159,7 +2060,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
           scanning: 'Scanning local engine projects...',
           empty: 'No local projects found',
           emptyDesc:
-            'Nothing was opened recently. Open a project with Epic Launcher and come back.',
+            'No recently opened projects found. Open a project in the Godot editor and try again.',
           imported: 'Imported',
           clickToImport: 'Click to import',
           clickToJoin: 'Click to add to "{name}"',
@@ -2245,23 +2146,22 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       failed: 'The review did not run',
       fix: 'Ask AI to fix',
       // Used when the compile error comes with the engine's text, which may span lines
-      compileErrorDetail: 'The blueprint fails to compile:\n{detail}',
+      compileErrorDetail: 'The script fails to parse:\n{detail}',
       /** What "Ask AI to fix" sends. It goes to the model, but through i18n — same reason as selfCheck.prompt */
       fixPrompt: {
         intro: 'After the last turn, the engine check found the problems below. Please fix them:',
         rules:
-          'Confirm each one with read-only tools before changing anything. When done, recompile the ' +
-          'affected blueprints and tell me the result. If something cannot be fixed, say why — do not work around it.'
+          'Confirm each one with read-only tools before changing anything. When done, re-check the affected scripts and scenes and tell me the result. If something cannot be fixed, say why — do not work around it.'
       },
       codes: {
         missing: 'Reported as done, but it is not in the project',
         'still-there': 'Reported as deleted, but it is still there',
         unsaved: 'Only changed in the editor — not saved to disk yet',
-        'compile-error': 'The blueprint fails to compile',
-        'compile-warning': 'The blueprint compiles with warnings',
+        'compile-error': 'The script fails to parse',
+        'compile-warning': 'The script parses with warnings',
         'broken-dependency': 'References an asset that does not exist: {detail}',
         'orphan-referencer': 'Deleted, but still referenced by: {detail}',
-        naming: 'Name does not follow the usual UE convention ({detail} prefix)',
+        naming: 'Name does not follow the project convention ({detail} prefix)',
         'check-failed': 'This check did not run: {detail}'
       }
     },
@@ -2285,8 +2185,8 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
         rules:
           'Answer point by point, under these rules:\n' +
           '1. **Do not answer from memory.** Re-check every point against the engine with read-only ' +
-          'tools (material_describe, material_get_graph, blueprint_describe, blueprint_get_graph, ' +
-          'ue_content_*, …) and write down the actual values you find. Remembering that your call ' +
+          'tools (the ones that read scenes, scripts and resources) ' +
+          'and write down the actual values you find. Remembering that your call ' +
           'succeeded is not evidence.\n' +
           '2. For each issue the machine found, say whether it is real or a false positive — and if ' +
           'it is a false positive, show what you found.\n' +
@@ -2324,10 +2224,10 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
        */
       kinds: {
         material: 'Material',
-        blueprint: 'Blueprint',
-        widget: 'Widget Blueprint',
-        level: 'Level',
-        actor: 'Actor',
+        blueprint: 'Script',
+        widget: 'UI',
+        level: 'Scene',
+        actor: 'Node',
         asset: 'Asset',
         folder: 'Folder',
         file: 'File',
@@ -2357,54 +2257,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       tools: {
         mcpEngineToolset: 'Via engine toolsets',
 
-        ue_spawn_actor: 'Spawn actor',
-        ue_destroy_actor: 'Delete actor',
-        ue_set_property: 'Change property',
-        ue_set_transform: 'Move / rotate / scale',
-
-        blueprint_create: 'Create Blueprint',
-        blueprint_apply_graph: 'Edit Blueprint graph',
-        blueprint_add_component: 'Add Blueprint component',
-        blueprint_set_property: 'Change Blueprint property',
-        blueprint_create_function: 'Create Blueprint function',
-        blueprint_create_event_graph: 'Create Blueprint event graph',
-        blueprint_add_variable: 'Add Blueprint variable',
-        blueprint_remove_variable: 'Remove Blueprint variable',
-        blueprint_set_variable_meta: 'Change Blueprint variable settings',
-        blueprint_function_signature: 'Change Blueprint function signature',
-        blueprint_set_parent_class: 'Change Blueprint parent class',
-        blueprint_event_dispatcher: 'Change Blueprint event dispatcher',
-        blueprint_component_event: 'Add Blueprint component event',
-        blueprint_compile: 'Compile Blueprint',
-        blueprint_compile_all: 'Compile all Blueprints',
-        blueprint_tidy_graph: 'Tidy Blueprint graph',
-
-        material_create: 'Create material',
-        material_create_instance: 'Create material instance',
-        material_apply: 'Apply material',
-        material_add_node: 'Add material node',
-        material_delete_node: 'Delete material node',
-        material_connect_pins: 'Connect material pins',
-        material_disconnect_pins: 'Disconnect material pins',
-        material_delete_unused_nodes: 'Delete unused material nodes',
-        material_create_function: 'Create material function',
-        material_parameter_collection: 'Change material parameter collection',
-        material_set_node_value: 'Set material node value',
-        material_set_param: 'Change material parameter',
-        material_set_property: 'Change material property',
-        material_compile: 'Compile material',
-        material_tidy_graph: 'Tidy material graph',
-
-        ue_content_import: 'Import asset',
-        ue_content_move: 'Move assets',
-        ue_content_naming_audit: 'Audit asset naming',
-        ue_content_dependencies: 'Inspect asset dependencies',
-        ue_content_migrate: 'Migrate assets to another project',
-        ue_content_set_properties: 'Change asset settings',
-        mesh_optimize: 'Generate mesh LODs / collision',
-        ue_datatable_edit: 'Edit data table',
-        ue_content_delete: 'Delete asset',
-        ue_fixup_redirectors: 'Fix up redirectors',
         annotate_asset: 'Annotate asset',
         delete_assets: 'Delete library assets',
         restore_assets: 'Restore library assets',
@@ -2412,37 +2264,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
         create_folders: 'Create folders',
         rename_folder: 'Rename folder',
         delete_folders: 'Delete folders',
-
-        ue_new_level: 'Create level',
-        ue_open_level: 'Open level',
-        ue_save_level: 'Save level',
-        ue_set_level_streaming: 'Change sublevel streaming',
-        level_organize_actors: 'Organize level actors',
-
-        ue_save: 'Save',
-        ue_set_config: 'Change editor setting',
-        ue_input_add_mapping: 'Add input mapping',
-        sequence_rebind: 'Change sequence binding',
-        ue_collect_garbage: 'Free memory',
-        ue_playtest: 'Play in editor',
-        ue_restart_editor: 'Restart editor',
-        ue_focus_viewport: 'Focus viewport on target',
-        ue_undo: 'Undo last step',
-
-        // These three can do anything; naming one specific action would be a lie.
-        ue_run_python_script: 'Run script in editor',
-        ue_run_console_command: 'Run console command',
-        // The direction lives in the tool arguments; ue_manage_plugin_enable /
-        // _disable are picked by it. This vague fallback is only for history
-        // entries saved without a direction
-        ue_manage_plugin: 'Enable / disable plugin',
-        ue_manage_plugin_enable: 'Enable plugin',
-        ue_manage_plugin_disable: 'Disable plugin',
-
-        widget_create: 'Create widget Blueprint',
-        widget_add_child: 'Add child widget',
-        widget_make_variable: 'Expose widget as variable',
-        widget_set_property: 'Change widget property',
 
         write_local_file: 'Write file',
         edit_local_file: 'Edit file',
@@ -2503,22 +2324,23 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       greetingPrompt: '{greeting}, how can I help you?'
     },
     suggestions: {
-      blueprintDebug: {
-        title: 'Performance Analysis',
-        desc: 'One-click performance check, display FPS and GPU time',
-        prompt:
-          'Analyze the performance bottlenecks of the current scene and display FPS and GPU time.'
+      // Suggestions for the default chat mode
+      knowledge: {
+        title: 'Ask a question',
+        desc: 'Ask anything and get an up-to-date answer',
+        prompt: 'What are the most notable new features in recent Godot 4 releases?'
       },
-      materialRender: {
-        title: 'Scene Organization',
-        desc: 'Batch organize Actors in the scene to specified folders',
+      spriteFrames: {
+        title: 'Pixel character',
+        desc: 'Generate sprite frames and add them to the project',
         prompt:
-          "Organize all PointLight (point lights) in the scene into the 'Lighting/Indoor' folder."
+          'Generate a 32×32 pixel-art character walk cycle (4 frames each for up, down, left and right) and put it in the project folder art/characters.'
       },
-      buildPackage: {
-        title: 'Create Blueprint',
-        desc: 'Quickly create blueprint assets and add components',
-        prompt: "Create an Actor blueprint named 'BP_MyWeapon' and add a StaticMesh component."
+      loopMusic: {
+        title: 'Background music',
+        desc: 'Score a scene with a seamless loop',
+        prompt:
+          'Generate a relaxed 60-second background track for a forest exploration scene that loops seamlessly, and put it in the project folder audio/music.'
       },
       imageGen: {
         item1: {
@@ -2686,7 +2508,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       openTab: 'View team tasks in the side panel',
       closeTab: 'Close team tasks',
       selfReportedHint:
-        'Marked by the teammate, not checked by Unreal Box — the acceptance verdict is what counts',
+        'Marked by the teammate, not checked by GDBox — the acceptance verdict is what counts',
       objective: 'Goal',
       noTasks: 'The task board is empty',
       evidence: 'Evidence: ',
@@ -2909,9 +2731,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
         team_deliver: 'Submit delivery',
         team_hire: 'Add teammate',
         team_snapshot: 'Save project snapshot',
-        ue_list: 'List items',
-        ue_project_asset_ranking: 'Rank assets by size',
-        ue_find_heavy_assets: 'Find heavy assets',
         generate_image: 'Generate Image',
         search_assets: 'Search Assets',
         generate_3d_model: 'Generate 3D Model',
@@ -2933,7 +2752,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
         find_local_files: 'Find files',
         grep_local_files: 'Search file contents',
         read_document: 'Read document',
-        inspect_uasset_file: 'Inspect .uasset',
         run_shell_command: 'Run command',
         web_search: 'Web search',
         web_read: 'Read web page',
@@ -2950,37 +2768,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
         search_notebook_sources: 'Search notebook sources',
         project_list: 'List projects',
         list_engines: 'List engines',
-        ue_screenshot: 'Screenshot',
-        ue_autoplay: 'Autoplay',
-        ue_get_actor: 'Inspect actor',
-        ue_get_selection: 'Get selection',
-        ue_get_current_level: 'Get current level',
-        ue_get_levels: 'List levels',
-        ue_get_project_info: 'Get project info',
-        ue_get_config: 'Read editor config',
-        ue_content_search: 'Search project assets',
-        ue_content_describe: 'Inspect asset',
-        ue_inspect_components: 'Inspect components',
-        ue_light_census: 'Light census',
-        ue_datatable_describe: 'Read data table',
-        ue_message_log: 'Read message log',
-        ue_get_crash_logs: 'Read crash logs',
-        ue_editor_health: 'Editor health check',
-        ue_get_performance_stats: 'Read performance stats',
-        ue_list_unsaved: 'List unsaved',
-        ue_undo_history: 'Undo history',
-        ue_inject_input: 'Simulate input',
-        ue_input_map: 'Read input mappings',
-        ue_input_add_mapping: 'Add input mapping',
-        blueprint_describe: 'Inspect blueprint',
-        blueprint_get_graph: 'Read blueprint graph',
-        blueprint_search_nodes: 'Search blueprint nodes',
-        blueprint_find_usages: 'Find in all Blueprints',
-        material_describe: 'Inspect material',
-        material_get_graph: 'Read material graph',
-        material_graph_slice: 'Read material slice',
-        material_search_nodes: 'Search material nodes',
-        material_get_referencers: 'Find material referencers',
         mesh_describe: 'Inspect mesh',
         mesh_optimize: 'Generate mesh LODs / collision',
         widget_get_hierarchy: 'Read widget hierarchy',
@@ -3202,31 +2989,43 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
         'Trend analysis on recent data',
         'Summarize key insights for me'
       ],
-      blueprint: [
-        'Locate a node issue',
-        'Refactor complex logic into function',
-        'Example of event-driven vs Tick'
+      script: [
+        'Locate a script error',
+        'Extract repeated logic into a function',
+        'Replace per-frame polling with signals'
       ],
-      material: [
-        'Merge sampling nodes example',
-        'Enable static switch for optimization',
-        'Performance parameter suggestions'
+      shader: [
+        'Write an outline shader',
+        'Expose parameters to the Inspector',
+        'Shader performance tips'
       ],
-      niagara: [
-        'Create basic particle system',
+      particles: [
+        'Create a basic particle effect',
         'Add collision and trails',
-        'Optimize emitter parameters'
+        'Optimize emission parameters'
       ],
       physics: [
-        'Rigid body and constraints example',
+        'Rigid body and joint example',
         'Performance considerations',
-        'Debug collision channels'
+        'Debug collision layers and masks'
       ],
-      animation: ['Bind animation blueprint', 'Edit with control rig', 'Export as clip'],
-      package: ['Platform settings check', 'Reduce package size suggestions', 'CI build steps'],
-      performance: ['Enable GPU Profiler', 'Reduce Draw Calls suggestions', 'LOD and streaming'],
-      ai: ['Create behavior tree structure', 'NavMesh settings', 'Blackboard variable design'],
-      input: ['Bind input mapping', 'Implement combo keys', 'Device difference handling'],
+      animation: [
+        'Build a state machine with AnimationTree',
+        'Keyframe with AnimationPlayer',
+        'Organize animation libraries'
+      ],
+      package: ['Check export presets', 'Tips to reduce build size', 'CI export steps'],
+      performance: [
+        'Open the performance monitors',
+        'Tips to reduce draw calls',
+        'Visibility ranges and streaming'
+      ],
+      ai: [
+        'Pathfinding with NavigationAgent',
+        'Navigation mesh setup',
+        'Enemy state machine design'
+      ],
+      input: ['Configure the input map', 'Implement key combos', 'Handle device differences'],
       default: ['Continue this topic', 'Explain from another angle', 'Give an example']
     },
     threeDGeneration: {
@@ -3273,7 +3072,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       agentV3Debug: 'Agent V3 Debug',
       notebook: 'Knowledge Base',
       asset: 'Asset Library',
-      plugin: 'Plugins',
       cli: 'Command line',
       objectStorage: 'Object storage',
       namingRules: 'Naming Rules',
@@ -3337,14 +3135,14 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       // how to ask the user to open it up, and decides whether to pass that on
       fileAccessScope: 'File access scope',
 
-      fileAccessScopeUeOnly: 'Unreal only',
+      fileAccessScopeUeOnly: 'Game development only',
       fileAccessScopeFull: 'Whole computer',
       fileAccessScopeUeOnlyHint:
         'Allow installed engines, imported projects, and asset libraries, excluding protected sensitive folders.',
       fileAccessScopeFullHint:
         'Allow access to local files, excluding protected sensitive folders.',
       editorScreenshot: 'Allow Editor Screenshots',
-      editorScreenshotDesc: 'Allow capture of the Unreal Editor screen.',
+      editorScreenshotDesc: 'Allow capture of the Godot editor screen.',
       archivedChats: 'Archived chats',
       archivedChatsDesc: 'View, restore, or delete archived chats.',
       autoRetitle: 'Auto-generate new titles',
@@ -3354,7 +3152,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
         'When your gateway is unstable, pick up from where it stopped every 60s. Gives up after 30 minutes of failures. Failed attempts are left out of the chat.',
       assetReadonlyLock: 'Make assets read-only while editing',
       assetReadonlyLockDesc:
-        'While the AI edits an asset, its .uasset file is set to read-only so a save in the editor cannot overwrite the changes. Those assets cannot be saved in the editor until the AI finishes.',
+        'While the AI edits a resource, its file is set to read-only so a save in the editor cannot overwrite the changes. Those files cannot be saved in the editor until the AI is done.',
       browserAllowLocalNetwork: 'Allow browser access to local network',
       browserAllowLocalNetworkDesc:
         'Lets the Agent browser open this computer and local network addresses (such as localhost or 192.168.x.x), for example a local dev server. Links on web pages can reach these addresses too.',
@@ -3365,7 +3163,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       alwaysAllowedRemoveLabel: 'Stop always allowing "{name}"',
       goalMaxRounds: 'Goal mode round limit',
       goalMaxRoundsDesc:
-        'With /goal, a failed review sends the work back for another round. After this many rounds it stops and hands back to you. Each round adds a review that may compile Blueprints or run PIE. Applies from your next message. 1–50.',
+        'With /goal, a failed review sends the work back for another round. After this many rounds it stops and hands back to you. Each round adds a review that may run scenes. Applies from your next message. 1–50.',
       openArchivedChats: 'Open archived chats',
       // Smart follow-up suggestions settings
       followUpSuggestions: 'Follow-up suggestions',
@@ -3404,7 +3202,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       instructionsTitle: 'Instructions for the assistant',
       instructionsDesc: 'Persistent preferences applied to all chats.',
       instructionsPlaceholder:
-        'For example:\nI am a level designer at a game studio, mostly open-world layout and optimisation.\nI do not write C++. I can read blueprints but do not assume fluency.\nLead with the conclusion; I will ask for the details when I want them.',
+        'For example:\nI am an indie game developer, mostly making 2D pixel-art games.\nI write GDScript, not C#. Do not assume I know C#.\nLead with the conclusion; I will ask for the details when I need them.',
       openInstructionsFile: 'Open in the default text editor',
       instructionsSaved: 'Instructions saved',
       instructionsSaveFailed: 'Could not save the instructions'
@@ -3440,10 +3238,10 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
         destructive: 'Irreversible'
       },
       category: {
-        blueprint: 'Blueprints',
+        blueprint: 'Scripts',
         material: 'Materials',
-        scene: 'Scene & levels',
-        content: 'Content browser',
+        scene: 'Scenes and nodes',
+        content: 'FileSystem',
         editor: 'Editor',
         ui: 'Widgets',
         cinematic: 'Animation & sequencer',
@@ -3537,8 +3335,8 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
         scopeGlobal: 'All projects',
         scopeProject: 'Only {name}',
         engines: 'Engine versions',
-        enginesOk: 'Works on UE {versions}',
-        enginesNo: 'Does not apply to UE {versions}',
+        enginesOk: 'Works on Godot {versions}',
+        enginesNo: 'Does not apply to Godot {versions}',
         effect: 'Effect',
         effectValue: 'Shown {shown}x, followed {adopted}x, worked {ok}x',
         lift: 'Success {without}% without it, {with}% with it',
@@ -3661,9 +3459,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       showDependencies: 'Show Dependency Assets',
       showDependenciesDesc:
         'Show automatically collected dependency assets in the asset list (when disabled, only primary assets are shown)',
-      archiveImportAsk: 'Ask before importing an archive',
-      archiveImportAskDesc:
-        'When importing an archive into a UE project, ask whether to extract it or copy it as-is (when disabled, archives are always extracted)',
       crossVaultSearch: 'Cross-vault search',
       crossVaultSearchDesc:
         'Let the AI assistant search other vaults too when looking for assets. When off, it only searches the current vault.',
@@ -3677,11 +3472,14 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       defaultAppLabel: 'Default',
       categories: {
         image: 'Image',
-        video: 'Video',
-        model: '3D Model',
         audio: 'Audio',
-        code: 'Code',
-        uasset: 'UE Asset'
+        model: '3D Model',
+        scene: 'Scene',
+        resource: 'Resource',
+        script: 'Script',
+        shader: 'Shader',
+        font: 'Font',
+        video: 'Video'
       },
       semantic: {
         group: 'Search',
@@ -3840,8 +3638,8 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
     },
     cli: {
       title: 'Command line',
-      description: 'Drive Unreal Engine from a terminal — for external agents and scripts',
-      intro: 'Open the target project before using engine commands. Help: uebox --help',
+      description: 'Drive the Godot engine from a terminal — for external agents and scripts',
+      intro: 'Open the target project before using engine commands. Help: gdbox --help',
       loading: 'Checking…',
       unavailable: 'Command-line tool not found. Please reinstall the app.',
       unsupportedPlatform: 'The command line tool ships with Windows and macOS installers.',
@@ -3853,68 +3651,30 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       revealFailed: 'Could not open the folder',
       addToPath: 'Add to PATH',
       addToPathDesc:
-        'Run uebox directly in new terminals. Affects only your user account and can be disabled anytime.',
-      pathAdded: 'Added to PATH. Run uebox directly in a new terminal.',
+        'Run gdbox directly in new terminals. Affects only your user account and can be disabled anytime.',
+      pathAdded: 'Added to PATH. Run gdbox directly in a new terminal.',
       pathRemoved: 'Removed from PATH',
       pathFailed: 'Could not change PATH',
       pathFailedWith: 'Could not change PATH: {error}',
       statusFailed: 'Could not read command line status: {error}',
       section: 'Command line tool',
-      about: 'uebox',
+      about: 'gdbox',
       integration: 'System integration'
     },
     project: {
       title: 'Projects',
+      godot: 'Godot editor',
+      godotFound: 'Found Godot {version}',
+      godotNotFound: 'Godot 4 not found',
+      godotNotFoundDesc: 'Point GDBox at the Godot editor executable to open projects from GDBox and let the AI check and play-test your game.',
+      godotAuto: 'Find automatically (PATH, winget, scoop, Steam)',
+      godotChoose: 'Choose…',
+      godotUseAuto: 'Find automatically',
+      godotInvalid: 'That file is not a Godot 4 editor. Nothing was saved.',
       openBehavior: 'Opening a project',
       hideWindowOnLaunch: 'Hide the main window after opening a project',
       hideWindowOnLaunchDesc:
         'Minimize to the tray after opening a project. Background tasks continue.'
-    },
-    plugin: {
-      title: 'Plugins',
-      description: 'Unreal Engine connection plugin.',
-      // Bridge status. This page showed no status at all, yet the AI points
-      // users here when it cannot reach the engine — they arrive and still
-      // cannot find out whether anything is connected
-      status: 'Connection',
-      bridgeState: 'Engine bridge',
-      bridgeOn: 'Running',
-      bridgeOff: 'Not running',
-      bridgeListening: 'Listening on port {port} for the engine to connect.',
-      bridgeOffline: 'The bridge is not running, so Unreal Engine cannot connect.',
-      // Used until the status is actually known — never report a failure you have not confirmed
-      bridgeChecking: 'Checking',
-      bridgeUnknown: 'Reading bridge status…',
-      connectedProjects: 'Connected projects',
-      connectedProjectsDesc:
-        'The plugin connects automatically and retries every 5 seconds after a disconnect; no manual connection is needed. If a project is open but this stays at 0, the plugin is most likely not installed in that project.',
-      injectionBehavior: 'Installation',
-      resources: 'Resources',
-      autoEnableUnrealAgentLink: 'Automatically install the connection plugin',
-      autoEnableUnrealAgentLinkDesc:
-        'Install and enable the connection plugin when opening a project.',
-      autoEnableUnrealAgentLinkEnabled: 'Automatic plugin installation enabled',
-      autoEnableUnrealAgentLinkDisabled: 'Automatic plugin installation disabled',
-      crashRecovery: 'Crash recovery',
-      autoRecoverEditorCrash: 'Let the agent reopen a crashed editor',
-      autoRecoverEditorCrashDesc:
-        'If the editor crashes while the agent is working, the agent decides whether to reopen it: closes the crash reporter, backs up unsaved autosaves, and reopens the project. Crashes during your own work are left alone. Stops after a second crash within 5 minutes.',
-      repairCleanup: 'Clean up old plugins',
-      repairCleanupDesc:
-        'Remove old connection plugins from engine folders. Close Unreal Editor first.',
-      repairCleanupAction: 'Clean up old plugins',
-      repairCleanupRunning: 'Repairing...',
-      repairCleanupSuccess: 'Cleaned leftover plugins from {count} engine(s)',
-      repairCleanupNothingToClean:
-        'No leftover UnrealAgentLink plugins were found in engine directories',
-      repairCleanupPartialFailed:
-        'Cleaned {cleaned}; {failed} failed (for example, {engine}). Close the editor and try again.',
-      repairCleanupFailed: 'Failed to repair and clean up',
-      sourceCode: 'Plugin open-source project',
-      sourceCodeDesc: 'View plugin code and update history.',
-      sourceCodeOpen: 'Open Link',
-      sourceCodeOpenFailed: 'Failed to open source URL',
-      settingSaveFailed: 'Failed to save setting'
     },
     // Appearance & language. Used to be a section inside General; it is its own
     // page now — theme, custom colors, motion and language each carry their own
@@ -3968,14 +3728,14 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
     },
     // About
     about: {
-      contributors: 'Built by Unreal Box contributors',
+      contributors: 'Built by GDBox contributors',
       title: 'About',
-      appName: 'Unreal Box',
+      appName: 'GDBox',
       version: 'Version',
-      description: 'AI-powered desktop assistant for Unreal Engine developers',
+      description: 'AI-powered desktop assistant for Godot developers',
       website: 'Official Website',
       github: 'GitHub',
-      copyright: '© Unreal Box. All rights reserved.',
+      copyright: '© GDBox. All rights reserved.',
       checkUpdate: 'Check for Updates',
       termsOfService: 'Terms of Service',
       // Update related
@@ -4078,7 +3838,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
         remove: 'Delete',
         assetType: 'Asset Type',
         directory: 'Directory Path',
-        directoryPlaceholder: 'Directory path, e.g. /Game/Imported/Meshes',
+        directoryPlaceholder: 'Directory path, e.g. res://assets/models',
         example: 'Example'
       },
       // The "imported from the asset library" copy is gone: no code path reads that table
@@ -4492,32 +4252,9 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
     addSource: {
       title: 'Add Source',
       description:
-        'After adding sources, UnrealBox can answer based on the information that matters most to you.',
+        'After adding sources, GDBox can answer based on the information that matters most to you.',
       examples:
         '(Examples: marketing plans, course readings, research notes, meeting transcripts, sales documents, etc.)',
-      /*
-       * Copy for pulling things out of a UE project into the notebook.
-       *
-       * The `sourceTitle.*` entries below are **stored as the source's title**,
-       * not UI chrome — so they are fixed at creation time and do not follow a
-       * later language switch. Same as a filename: a source an English user
-       * created should keep its English name rather than being renamed later.
-       */
-      sourceTitle: {
-        projectInfo: '{project} project info',
-        crashLogs: 'UE crash logs',
-        configFiles: 'UE project config files'
-      },
-      configSection: {
-        engine: 'Engine config',
-        game: 'Game config',
-        editor: 'Editor config',
-        input: 'Input config'
-      },
-      crashLogsFailed: 'Could not read crash logs. Check the project path.',
-      noConfigDir: 'Could not locate the project Config folder',
-      noConfigFiles: 'No config files found',
-      configFilesFailed: 'Could not read the config files',
       noSupportedFiles: 'No supported file types found',
       addedFiles: 'Added {count} file(s)',
       scanning: 'Scanning folder...',
@@ -4551,16 +4288,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
         suffix: ' to upload',
         supportedTypes:
           'Supported file types: PDF, Word (doc, docx), Excel (xlsx, xls), csv, txt, Markdown, Images (jpg, jpeg, png, gif, bmp, webp, ico, tif, tiff, heic, heif, jp2), Videos (mp4, avi, mov, mkv, wmv, flv, webm, m4v, 3gp), Audio (mp3, wav, flac, ogg, m4a, aac, wma, opus, aiff, ape)'
-      },
-      ue: {
-        title: 'UE Project',
-        connected: 'Connected',
-        checking: 'Checking connection...',
-        notConnected: 'UE connection not detected',
-        refresh: 'Refresh',
-        projectInfo: 'Project Info',
-        crashLogs: 'Crash Logs',
-        projectConfig: 'Project Config'
       },
       links: {
         title: 'Links',
@@ -4788,7 +4515,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       rootButton: 'Asset path',
       createButton: 'New vault',
       rootNamePlaceholder: 'Display name (e.g. Project Library, leave blank to use folder name)',
-      rootPathPlaceholder: 'Server path (required, e.g. /volume1/UEAssets/Project)',
+      rootPathPlaceholder: 'Server path (required, e.g. /volume1/GameAssets/Project)',
       creating: 'Creating...',
       create: 'Create',
       cancel: 'Cancel',
@@ -5003,23 +4730,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       baiduyunClickHint: 'Click to open in Baidu Netdisk',
       webdavClickHint: 'Click to open in WebDAV'
     },
-    plugin: {
-      infoTitle: 'Plugin info',
-      nameLabel: 'Plugin name',
-      versionLabel: 'Version',
-      experimentalBadge: 'Experimental',
-      engineVersionLabel: 'Engine version',
-      descriptionLabel: 'Description',
-      categoryLabel: 'Category',
-      authorLabel: 'Author',
-      canContainContentLabel: 'Contains content',
-      yes: 'Yes',
-      no: 'No',
-      modulesTitle: 'Modules ({count})',
-      dependenciesTitle: 'Dependency plugins ({count})',
-      enabledLabel: 'Enabled',
-      disabledLabel: 'Disabled'
-    },
     smartTags: {
       label: 'Smart tags',
       autoDetectedTitle: 'Auto-detected: {name}',
@@ -5039,241 +4749,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
         'The cover has been saved. Delete the original recording? This cannot be undone.',
       deleteOriginalOk: 'Delete',
       originalDeleted: 'Original recording deleted'
-    }
-  },
-  // Shared strings for the "import from legacy" wizard (per-library parts live in xxxMigration)
-  libraryMigration: {
-    cancel: 'Cancel',
-    importCount: 'Import {count}',
-    manualSelect: 'Manually selected',
-    notFound: 'No legacy database found',
-    selectFile: 'Choose a database file',
-    error: '{scope} failed: {reason}',
-    scope: {
-      scan: 'Looking for the legacy database',
-      preview: 'Reading legacy data',
-      import: 'Import'
-    },
-    summary: {
-      from: 'from {folders} folders',
-      alreadyExists: '· {count} already in your library, will be skipped'
-    },
-    blocked: {
-      nothingSelected: 'No folders selected. Pick some under Customize, or hit Select all.'
-    },
-    customize: {
-      toggle: 'Customize',
-      folders: 'Folders to import',
-      selectNone: 'Deselect all',
-      selectAll: 'Select all',
-      otherFile: 'Import from another database file'
-    },
-    progress: 'Importing {current} / {total} ({percent}%)',
-    done: {
-      button: 'Done',
-      collections: 'Created {count} collections',
-      skipped: 'Skipped {count} that already existed'
-    }
-  },
-  blueprintMigration: {
-    title: 'Import blueprints from legacy',
-    loading: 'Looking for legacy blueprints…',
-    summary: {
-      unit: 'blueprints ready to import'
-    },
-    blocked: {
-      allExist:
-        'All {count} blueprints are already in your library — importing the same legacy database twice will not duplicate them.',
-      emptyFile: 'This file has no blueprints.',
-      otherKindOnly:
-        'None of the {count} nodes in this file are blueprints (import material nodes from the material library).'
-    },
-    done: {
-      imported: 'Imported {count} blueprints'
-    }
-  },
-  materialMigration: {
-    title: 'Import materials from legacy',
-    loading: 'Looking for legacy materials…',
-    summary: {
-      unit: 'materials ready to import'
-    },
-    blocked: {
-      allExist:
-        'All {count} materials are already in your library — importing the same legacy database twice will not duplicate them.',
-      emptyFile: 'This file has no materials.',
-      otherKindOnly:
-        'None of the {count} nodes in this file are materials (import blueprint nodes from the blueprint library).'
-    },
-    done: {
-      imported: 'Imported {count} materials'
-    }
-  },
-  // Strings shared by the blueprint / material library components (library-common)
-  libraryCommon: {
-    close: 'Close',
-    modal: {
-      advanced: 'Advanced'
-    }
-  },
-  libraryBrowser: {
-    saveAlert: {
-      title: '{count} item(s) could not be saved to the vault',
-      desc: 'Later edits will not be saved either. This usually means the vault was switched, or the package folder was renamed or moved outside the app.',
-      retry: 'Retry save'
-    },
-    allFolders: 'All',
-    searchPlaceholder: 'Search names, tags…',
-    sort: 'Sort',
-    sortRecent: 'Recently modified',
-    sortName: 'Name',
-    sortCreated: 'Created',
-    viewGrid: 'Grid',
-    viewList: 'List',
-    // List-view headers. Names are deliberately generic: one table has to hold both
-    // a blueprint's "UE 5.5" and a material's "Blend · Shading".
-    colName: 'Name',
-    colType: 'Type',
-    colUpdated: 'Modified',
-    colInfo: 'Info',
-    colTags: 'Tags',
-    loading: 'Loading…',
-    emptyTitle: 'A place for things you reuse',
-    emptyHint: 'Create one, or drag files into a folder on the left',
-    clearSearch: 'Clear search',
-    folderSection: 'Folders',
-    createFolder: 'New folder',
-    facetBlendMode: 'Blend mode',
-    facetShadingModel: 'Shading model',
-    newFolderName: 'Untitled folder',
-    folderNameLabel: 'Folder name',
-    folderNamePlaceholder: 'Name this folder',
-    folderNameConfirm: 'Save',
-    folderNameCancel: 'Cancel',
-    renameFolder: 'Rename',
-    deleteFolder: 'Delete folder',
-    deleteFolderConfirm: 'Delete "{name}"? Its contents move back to All — nothing is deleted.',
-    selectedCount: '{count} selected',
-    clearSelection: 'Clear selection',
-    resizeSidebar: 'Drag to resize the folder pane'
-  },
-  blueprintGallery: {
-    header: {
-      title: 'Blueprint library',
-      subtitle: 'Manage and reuse your blueprint nodes'
-    },
-    search: {
-      placeholder: 'Search name, type, tags',
-      clearTitle: 'Clear search'
-    },
-    filter: {
-      allTypes: 'All types',
-      favoriteOnlyTitle: 'Favorites only',
-      favoriteOnlyLabel: '★ Favorites',
-      clear: 'Clear'
-    },
-    view: {
-      gridTitle: 'Grid view',
-      listTitle: 'List view'
-    },
-    sort: {
-      recent: 'Recently used',
-      name: 'Blueprint name',
-      created: 'Date created'
-    },
-    importLegacy: {
-      title: 'Import from legacy version'
-    },
-    create: {
-      button: 'New blueprint',
-      cardText: 'New blueprint',
-      defaultName: 'New blueprint node',
-      modalTitle: 'New blueprint',
-      nameLabel: 'Blueprint name',
-      namePlaceholder: 'Default: New blueprint node',
-      advancedHint: 'Type, engine version, description',
-      advancedToggle: 'Advanced settings',
-      typeLabel: 'Blueprint type',
-      engineLabel: 'Engine version',
-      descLabel: 'Description (optional)',
-      descPlaceholder: 'What this blueprint is for...',
-      cancel: 'Cancel',
-      confirm: 'Create blueprint'
-    },
-    collection: {
-      badge: 'Collection',
-      countSuffix: '{count} blueprints',
-      empty: 'Empty collection',
-      mergePreviewCount: '{count} blueprints',
-      typeLabel: 'Collection'
-    },
-    menu: {
-      changeCover: '🖼 Change cover',
-      recordCover: '⏺ Record cover',
-      resetCover: '↺ Reset to default cover',
-      editInfo: '✎ Edit info',
-      unfavorite: '☆ Unfavorite',
-      favorite: '★ Favorite',
-      delete: '✕ Delete'
-    },
-    list: {
-      colName: 'Name',
-      colType: 'Type',
-      colEngine: 'Engine version',
-      colStats: 'Stats',
-      colTags: 'Tags',
-      empty: 'No matching blueprints found',
-      editInfoTitle: 'Edit info',
-      changeCoverTitle: 'Change cover',
-      recordCoverTitle: 'Record cover',
-      resetCoverTitle: 'Reset to default cover',
-      deleteTitle: 'Delete',
-      favoriteTitleOn: 'Unfavorite',
-      favoriteTitleOff: 'Favorite'
-    },
-    rename: {
-      modalTitle: 'Edit blueprint info',
-      closeTitle: 'Close',
-      nameLabel: 'Blueprint name',
-      namePlaceholder: 'Enter blueprint name...',
-      descLabel: 'Description (optional)',
-      descPlaceholder: 'What this blueprint is for...',
-      cancel: 'Cancel',
-      confirm: 'Confirm'
-    },
-    delete: {
-      title: 'Delete this blueprint?',
-      content: '"{name}" will be removed from the blueprint library. This cannot be undone yet.',
-      okText: 'Delete',
-      cancelText: 'Cancel',
-      successMessage: 'Blueprint deleted'
-    },
-    cover: {
-      dialogTitle: 'Choose blueprint cover',
-      dialogFilterName: 'Image or video',
-      updateSuccess: 'Blueprint cover updated',
-      readImageFailed: 'Failed to read image',
-      chooseFailed: 'Failed to choose cover',
-      openRecorderFailed: 'Failed to open recorder',
-      noRecordingAvailable: 'No recorded video available yet',
-      exportFailed: 'Failed to export cover',
-      resetSuccess: 'Cover reset to default',
-      modalTitle: 'Record cover',
-      notFound: 'No recorded video found',
-      formatLabel: 'Save format',
-      cancel: 'Cancel',
-      confirm: 'Confirm'
-    },
-    empty: {
-      title: 'Your blueprint library is empty',
-      hint: 'Create a blueprint node, or import the ones you already have from the legacy library.'
-    },
-    stats: {
-      functions: '{count} functions',
-      variables: '{count} variables',
-      graphs: '{count} graphs',
-      components: '{count} components',
-      empty: 'Empty blueprint'
     }
   },
   screenRecorderPanel: {
@@ -5483,105 +4958,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
     specialGroups: {
       all: 'All',
       selected: 'Selected'
-    }
-  },
-  materialGallery: {
-    header: {
-      title: 'Material Library',
-      subtitle: 'Save, inspect, and reuse offline material node assets'
-    },
-    search: {
-      placeholder: 'Search name, path, tags',
-      clearTitle: 'Clear search'
-    },
-    filter: {
-      favoriteTitle: 'Favorites only',
-      textureTitle: 'Has texture dependencies',
-      clearAll: 'Clear'
-    },
-    view: {
-      gridTitle: 'Grid view',
-      listTitle: 'List view'
-    },
-    sort: {
-      recent: 'Recently updated',
-      name: 'Material name',
-      created: 'Date created'
-    },
-    actions: {
-      newMaterial: 'New material',
-      createMaterialConfirm: 'Create material',
-      favorite: 'Favorite',
-      unfavorite: 'Unfavorite',
-      textures: 'Textures',
-      editInfo: 'Edit info',
-      removeFromLibrary: 'Remove from library'
-    },
-    collection: {
-      badge: 'Collection',
-      materialCount: '{count} materials'
-    },
-    stats: {
-      summary: 'Params {params} · Deps {deps}'
-    },
-    list: {
-      colName: 'Name',
-      colType: 'Material type',
-      colBlendShading: 'Blend & shading',
-      colStats: 'Stats',
-      colPath: 'Path'
-    },
-    empty: {
-      listEmpty: 'No matching materials found',
-      title: 'No matching material assets found',
-      hint: 'Try adjusting the filters, or create a new offline material node entry.'
-    },
-    common: {
-      close: 'Close',
-      cancel: 'Cancel',
-      save: 'Save'
-    },
-    form: {
-      nameLabel: 'Material name',
-      namePlaceholder: 'Default: New material node',
-      advancedHint: 'Material type, description',
-      advancedToggle: 'Advanced settings',
-      typeLabel: 'Material type',
-      descriptionLabel: 'Description (optional)',
-      descriptionPlaceholder: 'Note the purpose of this material node...',
-      noteLabel: 'Notes',
-      defaultMaterialName: 'New material node'
-    },
-    editModal: {
-      title: 'Edit material info'
-    },
-    entryType: {
-      all: 'All types',
-      material: 'Material',
-      instance: 'Material instance',
-      function: 'Material function'
-    },
-    compileStatus: {
-      all: 'All statuses',
-      success: 'OK',
-      warning: 'Warning',
-      error: 'Error',
-      unknown: 'Unknown'
-    },
-    toast: {
-      invalidName:
-        'Enter a valid name, or check whether a material with the same path already exists',
-      createdDraft: 'Material draft created',
-      updatedInfo: 'Material info updated',
-      removed: 'Material entry removed',
-      collectionCreated: 'Material collection created',
-      addedToCollection: 'Added to material collection'
-    },
-    removeConfirm: {
-      title: 'Remove from material library?',
-      content:
-        '"{name}" will be removed from the offline material library. This only affects Unreal Box\'s local library record and will not delete the external project file.',
-      okText: 'Remove'
     }
   },
   tiptapToolbar: {
@@ -5807,56 +5183,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       deregistered: 'Vault "{name}" deregistered from the server'
     }
   },
-  materialRenderer: {
-    graph: {
-      nodeCount: 'Nodes',
-      connectionCount: 'Connections',
-      textureNodeCount: 'Texture nodes',
-      functionCallCount: 'Function calls',
-      copied: 'Copied',
-      copyButton: 'Copy node text'
-    },
-    parameters: {
-      title: 'Parameters',
-      description:
-        'Summarized from material parameters and adjustable node values, sourced from offline-saved node text or import records',
-      tableHead: {
-        name: 'Name',
-        type: 'Type',
-        value: 'Value',
-        source: 'Source'
-      },
-      empty:
-        'No parameters or adjustable node values were parsed. Saving node text containing Parameter, Constant, or Texture Coordinate will summarize them automatically.',
-      groups: {
-        scalar: {
-          title: 'Scalar parameters',
-          desc: 'Scalar parameters and adjustable node values'
-        },
-        vector: {
-          title: 'Vector parameters',
-          desc: 'Colors, vectors, and multi-channel values'
-        },
-        texture: {
-          title: 'Texture parameters',
-          desc: 'Replaceable texture references'
-        },
-        boolean: {
-          title: 'Switches',
-          desc: 'Static Switch parameters and adjustable boolean node values'
-        }
-      },
-      source: {
-        nodeProperty: 'Node property',
-        overridden: 'Overridden',
-        inherited: 'Inherited',
-        unknown: 'Unrecorded'
-      }
-    },
-    toast: {
-      copied: 'Material node text copied'
-    }
-  },
   messageDemo: {
     title: 'Message manager demo',
     subtitle: 'Click the buttons to see deduplication and counting for identical messages',
@@ -6014,9 +5340,10 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       yoloDesc: 'Unrestricted access to your project, assets and local files',
       confirmTitle: 'Turn on full access?',
       confirmIntro:
-        'Unreal Box will be able to do the following to your project and this computer without asking. This includes but is not limited to:',
-      confirmProject: 'Unreal project',
-      confirmProjectDesc: 'Create, modify and delete actors, blueprints, materials and assets',
+        'GDBox will be able to do the following to your project and this computer without asking. This includes but is not limited to:',
+      confirmProject: 'Godot project',
+      confirmProjectDesc:
+        'Create, modify and delete nodes, scripts, resources and assets in scenes',
       confirmFile: 'Files and asset library',
       confirmFileDesc: 'Read, write, move or delete files in your asset library',
       confirmCommand: 'Engine commands and scripts',
@@ -6064,7 +5391,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       bilibili: 'Bilibili video',
       text: 'Note',
       file: 'File',
-      ueProject: 'UE project'
+      ueProject: 'Project'
     },
     toast: {
       loadWikiFailed: 'Failed to load knowledge base list',
@@ -6198,198 +5525,21 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       'Skipped {count} item(s): these were unpacked into a temporary folder by your archiver and would disappear with it. Extract the archive properly first.'
   },
   importToProjectModal: {
-    engineFilter: 'Filter by UE version',
-    allEngineVersions: 'All UE versions',
-    unknownEngineVersion: 'Unknown version',
-
-    targetNotConnected: 'This project is not open in UE. Files like this need UE to convert them.',
-    notOpened: 'Not open',
-    openAndImport: 'Open project & import',
-    waitingForEditorButton: 'Waiting for UE…',
-    needsEditorNote: '{format} needs UE to convert it. The project will be opened in UE first',
-    waitingForEditor: 'Opening "{name}". Import starts automatically once UE is ready.',
-    editorWaitTimeout:
-      'UE still has not connected. Make sure the project is open in UE, then try again.',
-    alreadyRunningNotConnected:
-      'This project is already open in UE but is not connected — the UnrealAgentLink plugin is probably not enabled. Enable it, restart the editor, then try again.',
-    openProjectFailed: 'Could not open the project: {error}',
-    uprojectMissing:
-      "Cannot find this project's .uproject file. It may have been moved or deleted.",
-    pluginNotInstalled:
-      'The UnrealAgentLink plugin is not installed, so this project cannot connect: {error}',
-    addProject: 'Add project',
-    selected: 'Selected',
-    preparing: 'Preparing…',
-    loadingProjects: 'Loading projects…',
-    loadProjectsFailed: 'Could not load projects',
-    retry: 'Retry',
-    sourceItems: 'Importing {count} items, folders include their contents',
-    sourceName: 'Importing: {name}',
-    sourceFolder: 'Importing folder: {name}',
-    sourceFolderWithCount: 'Importing folder: {name} ({count} assets)',
-    targetProject: 'Import to: {name}',
-    startImport: 'Start import',
-    checkingVersion: 'Checking versions…',
-    versionConflicts:
-      '{count} items need a newer engine. You will be asked what to do when the import starts.',
-    versionPreflightDone: 'No version conflicts found',
-    versionPreflightOther:
-      'Whether external files, plugins and archives work depends on their contents and the target engine.',
-    compatibilityCheckFailed: 'Version check failed',
-    compatibilityTitle: 'Some assets are too new',
-    compatibilityDetails:
-      '{project} is UE {version}. These {count} assets need a newer version: {assets}. Importing anyway just copies the files as-is without converting them, so UE most likely cannot open them.',
-    blockedAssetsOverflow: '{assets} and {rest} more',
-    chooseCompatibleProject: 'Pick another project',
-    importCompatibleOnly: 'Import the rest',
-    forceImport: 'Import anyway',
-    forceImportAll: 'Import all anyway',
-    missingPlugins: {
-      title: '{count} plugins need to be enabled',
-      desc: 'The imported assets use these engine plugins, which {project} has not enabled. Without them, Blueprints fail to compile with "invalid type" and "function not found" errors.',
-      restartHint:
-        "They will be added to the project's .uproject and take effect after restarting the Unreal Editor.",
-      enable: 'Enable plugins',
-      later: 'Not now',
-      done: 'Enabled {count} plugins. Restart the Unreal Editor to apply.',
-      failed: 'Could not update .uproject: {error}',
-      editorFailed:
-        'The open editor did not apply {plugins}; only the file was updated. Restart the editor before changing plugins there, or the change will be overwritten.',
-      unavailableTitle: '{count} items are not on this machine',
-      unavailableDesc:
-        'Unreal Box cannot enable these automatically. Related Blueprints will not open until they are installed:',
-      fromProject: 'from "{project}"',
-      projectCode: 'C++ code from "{project}"',
-      projectCodeUnknown: 'C++ code from the original project',
-      onlyModuleName:
-        'Only the module name is known. It may be a third-party plugin or C++ from the original project.',
-      openFab: 'View on Fab',
-      unavailableHint:
-        'Restart the editor after installing plugins. C++ from the original project needs its source copied over and compiled.',
-      gotIt: 'Got it'
-    },
-
-    title: 'Import into a project',
-    archive: {
-      title: 'This is an archive',
-      question: 'How should "{name}" be imported?',
-      extractOption:
-        "Extract and import: unpack into the project's Content folder, visible in UE right away",
-      copyOption: 'Copy as-is: put the archive into Content/Imported and unpack it yourself',
-      extractAction: 'Extract and import',
-      copyAction: 'Copy as-is',
-      dontAskAgain: 'Always do this',
-      taskName: 'Archive import: {name}',
-      pathNotFound: 'Cannot find the file path of this archive',
-      extractDone: 'Extracted {count} file(s) to {dir}',
-      extractHintAfter:
-        'If the archive holds FBX or textures, you still need to import them again inside UE',
-      copyDone: 'Archive copied to {dir}',
-      unsupportedTitle: 'This format cannot be unpacked here',
-      unsupportedContent:
-        'Unreal Box can only unpack ZIP. Unpack the {format} archive yourself first, then import the folder into the asset library.',
-      unsupportedOk: 'Got it'
-    },
-    searchPlaceholder: 'Search name or path',
-    progress: {
-      processed: '{count}/{total} processed',
-      success: '{count} succeeded',
-      existing: '{count} already there',
-      error: '{count} failed'
-    },
-    unnamedProject: 'Unnamed project',
-    connected: 'Connected',
-    emptyNoMatch: 'No matching projects',
-    emptyNoProjects: 'No projects yet. Select Add project, top right.',
-    emptyNoProjectsInGroup: 'No projects in this group yet',
+    title: 'Import to project',
+    sourceItems: '{count} items selected',
+    sourceSingle: '"{name}" selected',
+    targetLabel: 'Target folder',
+    targetPlaceholder: 'Choose a folder in your project',
+    chooseFolder: 'Choose folder',
+    hint: 'Files are copied with their original names. Files that already exist in the project are skipped, not overwritten.',
     cancel: 'Cancel',
-    confirm: 'Confirm',
-    importPathTooltip: 'Import path inside the project, e.g. Imported',
-    importPathLabel: 'Import path',
-    normalizedImport: 'Normalized import',
-    fileTypes: {
-      model: 'Model',
-      texture: 'Texture',
-      audio: 'Audio',
-      video: 'Video'
-    },
-    classifyConfirmTitle: 'What you picked:',
-    classifyUnrealCount: '{count} Unreal assets',
-    defaultFileTypesDesc: 'unknown type',
-    classifyExternalCount: '{count} external files ({types})',
-    importAllHint:
-      'Engine not connected, so external files are copied straight to Content/Imported',
-    engineNotConnectedTitle: 'Engine not connected. How should this import?',
-    importUnrealOnly: 'Unreal assets only',
-    importAllKeepNative: 'All, keep formats',
-    chooseModeTitle: 'How should external files be handled?',
-    connectedUnrealCount: '{count} Unreal assets',
-    nativeMediaCount: '{count} images, audio or video',
-    externalCountWithTypes: '{count} to convert ({types})',
-    convertToUEOption: 'Convert to Unreal assets: import into /Game/Imported',
-    keepNativeOption: 'Keep formats: copy straight to Content/Imported',
-    chooseModeModalTitle: 'Choose import mode',
-    convertToUE: 'Convert to Unreal assets',
-    keepNative: 'Keep formats',
-    normalizedImportOnlyUAsset: 'Normalized import supports .uasset and .umap files only',
-    normalizedImportTooltip: 'Normalized import into {path}',
-    taskName: 'Import {count} assets into project',
-    unknownProject: 'Unknown project',
-    stagePreparing: 'Preparing import…',
-    importFailed: 'Import failed',
-    importingProgress: 'Importing {processed}/{total}',
-    copyingFiles: '{base} · {files}/{totalFiles} files written ({bytes}/{totalBytes})',
-    stageCancelling: 'Cancelling, finishing the current file…',
-    doneCancelled: 'Cancelled: {success} succeeded, {existing} already existed',
-    projectPathNotFound: 'Project path not found',
-    copyFailed: 'Failed to copy: {name}',
-    copiedToProject: 'Copied {count} files to the project',
-    copyFailedCount: '{count} files failed to copy',
-    copyError: 'Failed to copy files: {error}',
-    ueNotConnectedFile: 'UE not connected, could not import {name}',
-    doneSummary: 'Import finished: {success} succeeded, {existing} already existed, {error} failed',
-    doneWithWarnings: 'Import finished with {count} warnings',
-    doneWithIssues: 'Import finished, but some problems remain',
-    doneWithFailures: 'Import finished; {count} assets are incomplete',
-    doneImported: 'Import finished: copied {copied}/{total} files, {existing} already existed',
-    singleTaskName: 'Import {name}',
-    importingExternal: 'Importing external files…',
-    doneImportedFiles: 'Imported {count} files',
-    ueNotConnected: 'UE is not connected',
-    ueNotConnectedImportFailed: 'Import failed because UE is not connected',
-    copyingUnrealAssets: 'Copying Unreal assets…',
-    assetExists: 'The asset already exists in the project',
-    doneCopied: 'Copied {copied}/{total} files',
-    importException: 'Import error',
-    selectProjectFirst: 'Pick a project first',
-    noImportableAssets: 'No assets to import',
-    needUEConnection: {
-      title: 'UE connection required',
-      content:
-        'Normalized import requires a UE connection. Enable the Unreal Box plugin and open the project first.',
-      okText: 'Got it'
-    },
-    folderKeyNotFound: 'Folder key not found',
-    noUAssetFiles: 'No .uasset or .umap files found',
-    normalizedImporting: 'Normalizing import for {count} files',
-    normalizedImportDone: 'Normalized import finished: {success} succeeded, {error} failed',
-    normalizedImportWarnings: 'Import finished with warnings: {warnings}',
-    normalizedImportUENotConnected: 'UE is not connected, normalized import is unavailable',
-    normalizedImportFailed: 'Normalized import failed',
-    normalizedImportException: 'Normalized import error: {error}',
-    pluginPathNotFound: 'Plugin file path not found',
-    vaultPathNotFound: 'Vault root path not found',
-    pluginFolderKeyNotFound: 'Plugin folder key not found',
-    pluginFolderEmpty: 'The plugin folder is empty',
-    assetPathNotFound: 'Asset path not found',
-    pluginDirNotFound: 'Plugin directory not found',
-    sourceOrProjectPathNotFound: 'Plugin source directory or project path not found',
-    pluginImported: 'Plugin {name} imported to {path}',
-    pluginImportFailed: 'Failed to import the plugin: {error}',
-    unknownError: 'Unknown error',
-    pluginImportException: 'Plugin import error: {error}',
-    quickPathInfo: 'Standard UE project detected, copying {count} Unreal assets directly',
-    unknownAsset: 'Unknown asset'
+    confirm: 'Copy to project',
+    noFiles: 'No files to copy',
+    copied: '{count} files copied',
+    copiedWithSkipped: '{count} files copied, {skipped} existing files skipped',
+    allSkipped: 'All {count} files already exist in the project and were skipped',
+    copyFailed: '{count} files failed to copy',
+    loadFailed: 'Failed to read the assets to import'
   },
   graphManageModal: {
     title: 'Manage graphs',
@@ -6485,7 +5635,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
     }
   },
   bridgeBanner: {
-    title: 'The engine bridge did not start'
+    title: 'The Godot editor link did not start'
   },
   modelViewer: {
     loading: 'Loading model…',
@@ -6630,45 +5780,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
     sessionProject: {
       none: 'No project',
       pick: 'Move to project'
-    },
-    // Top bar status monitor (the heartbeat button left of the project chip)
-    statusMonitor: {
-      title: 'Status monitor',
-      tooltipIssues: 'Status monitor · {n} outside expected range',
-      attention: 'Needs attention',
-      expect: 'Expected {expect}',
-      ask: 'Ask AI',
-      askPrompt: 'The status monitor shows "{label}" at {value} (expected {expect}). Find out why.',
-      refresh: 'Refresh',
-      updatedAt: 'Updated {time}',
-      loading: 'Reading…',
-      loadFailed: "Couldn't read the editor status. Refresh to try again.",
-      pluginOutdated:
-        'The UnrealAgentLink plugin in this project is out of date. Update it and restart the editor.',
-      pending: 'No data yet',
-      unsupported: 'Not available in this version',
-      unit: {
-        seconds: '{n} s',
-        minutesSeconds: '{m} min {s} s'
-      },
-      group: {
-        startup: 'Editor',
-        pie: 'Play in Editor',
-        cache: 'Cache',
-        memory: 'Memory'
-      },
-      item: {
-        startup: 'Editor startup',
-        assetRegistry: 'Asset registry scan',
-        pluginCount: 'Enabled plugins',
-        editorHitch: 'Editor hitch rate',
-        pieFirstEnter: 'First start',
-        pieEnter: 'Latest start',
-        pieHitch: 'PIE hitch rate',
-        localCacheHit: 'Local cache hit rate',
-        cacheDisk: 'Local cache on disk',
-        availableMemory: 'Available memory'
-      }
     }
   },
   notebookNoteChatPanel: {
@@ -6765,34 +5876,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       desc: 'Create a tag group to manage your tags better',
       action: 'Create tag group'
     }
-  },
-  blueprintCollectionOverlay: {
-    untitled: 'Untitled collection',
-    renameTitle: 'Rename collection',
-    countLabel: '{count} blueprints',
-    stats: {
-      functionCount: '{count} functions',
-      variableCount: '{count} variables',
-      graphCount: '{count} graphs',
-      componentCount: '{count} components',
-      empty: 'Empty blueprint'
-    },
-    removedToast: 'Removed from collection',
-    contextMenu: {
-      open: '📂 Open blueprint',
-      remove: '✕ Remove from collection'
-    }
-  },
-  materialCollectionOverlay: {
-    renameTitle: 'Rename collection',
-    entryCount: '{count} material entries',
-    close: 'Close',
-    remove: 'Remove from collection',
-    untitled: 'Untitled collection',
-    contextMenu: {
-      open: 'Open material'
-    },
-    empty: 'This collection is empty'
   },
   notebookBrainstormViewer: {
     /*
@@ -6893,7 +5976,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
     locateFailed: 'Could not locate this file. Refresh the list and try again.',
     loading: 'Loading…',
     modifiedTime: 'Modified: {time}',
-    engineVersion: 'Engine version: {version}',
     browsePathUnavailable:
       'Cannot open the containing path; please check whether the file still exists',
     folderUploading: 'Uploading folder, please wait…',
@@ -7125,7 +6207,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
   markdownRendererLinkConfirm: {
     title: 'Security notice',
     confirmText:
-      'You are about to leave Unreal Box for an external link. Please verify the site is trustworthy.',
+      'You are about to leave GDBox for an external link. Please verify the site is trustworthy.',
     cancelButton: 'Cancel',
     continueButton: 'Continue'
   },
@@ -7158,58 +6240,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
     clearButton: 'Clear',
     saveButton: 'Save',
     editorPlaceholder: 'Start writing your Markdown notes...'
-  },
-  materialEditor: {
-    copiedLibraryPath: 'Library path copied',
-    copiedTexturePath: 'Texture path copied',
-    sections: {
-      graph: 'Node graph',
-      textureDependencies: 'Texture dependencies',
-      functionDependencies: 'Function dependencies'
-    },
-    actions: {
-      back: 'Back',
-      copyPathTitle: 'Click to copy path',
-      focusModeTitle: 'Focus mode (F)',
-      exitFocusMode: 'Exit focus',
-      focusMode: 'Focus mode',
-      favorited: '★ Favorited',
-      favorite: '☆ Favorite'
-    },
-    sidebar: {
-      title: 'Material structure',
-      collapseTitle: 'Collapse panel',
-      expandTitle: 'Expand material structure'
-    },
-    parameters: {
-      sectionLabel: 'Parameters / adjustable values',
-      materialGroupLabel: 'Material parameters',
-      nodeGroupLabel: 'Node adjustable values',
-      nodeCountTitle: '{owner}: {count} adjustable values',
-      emptyState: 'No parameters or adjustable node values yet'
-    },
-    textureDependencies: {
-      heading: 'Texture dependencies',
-      stats: '{total} total · {recorded} recorded · {missing} missing',
-      copyTitle: 'Copy {path}',
-      sourceAsset: 'Matched from asset library',
-      sourceNode: 'Node text reference',
-      emptyState:
-        "No texture dependencies parsed yet. They'll be collected automatically after saving material node text containing TextureSample."
-    },
-    functionDependencies: {
-      heading: 'Function & collection dependencies',
-      count: '{count} items',
-      emptyState: 'No function or collection dependencies yet'
-    },
-    status: {
-      missing: 'Missing',
-      recorded: 'Recorded'
-    },
-    notFound: {
-      title: 'Material not found',
-      backButton: 'Back to material library'
-    }
   },
   miniSensitiveConfirm: {
     header: {
@@ -7286,15 +6316,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       sub: 'Press ESC to exit'
     }
   },
-  blueprintComponentsEditor: {
-    title: 'Unreal Engine Blueprint Editor',
-    toggleModeButton: 'Switch to {mode} mode',
-    mode: {
-      dark: 'Dark',
-      light: 'Light'
-    },
-    fullscreenOption: 'Fullscreen'
-  },
   componentsUpload: {
     modal: {
       title: 'Image crop',
@@ -7309,7 +6330,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
     },
     form: {
       appNamePlaceholder: 'Path name (e.g. model assets)',
-      uploadPathPlaceholder: 'Full upload path, e.g. /apps/unreal-agent/filename'
+      uploadPathPlaceholder: 'Full upload path, e.g. /apps/app-folder/filename'
     },
     actions: {
       chooseFile: 'Choose file',
@@ -7423,128 +6444,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
     unknownName: 'Unknown',
     moreHidden: '{count} more assets not shown'
   },
-  snippetCapture: {
-    title: 'Capture a snippet from the engine',
-    prompt:
-      'I want to save a piece of Blueprint logic from the current Unreal project into the blueprint library. ' +
-      'Read the graph I name with blueprint_get_graph and list its nodes for me first. ' +
-      'Once I tell you which nodes to keep and what to call the entry, save it with blueprint_library_save. ' +
-      'If it cannot be saved, list every node that blocked it and why — do not just report a failure.',
-    failed: 'Could not start: {reason}'
-  },
-  snippetDetail: {
-    back: 'Back',
-    formBadge: 'Snippet',
-    applyToProject: 'Add to current project',
-    nodes: 'Nodes',
-    connections: 'Connections',
-    openPorts: 'Open ports',
-    nodeTypes: 'Node types used',
-    source: 'Captured from',
-    openPortsTitle: 'This snippet has open ports',
-    openPortsHint:
-      'These pins were connected to nodes outside the selection, so they are left dangling. You will need to wire them up in Unreal after adding the snippet.',
-    noCanvasTitle: 'Why there is no node graph here',
-    noCanvasHint:
-      'Snippets store Unreal clipboard text, which the library’s node renderer can actually read — but that renderer is an editor: drag a node and the content changes, and a snippet has nowhere to save those edits, so it would look editable and then lose your work. It needs a real read-only mode first. To understand what this snippet does, ask the assistant on the right, which has the full snippet content.',
-    applyPrompt:
-      'Add the blueprint library snippet “{name}” (entry_id: {id}) to the current project. ' +
-      'Confirm the entry with library_search first, ask me which blueprint and which empty graph to write into, then use blueprint_library_apply.',
-    applyFailed: 'Could not add the snippet: {reason}'
-  },
-  blueprintEditor: {
-    topbar: {
-      back: 'Back',
-      focusModeTitle: 'Focus mode (F)',
-      exitFocus: 'Exit focus',
-      focusMode: 'Focus mode',
-      favorited: '★ Favorited',
-      favorite: '☆ Favorite'
-    },
-    sections: {
-      graph: 'Graph',
-      function: 'Function',
-      variable: 'Variable',
-      component: 'Component',
-      eventDispatcher: 'Event dispatcher',
-      macro: 'Macro',
-      element: 'Element'
-    },
-    defaultNames: {
-      graph: 'NewEventGraph_{n}',
-      function: 'NewFunction_{n}',
-      variable: 'NewVariable_{n}',
-      component: 'NewComponent_{n}',
-      eventDispatcher: 'NewDispatcher_{n}',
-      macro: 'NewMacro_{n}'
-    },
-    deleteConfirm: {
-      title: 'Delete {type}?',
-      content: '"{name}" will be removed from this blueprint. This action cannot be undone yet.',
-      okText: 'Delete',
-      cancelText: 'Cancel'
-    },
-    dragHint: {
-      dropForFunctionCall: 'Drop to create a function call node',
-      dropForSet: 'Drop to create a Set node',
-      dropForGet: 'Drop to create a Get node',
-      functionCallSubtitle: 'Creates a call node based on the function signature',
-      shiftForSetSubtitle: 'Hold Shift while dragging to drop a Set node',
-      shiftToSetSubtitle: 'Hold Shift then release to switch to a Set node',
-      treeItemVariable: 'Drag onto the canvas to create a node, hold Shift for a Set node',
-      treeItemFunction: 'Drag onto the canvas to create a function call node'
-    },
-    sidebar: {
-      myBlueprint: 'My Blueprint',
-      collapsePanel: 'Collapse panel',
-      searchPlaceholder: 'Search graphs, variables...',
-      filterAll: 'All',
-      filterGraphs: 'Graphs',
-      filterUsedVars: 'Used variables',
-      filterUnusedVars: 'Unused',
-      noMatches: 'No matches found',
-      clearFilters: 'Clear filters',
-      add: 'Add',
-      notUsedInGraph: 'Not referenced in current graph',
-      delete: 'Delete',
-      expandTitle: 'Expand My Blueprint'
-    },
-    varTooltip: {
-      type: 'Type',
-      subType: 'Subtype',
-      container: 'Container',
-      defaultValue: 'Default value',
-      referencedIn: 'Referenced in',
-      listSeparator: ', '
-    },
-    canvasEmpty: {
-      title: 'This graph has no nodes yet',
-      desc: 'Drag a variable in from the left, or ask the AI to build the logic'
-    },
-    emptyState: {
-      title: 'Select a graph, function, or macro to start editing',
-      desc: 'Select an element from the left panel'
-    },
-    notFound: {
-      text: 'Blueprint not found',
-      backButton: 'Back to Blueprint Library'
-    }
-  },
-  blueprintManagerCommentBox: {
-    colorButtonTitle: 'Change comment box color',
-    customColorTitle: 'Custom color',
-    autoArrangeTitle: 'Auto-arrange nodes in box',
-    colors: {
-      slate: 'Slate',
-      rose: 'Rose',
-      orange: 'Orange',
-      amber: 'Amber',
-      emerald: 'Emerald',
-      teal: 'Teal',
-      sky: 'Sky',
-      violet: 'Violet'
-    }
-  },
   notebookKnowledgeGraphViewer: {
     title: 'Knowledge graph',
     emptyState: 'No data yet',
@@ -7564,7 +6463,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       bilibili: 'Bilibili video',
       text: 'Note',
       file: 'File',
-      ueProject: 'UE project'
+      ueProject: 'Project'
     }
   },
   spotlightWindow: {
@@ -7690,11 +6589,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       folderDoneWithFailures: '{count} folder(s) failed to import: {names}',
       folderDoneWithFailuresShort: '{count} folder(s) failed to import',
       successItems: 'Import finished: {count} item(s)',
-      unrealImportStarted: 'Importing UE project, {count} item(s) in total…',
-      unrealImportDone: 'UE project import finished, {count} item(s) added',
-      unrealImportTaskName: 'Import from Unreal',
-      unrealImportTaskDone: 'Done: {count} asset(s)',
-      unrealImportTaskFailed: 'Import failed: {error}',
+      agentImportDone: '{count} items imported',
       modeV1: 'V1 batch',
       modeV2: 'V2 chunked',
       modeSuffix: ' ({mode})',
@@ -7978,99 +6873,9 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
     viewDetail: 'View details',
     detecting: 'Detecting'
   },
-  importResultModal: {
-    title: 'Import into "{name}" is incomplete',
-    headlinePlanErrors: "{count} assets couldn't be started",
-    headlineOrphans: "{count} dependency files couldn't be written",
-    headlineUnattributed: "{count} missing dependencies couldn't be traced to an asset",
-    noDetail: 'The import is incomplete, but there are no further details.',
-    separator: ', ',
-    listSeparator: ', ',
-    sectionPlanErrors: "Assets that couldn't be started",
-    headlineMissing: '{count} dependencies missing',
-    headlineFiles: "{count} files couldn't be written",
-    headlineUnconfirmed: "{count} assets couldn't be confirmed complete",
-    headlineConflicts: '{count} target path conflicts',
-    sectionMissing: 'Missing dependencies',
-    sectionFiles: 'Files not written to the project',
-    sectionUnconfirmed: "Couldn't confirm these are complete",
-    sectionConflicts: 'Target path conflicts',
-    unconfirmedNote:
-      "These assets have too many dependencies to walk through; since this batch did hit problems, they can't be assumed fine.",
-    state: {
-      'not-in-vault': 'Not in the vault',
-      'source-missing': 'In the vault, but the source file is gone',
-      unresolved: 'In the vault and on disk, but not located'
-    },
-    affected: 'Used by {count} assets: {sample}',
-    affectedMore: 'Used by {count} assets: {sample} and {more} more',
-    conflictKept: 'Kept the first one; the other source was: {rejected}',
-    findInVault: 'Find it in the vault',
-    copyPath: 'Copy path',
-    copied: 'Copied',
-    copyFailed: 'Copy failed',
-    andMore: '...and {count} more, see the log',
-    retry: 'Retry import',
-    retrySucceeded: 'All items imported',
-    retrying: 'Retrying import...',
-    retryPartial:
-      'The .uasset files are complete; external files (FBX, textures, etc.) can be retried only while the project is open',
-    retryStillFailing: 'Still incomplete; details updated',
-    close: 'Close'
-  },
   webdavHeader: {
     title: 'WebDAV connection',
     desc: 'Connect to a WebDAV server to manage remote assets'
-  },
-  libraryAIPanel: {
-    title: 'AI assistant',
-    expandTooltip: 'Expand AI assistant',
-    collapsedLabel: 'AI assistant',
-    dockTooltip: 'Dock',
-    overlayTooltip: 'Float',
-    collapseTooltip: 'Collapse',
-    selectedNodes: '{count} node(s) selected — your question will include them',
-    suggestions: {
-      blueprint: {
-        explain: {
-          title: 'Explain this logic',
-          desc: 'What it does, in execution order',
-          prompt: 'Explain what {subject} does, in execution order, and point out the key nodes.'
-        },
-        review: {
-          title: 'Find problems',
-          desc: 'Per-frame cost, null refs, simplifications',
-          prompt:
-            'Review {subject} for performance and robustness issues: per-frame cost, null references, anything that can be simplified.'
-        },
-        apply: {
-          title: 'Apply to current project',
-          desc: 'Write into an empty graph, compile and save',
-          prompt:
-            'Put {subject} into my current project. Tell me which blueprint and which graph first, then do it once I confirm.'
-        }
-      },
-      material: {
-        explain: {
-          title: 'Explain this material',
-          desc: 'Node structure and data flow',
-          prompt:
-            'Explain the node structure and data flow of {subject}, and point out the key nodes and anything hard to maintain.'
-        },
-        performance: {
-          title: 'Find problems',
-          desc: 'Samplers, instruction count, blend mode',
-          prompt:
-            'Analyse the performance risks of {subject}: texture samplers, instruction count, translucent blending, function calls. Give actionable suggestions.'
-        },
-        dependencies: {
-          title: 'Check dependencies',
-          desc: 'Textures, material functions, parameter collections',
-          prompt:
-            'Check the texture, material function and parameter collection dependencies of {subject} for anything missing, duplicated or suspicious.'
-        }
-      }
-    }
   },
   codeBlockComponent: {
     copyTooltip: 'Copy code'
@@ -8317,37 +7122,10 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       excel: 'Spreadsheet'
     },
     snapshotNodes: '{count} node(s)',
-    snapshotActors: '{count} actor(s)',
+    snapshotActors: '{count} node(s)',
     snapshotAssets: '{count} asset(s)',
     snapshotEmpty: 'nothing was selected',
     snapshotTitle: 'What the AI saw in the editor when you sent this ({time})'
-  },
-  blueprintLibraryRenderer: {
-    loadingText: 'Loading blueprint renderer…',
-    loadError: 'Renderer failed to load: {message}'
-  },
-  blueprintLibraryStore: {
-    // The graph a new blueprint ships with. Stored in the package, fixed at creation
-    defaultGraph: {
-      name: 'New event graph',
-      description: 'Default event graph'
-    },
-    /*
-     * The four sample blueprints seeded into an empty library.
-     *
-     * An English user opening the blueprint library for the first time saw
-     * four samples described entirely in Chinese. (Whether sample data should
-     * exist at all is a separate question — see review §4.6.)
-     */
-    samples: {
-      damageSystem: 'General damage calculation, physical and magical',
-      calculateDamage: 'Compute the final damage value',
-      damageMultiplier: 'Damage multiplier',
-      isActive: 'Is active',
-      characterController: 'Character movement: jump, sprint, climb',
-      mainMenu: 'Main menu UI blueprint',
-      networkManager: 'Network replication manager'
-    }
   },
   miniChatWindow: {
     sendButton: 'Send',
@@ -8394,7 +7172,7 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
       text: 'Text source',
       note: 'Note',
       file: 'File source',
-      ueProject: 'UE project',
+      ueProject: 'Project',
       default: 'Source'
     },
     openOriginalLink: 'Open original link'
@@ -8449,7 +7227,6 @@ Places to start: whether this .uproject can be read at all and which EngineAssoc
     mainAssetsOnly: 'Main assets only',
     typeGroups: {
       common: 'Common',
-      blueprint: 'Blueprint',
       material: 'Material',
       mesh: 'Mesh',
       animation: 'Animation',

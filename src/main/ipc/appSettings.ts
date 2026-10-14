@@ -1,3 +1,4 @@
+import { locateGodot, probeGodot } from '../godot/locate'
 import { ipcMain } from 'electron'
 import {
   appSettingsManager,
@@ -17,6 +18,15 @@ export function registerAppSettingsIPC(setAppIconTheme: SetAppIconTheme): void {
   /**
    * 获取应用设置
    */
+  /**
+   * 设置页显示「找到的是哪个 Godot」。给了路径就只验这一个（不对就是 null，
+   * 让用户看出路径填错了）；没给就按 PATH、winget、scoop、Steam 自动找
+   */
+  ipcMain.handle('app-settings:locateGodot', async () => {
+    const preferred = appSettingsManager.getGodotPath()
+    return preferred ? await probeGodot(preferred) : await locateGodot()
+  })
+
   ipcMain.handle('app-settings:get', () => {
     const settings = appSettingsManager.getSettings()
     // 同步获取系统实际的开机自启状态
@@ -50,6 +60,7 @@ export function registerAppSettingsIPC(setAppIconTheme: SetAppIconTheme): void {
         notifyApprovalRequired?: boolean
         notifyQuestionRequired?: boolean
         hideWindowOnProjectLaunch?: boolean
+        godotPath?: string
         autoRecoverEditorCrash?: boolean
         assetCrossVaultSearch?: boolean
         assetReadonlyLock?: boolean
@@ -118,6 +129,9 @@ export function registerAppSettingsIPC(setAppIconTheme: SetAppIconTheme): void {
       }
       if (typeof settings.notifyQuestionRequired === 'boolean') {
         appSettingsManager.setNotifyQuestionRequired(settings.notifyQuestionRequired)
+      }
+      if (typeof settings.godotPath === 'string') {
+        appSettingsManager.setGodotPath(settings.godotPath)
       }
       if (typeof settings.hideWindowOnProjectLaunch === 'boolean') {
         appSettingsManager.setHideWindowOnProjectLaunch(settings.hideWindowOnProjectLaunch)

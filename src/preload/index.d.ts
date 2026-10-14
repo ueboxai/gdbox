@@ -10,13 +10,6 @@ import type {
 } from '../shared/agentNotificationActivation'
 import type { TrayAction, TrayRecentSession } from '../shared/trayActions'
 import type {
-  CommunityFetchResult,
-  CommunityTemplate,
-  TemplateDownloadProgress,
-  TemplateInfo,
-  TemplateSource
-} from '../shared/projectTemplate'
-import type {
   AssetImportStatusSummary,
   DependencyGraphEdge,
   DependencyGraphNode
@@ -868,60 +861,7 @@ declare global {
     }
   }
 
-  /**
-   * 工程模板 API
-   */
-  interface ProjectTemplateAPI {
-    /** 列出所有可用模板（内置 / 自制 / 已下载的社区模板） */
-    list: () => Promise<{ success: boolean; templates?: TemplateInfo[]; error?: string }>
-    /** 从模板创建工程 */
-    createFromTemplate: (params: {
-      templatePath: string
-      targetDir: string
-      projectName: string
-    }) => Promise<{ success: boolean; uprojectPath?: string; error?: string }>
-    /** 添加自定义模板 */
-    addCustomTemplate: (params: {
-      sourceProjectPath: string
-      templateName: string
-    }) => Promise<{ success: boolean; error?: string }>
-    /** 列出社区模板源 */
-    listSources: () => Promise<{ success: boolean; sources?: TemplateSource[]; error?: string }>
-    /** 启用 / 禁用一个源。启用之前不会发出任何网络请求 */
-    setSourceEnabled: (params: {
-      id: string
-      enabled: boolean
-    }) => Promise<{ success: boolean; sources?: TemplateSource[]; error?: string }>
-    /** 添加自定义源 */
-    addSource: (params: {
-      name: string
-      url: string
-    }) => Promise<{ success: boolean; sources?: TemplateSource[]; error?: string }>
-    /** 删除自定义源（内置源不可删） */
-    removeSource: (params: {
-      id: string
-    }) => Promise<{ success: boolean; sources?: TemplateSource[]; error?: string }>
-    /** 抓取所有已启用源的清单 */
-    fetchCommunity: () => Promise<{
-      success: boolean
-      results?: CommunityFetchResult[]
-      error?: string
-    }>
-    /** 下载一条社区模板到本地模板库 */
-    downloadCommunity: (params: {
-      sourceId: string
-      template: CommunityTemplate
-    }) => Promise<{ success: boolean; templatePath?: string; error?: string }>
-    /** 取消一个进行中的下载 */
-    cancelDownload: (params: {
-      sourceId: string
-      templateId: string
-    }) => Promise<{ success: boolean }>
-    /** 订阅下载进度，返回取消订阅函数 */
-    onDownloadProgress: (listener: (payload: TemplateDownloadProgress) => void) => () => void
-  }
-
-  // 文件对话框API接口
+    // 文件对话框API接口
   interface DialogAPI {
     showOpenDialog: (
       options?: Electron.OpenDialogOptions
@@ -1498,7 +1438,6 @@ declare global {
     }
     database: DatabaseAPI
     dialog: DialogAPI
-    projectTemplate: ProjectTemplateAPI
     fs: FileSystemAPI
     baiduYun: BaiduYunAPI
     asset: AssetAPI
@@ -2875,6 +2814,8 @@ declare global {
         notifyApprovalRequired: boolean
         notifyQuestionRequired: boolean
         hideWindowOnProjectLaunch: boolean
+        /** Godot 可执行文件；空串 = 自动查找 */
+        godotPath: string
         autoRecoverEditorCrash: boolean
         /** agent 搜素材时看不看别的保管库，默认关 */
         assetCrossVaultSearch: boolean
@@ -2900,6 +2841,7 @@ declare global {
         notifyApprovalRequired?: boolean
         notifyQuestionRequired?: boolean
         hideWindowOnProjectLaunch?: boolean
+        godotPath?: string
         autoRecoverEditorCrash?: boolean
         assetCrossVaultSearch?: boolean
         assetReadonlyLock?: boolean
@@ -2907,6 +2849,8 @@ declare global {
       }) => Promise<{ success: boolean }>
       /** 设置开机自启 */
       setAutoLaunch: (enabled: boolean) => Promise<{ success: boolean }>
+      /** 按设置找 Godot 4（设置为空就自动查找）。找不到回 null */
+      locateGodot: () => Promise<{ path: string; version: string } | null>
       /** 设置应用语言 */
       setLanguage: (language: 'zh-CN' | 'en-US') => Promise<{ success: boolean }>
       /** 获取应用语言 */
@@ -3714,7 +3658,7 @@ declare global {
   /**
    * 技能沉淀档位。
    *
-   * off = 不会自己写技能（`ue-skill-creator` 整条从清单里删掉）；
+   * off = 不会自己写技能（`skill-creator` 整条从清单里删掉）；
    * ask = 想沉淀时先给一条提案，用户点头才写（默认）；
    * auto = 自己写，写完在交付里说。
    *

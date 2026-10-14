@@ -1,7 +1,7 @@
 /**
  * 命令行解析。
  *
- * 用 Node 自带的 `util.parseArgs`，不引第三方框架：这套命令只有七条、
+ * 用 Node 自带的 `util.parseArgs`，不引第三方框架：这套命令只有八条、
  * 选项也就十来个，为它背一个依赖不划算，而 `parseArgs` 恰好支持
  * `allowPositionals` + 选项出现在位置参数前后都行 —— 那正是 §4 要的
  * 「公共选项允许出现在子命令前后」。
@@ -12,7 +12,7 @@
 
 import { parseArgs } from 'node:util'
 
-import { UeboxError } from './errors.js'
+import { GdboxError } from './errors.js'
 
 export interface ParsedArgs {
   /** 例如 `['tools', 'list']` */
@@ -30,7 +30,10 @@ export interface ParsedArgs {
   argsFile?: string
   name?: string
   output?: string
-  world?: 'auto' | 'editor'
+  /** `screenshot` 拍哪个场景（res:// 路径），不给就是主场景 */
+  scene?: string
+  /** `screenshot` 跑到第几帧再拍 */
+  frames?: number
   overwrite: boolean
   /** 这次允许调用会改动工程的工具。CLI 没有审批弹窗，这个开关顶替它 */
   allowWrite: boolean
@@ -49,7 +52,8 @@ const OPTIONS = {
   'args-file': { type: 'string' },
   name: { type: 'string' },
   output: { type: 'string' },
-  world: { type: 'string' },
+  scene: { type: 'string' },
+  frames: { type: 'string' },
   overwrite: { type: 'boolean' },
   'allow-write': { type: 'boolean' }
 } as const
@@ -59,10 +63,10 @@ export function parse(argv: string[]): ParsedArgs {
   try {
     parsed = parseArgs({ args: argv, options: OPTIONS, allowPositionals: true, strict: true })
   } catch (error) {
-    throw new UeboxError(
+    throw new GdboxError(
       'INVALID_ARGUMENT',
       (error as Error).message,
-      '运行 uebox --help 看可用的命令和选项。'
+      '运行 gdbox --help 看可用的命令和选项。'
     )
   }
 
@@ -82,7 +86,8 @@ export function parse(argv: string[]): ParsedArgs {
     ...(values['args-file'] !== undefined ? { argsFile: values['args-file'] } : {}),
     ...(values.name !== undefined ? { name: values.name } : {}),
     ...(values.output ? { output: values.output } : {}),
-    ...(values.world ? { world: parseWorld(values.world) } : {}),
+    ...(values.scene ? { scene: values.scene } : {}),
+    ...(values.frames ? { frames: parseFrames(values.frames) } : {}),
     overwrite: values.overwrite === true,
     allowWrite: values['allow-write'] === true
   }
@@ -90,18 +95,22 @@ export function parse(argv: string[]): ParsedArgs {
 
 function parseLang(value: string): 'zh-CN' | 'en-US' {
   if (value === 'zh-CN' || value === 'en-US') return value
-  throw new UeboxError('INVALID_ARGUMENT', `--lang 只支持 zh-CN 或 en-US，收到 ${value}。`)
+  throw new GdboxError('INVALID_ARGUMENT', `--lang 只支持 zh-CN 或 en-US，收到 ${value}。`)
 }
 
-function parseWorld(value: string): 'auto' | 'editor' {
-  if (value === 'auto' || value === 'editor') return value
-  throw new UeboxError('INVALID_ARGUMENT', `--world 只支持 auto 或 editor，收到 ${value}。`)
+/** 范围和 `godot_screenshot` 的参数定义一致：60 fps 下最多 10 秒 */
+function parseFrames(value: string): number {
+  const frames = Number(value)
+  if (!Number.isInteger(frames) || frames < 1 || frames > 600) {
+    throw new GdboxError('INVALID_ARGUMENT', `--frames 要是 1–600 之间的整数，收到 ${value}。`)
+  }
+  return frames
 }
 
 function parseTimeout(value: string): number {
   const seconds = Number(value)
   if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 3600) {
-    throw new UeboxError('INVALID_ARGUMENT', `--timeout 要是 1–3600 之间的秒数，收到 ${value}。`)
+    throw new GdboxError('INVALID_ARGUMENT', `--timeout 要是 1–3600 之间的秒数，收到 ${value}。`)
   }
   return Math.floor(seconds)
 }
@@ -109,7 +118,7 @@ function parseTimeout(value: string): number {
 /** 两种参数输入互斥，都不给等同于 `{}`（§4） */
 export function assertArgsInputExclusive(parsed: ParsedArgs): void {
   if (parsed.args !== undefined && parsed.argsFile !== undefined) {
-    throw new UeboxError(
+    throw new GdboxError(
       'INVALID_ARGUMENT',
       '--args 和 --args-file 只能给一个。',
       '复杂结构用 --args-file，可以躲开各种 shell 的引号差异。'

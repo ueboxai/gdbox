@@ -102,7 +102,7 @@ export function useApprovalDisplay(): ApprovalDisplay {
    * 查不到就退回工具名 —— 和那张表一样的规矩：新工具忘了配文案时退化成今天的样子，
    * 而不是冒出个 `undefined`。
    */
-  function describeTool(toolName: string, args: unknown): string {
+  function describeTool(toolName: string): string {
     /*
      * MCP 来的先归一。`mcp_ue-official_call_tool` 这种名字表里查不到，退回原样显示
      * 就成了「即将执行写入操作：mcp_ue-official_call_tool」—— 恰恰是全仓最难读的
@@ -112,20 +112,6 @@ export function useApprovalDisplay(): ApprovalDisplay {
      * 这里漏掉它等于两处对同一件事有两套说法。
      */
     if (isMcpChange({ toolName })) return t('assistant.changes.tools.mcpEngineToolset')
-
-    /*
-     * 插件管理的启停方向在参数里，一个工具拆成两句话说清「到底要启还是要停」。
-     * 审批卡尤其需要：用户要判断的正是方向，而「启用/停用插件」这句含糊话
-     * 等于没说。方向读不出来时退回那句含糊的（同 `AIBubble.changeLabel`）。
-     */
-    if (toolName === 'ue_manage_plugin') {
-      const action = (args as { action?: unknown } | null)?.action
-      if (action === 'Enable' || action === 'Disable') {
-        return t(
-          `assistant.changes.tools.ue_manage_plugin_${action === 'Disable' ? 'disable' : 'enable'}`
-        )
-      }
-    }
 
     const key = changeLabelKey(toolName)
     const label = t(key)
@@ -137,7 +123,7 @@ export function useApprovalDisplay(): ApprovalDisplay {
     if (!request) return null
 
     const browser = request.namespace === 'browser'
-    const action = browser ? '' : describeTool(request.toolName, request.args)
+    const action = browser ? '' : describeTool(request.toolName)
     return {
       toolCallId: request.toolCallId,
       actionType: browser ? 'browser_action' : 'other',

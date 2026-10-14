@@ -16,7 +16,7 @@
 import { promises as fs } from 'node:fs'
 
 import { stripBom } from './config.js'
-import { UeboxError } from './errors.js'
+import { GdboxError } from './errors.js'
 
 /** 文件和标准输入的上限。超过它多半是喂错了东西，不是真有这么大的参数 */
 export const MAX_ARGS_BYTES = 1024 * 1024
@@ -47,10 +47,10 @@ async function readFileCapped(path: string): Promise<string> {
   try {
     raw = await fs.readFile(path)
   } catch {
-    throw new UeboxError('INVALID_ARGUMENT', `读不到参数文件：${path}`)
+    throw new GdboxError('INVALID_ARGUMENT', `读不到参数文件：${path}`)
   }
   if (raw.byteLength > MAX_ARGS_BYTES) {
-    throw new UeboxError(
+    throw new GdboxError(
       'INVALID_ARGUMENT',
       `参数文件超过 ${MAX_ARGS_BYTES} 字节：${path}（${raw.byteLength} 字节）`
     )
@@ -66,7 +66,7 @@ async function readStdin(): Promise<string> {
     const buffer = chunk as Buffer
     size += buffer.byteLength
     if (size > MAX_ARGS_BYTES) {
-      throw new UeboxError('INVALID_ARGUMENT', `标准输入超过 ${MAX_ARGS_BYTES} 字节。`)
+      throw new GdboxError('INVALID_ARGUMENT', `标准输入超过 ${MAX_ARGS_BYTES} 字节。`)
     }
     chunks.push(buffer)
   }
@@ -77,18 +77,18 @@ async function readStdin(): Promise<string> {
 function parseObject(text: string, where: string): Record<string, unknown> {
   const trimmed = text.trim()
   if (!trimmed) {
-    throw new UeboxError('INVALID_ARGUMENT', `${where} 是空的。不需要参数就整个别给。`)
+    throw new GdboxError('INVALID_ARGUMENT', `${where} 是空的。不需要参数就整个别给。`)
   }
 
   let parsed: unknown
   try {
     parsed = JSON.parse(trimmed)
   } catch (error) {
-    throw new UeboxError('INVALID_ARGUMENT', `${where} 不是合法 JSON：${(error as Error).message}`)
+    throw new GdboxError('INVALID_ARGUMENT', `${where} 不是合法 JSON：${(error as Error).message}`)
   }
 
   if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new UeboxError(
+    throw new GdboxError(
       'INVALID_ARGUMENT',
       `${where} 必须是一个 JSON 对象，收到 ${Array.isArray(parsed) ? '数组' : typeof parsed}。`
     )

@@ -36,9 +36,7 @@ let lastConfigSnapshot: string | null = null // 用于检测配置是否真的�
 const editingAssetPrefixes = ref<Record<string, { assetType: string; prefix: string }>>({})
 const editingDirectories = ref<Record<string, { assetType: string; directory: string }>>({})
 // 「从资产库导入的目录」（libraryAssetTypeToDirectory）没有编辑入口，是有意的：
-// 那张表目前**没有任何代码路径读得到**。projectImport 只在 destinationPath 不以 /Game/
-// 开头时才走资产库映射，而现有调用方（ImportToProjectModal）一律传 '/Game/Imported'，
-// 所以那个分支永远进不去。给一张读不到的表配编辑器，用户改完发现毫无效果。
+// 那张表目前**没有任何代码路径读得到**。给一张读不到的表配编辑器，用户改完发现毫无效果。
 // 等真的有资产库导入入口了再把编辑器加回来。
 const editingExtensions = ref<Record<string, { extension: string; assetType: string }>>({})
 

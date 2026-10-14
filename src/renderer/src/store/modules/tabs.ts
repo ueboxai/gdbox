@@ -42,11 +42,6 @@ export const useTabsStore = defineStore(
         首页: 'menu.projectLib',
         资产库: 'menu.assetLib',
         资产依赖关系图: 'menu.assetDependency',
-        蓝图库: 'menu.blueprintLib',
-        蓝图详情: 'menu.blueprintDetail',
-        材质库: 'menu.materialLib',
-        材质详情: 'menu.materialDetail',
-        共创市场: 'menu.coCreateMarket',
         探索: 'menu.explore',
         资产: 'menu.assets',
         开发者: 'menu.talents',
@@ -492,14 +487,6 @@ export const useTabsStore = defineStore(
             // 如果导入失败，忽略
           }),
 
-        import('../../store/modules/blueprintLibraryStore')
-          .then(({ useBlueprintLibraryStore }) => {
-            useBlueprintLibraryStore().copyEditorStateToTabId(sourceTabId, newTabId)
-          })
-          .catch(() => {
-            // 如果导入失败，忽略
-          }),
-
         import('../../store/modules/notebookStore')
           .then(({ useNotebookStore }) => {
             useNotebookStore().copyStateToTabId(sourceTabId, newTabId)
@@ -634,104 +621,8 @@ export const useTabsStore = defineStore(
       return modified
     }
 
-    /**
-     * Normalize static library tabs so persisted legacy paths do not open the wrong page.
-     * These tabs should always point to their canonical list route.
-     *
-     * 匹配靠 title 而不是 key —— 所以老装机里存下来的 `/blueprint-manager`
-     * （那条路由已随旧版画布蓝图库一起删掉）也会在这里被改写成 `/blueprint-library`，
-     * 不会变成一个点开是空白的死标签。
-     */
-    const cleanupLibraryTabs = () => {
-      const libraryTabSpecs = [
-        {
-          title: 'menu.blueprintLib',
-          canonicalKey: '/blueprint-library'
-        },
-        {
-          title: 'menu.materialLib',
-          canonicalKey: '/material-library'
-        }
-      ]
-
-      let modified = false
-
-      for (const { title, canonicalKey } of libraryTabSpecs) {
-        const matchingTabs = historyTabs.value.filter((tab) => tab.title === title)
-        if (matchingTabs.length === 0) continue
-
-        const canonicalTab = matchingTabs.find((tab) => tab.key === canonicalKey)
-        const misplacedTabs = matchingTabs.filter((tab) => tab.key !== canonicalKey)
-
-        if (misplacedTabs.length === 0) continue
-
-        if (canonicalTab) {
-          const misplacedTabSet = new Set(misplacedTabs)
-          historyTabs.value = historyTabs.value.filter((tab) => !misplacedTabSet.has(tab))
-
-          const removableKeys = new Set(
-            misplacedTabs
-              .map((tab) => tab.key)
-              .filter((key) => !historyTabs.value.some((tab) => tab.key === key))
-          )
-          if (removableKeys.size > 0) {
-            tabVisitHistory.value = tabVisitHistory.value.filter((key) => !removableKeys.has(key))
-          }
-        } else {
-          const [firstMisplaced, ...restMisplaced] = misplacedTabs
-          if (firstMisplaced) {
-            const previousKey = firstMisplaced.key
-            firstMisplaced.key = canonicalKey
-            firstMisplaced.path = canonicalKey
-
-            const hasOtherTabsUsingPreviousKey = historyTabs.value.some(
-              (tab) => tab !== firstMisplaced && tab.key === previousKey
-            )
-            if (!hasOtherTabsUsingPreviousKey) {
-              tabVisitHistory.value = tabVisitHistory.value.map((key) =>
-                key === previousKey ? canonicalKey : key
-              )
-            }
-
-            if (activeTab.value === previousKey) {
-              activeTab.value = canonicalKey
-            }
-          }
-
-          if (restMisplaced.length > 0) {
-            const extraTabSet = new Set(restMisplaced)
-            historyTabs.value = historyTabs.value.filter((tab) => !extraTabSet.has(tab))
-
-            const removableKeys = new Set(
-              restMisplaced
-                .map((tab) => tab.key)
-                .filter((key) => !historyTabs.value.some((tab) => tab.key === key))
-            )
-            if (removableKeys.size > 0) {
-              tabVisitHistory.value = tabVisitHistory.value.filter((key) => !removableKeys.has(key))
-            }
-          }
-        }
-
-        if (activeTab.value !== canonicalKey) {
-          const hasCanonicalTab = historyTabs.value.some((tab) => tab.key === canonicalKey)
-          const activeMisplacedTab = misplacedTabs.some((tab) => tab.key === activeTab.value)
-          if (hasCanonicalTab && activeMisplacedTab) {
-            activeTab.value = canonicalKey
-          }
-        }
-
-        modified = true
-      }
-
-      tabVisitHistory.value = [...new Set(tabVisitHistory.value)]
-
-      return modified
-    }
-
     // 初始化时清理污染的嵌套路由 tabs
     cleanupNestedRouteTabs()
-    cleanupLibraryTabs()
 
     // 监听 historyTabs 变化，也检查嵌套路由污染
     let nestedCleanupScheduled = false
@@ -761,29 +652,6 @@ export const useTabsStore = defineStore(
       { deep: true, immediate: false }
     )
 
-    let libraryCleanupScheduled = false
-    watch(
-      historyTabs,
-      () => {
-        if (libraryCleanupScheduled) return
-
-        const hasMisplacedLibraryTab = historyTabs.value.some(
-          (tab) =>
-            (tab.title === 'menu.blueprintLib' && tab.key !== '/blueprint-library') ||
-            (tab.title === 'menu.materialLib' && tab.key !== '/material-library')
-        )
-
-        if (hasMisplacedLibraryTab) {
-          libraryCleanupScheduled = true
-          nextTick(() => {
-            cleanupLibraryTabs()
-            libraryCleanupScheduled = false
-          })
-        }
-      },
-      { deep: true, immediate: false }
-    )
-
     return {
       // 状态
       historyTabs,
@@ -807,8 +675,7 @@ export const useTabsStore = defineStore(
       toggleTabFixed,
       duplicateTab,
       cleanupSpotlightTabs,
-      cleanupNestedRouteTabs,
-      cleanupLibraryTabs
+      cleanupNestedRouteTabs
     }
   },
   {
@@ -842,9 +709,6 @@ export const useTabsStore = defineStore(
           }
           if (typeof store.cleanupNestedRouteTabs === 'function') {
             ;(store.cleanupNestedRouteTabs as () => void)()
-          }
-          if (typeof store.cleanupLibraryTabs === 'function') {
-            ;(store.cleanupLibraryTabs as () => void)()
           }
         }, 0)
       }

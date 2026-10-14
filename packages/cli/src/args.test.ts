@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { assertArgsInputExclusive, parse } from './args.js'
 import { run } from './cli.js'
 import { isSettled, resetSettledForTest } from './interrupt.js'
-import { exitCodeFor, UeboxError } from './errors.js'
+import { exitCodeFor, GdboxError } from './errors.js'
 
 describe('parse', () => {
   it('拆出命令和公共选项', () => {
@@ -30,16 +30,16 @@ describe('parse', () => {
       parse(['tools', 'list', '--nope'])
       expect.unreachable('应该抛出')
     } catch (error) {
-      expect((error as UeboxError).code).toBe('INVALID_ARGUMENT')
-      expect(exitCodeFor((error as UeboxError).code)).toBe(2)
+      expect((error as GdboxError).code).toBe('INVALID_ARGUMENT')
+      expect(exitCodeFor((error as GdboxError).code)).toBe(2)
     }
   })
 
   it('工程路径原样保留，带空格和中文都不动它', () => {
-    const parsed = parse(['tools', 'call', 'ue_get_selection', '--project', 'D:/我的 工程/Demo'])
+    const parsed = parse(['tools', 'call', 'editor_scene_tree', '--project', 'D:/我的 工程/Demo'])
 
     expect(parsed.project).toBe('D:/我的 工程/Demo')
-    expect(parsed.command).toEqual(['tools', 'call', 'ue_get_selection'])
+    expect(parsed.command).toEqual(['tools', 'call', 'editor_scene_tree'])
   })
 
   describe('--timeout', () => {
@@ -59,9 +59,14 @@ describe('parse', () => {
     expect(() => parse(['--lang', 'fr', 'doctor'])).toThrow(/--lang/)
   })
 
-  it('--world 只认 auto / editor', () => {
-    expect(parse(['viewport', 'screenshot', '--world', 'editor']).world).toBe('editor')
-    expect(() => parse(['viewport', 'screenshot', '--world', 'game'])).toThrow(/--world/)
+  it('--frames 只认 1–600 的整数', () => {
+    expect(parse(['screenshot', '--frames', '90']).frames).toBe(90)
+    expect(() => parse(['screenshot', '--frames', '0'])).toThrow(/--frames/)
+    expect(() => parse(['screenshot', '--frames', '1.5'])).toThrow(/--frames/)
+  })
+
+  it('--scene 原样透传', () => {
+    expect(parse(['screenshot', '--scene', 'res://main.tscn']).scene).toBe('res://main.tscn')
   })
 })
 

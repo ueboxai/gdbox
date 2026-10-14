@@ -50,7 +50,7 @@ export default defineConfig({
     include: [
       'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
       'tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
-      // 独立子包（uebox CLI）。不写这一行的话它的测试根本不会被跑到，
+      // 独立子包（gdbox CLI）。不写这一行的话它的测试根本不会被跑到，
       // 而门禁会全绿 —— 见 docs/CLI设计.md §8
       'packages/*/src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'
     ],

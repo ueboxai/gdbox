@@ -8,13 +8,13 @@ import {
 
 const entry: ExperienceEntry = {
   id: 'e-1a2b3c4d',
-  title: '角色没有 is_hidden',
-  tool: 'ue_run_python_script',
-  errorPattern: "has no attribute 'is_hidden'",
-  advice: '用 is_hidden_ed() 读隐藏状态',
-  expect: { param: 'script' },
+  title: 'PackedScene 用 instantiate()',
+  tool: 'godot_check',
+  errorPattern: "nonexistent function 'instance' in base 'packedscene'",
+  advice: 'Godot 4 里改用 instantiate()',
+  expect: { tool: 'edit_local_file' },
   source: '2026-09-28 · session a1b2c3d4 · failed 2x, then succeeded',
-  verified: { date: '2026-09-28', engine: '5.5' },
+  verified: { date: '2026-09-28', engine: '4.3' },
   status: 'trial'
 }
 
@@ -25,13 +25,22 @@ describe('experienceFile', () => {
       id: 'e-2',
       status: 'proven' as const,
       pinned: true,
-      expect: { tool: 'ue_get_actor' },
+      expect: { tool: 'godot_editor_get_node' },
       // 通用层才有的两个字段
-      engines: ['5.5', '5.6'],
-      notFor: ['5.7']
+      engines: ['4.2', '4.3'],
+      notFor: ['4.4']
     }
-    const text = serializeExperienceFile('ue_run_python_script', [entry, pinned])
+    const text = serializeExperienceFile('godot_check', [entry, pinned])
     expect(parseExperienceFile(text)).toEqual([entry, pinned])
+  })
+
+  it('验证版本写成 Godot 4.3；虚幻时期写的 UE 前缀照样读得回来', () => {
+    const text = serializeExperienceFile('godot_check', [entry])
+    expect(text).toContain('- verified: 2026-09-28 · Godot 4.3')
+    expect(parseExperienceFile(text.replace('Godot 4.3', 'UE 4.3'))[0].verified).toEqual({
+      date: '2026-09-28',
+      engine: '4.3'
+    })
   })
 
   it('字段里的换行被压平，不会把一条劈成两条', () => {

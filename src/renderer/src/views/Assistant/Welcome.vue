@@ -378,7 +378,6 @@ import { useAgentMode } from './composables/useAgentMode'
 import { ensurePermissionMode } from './composables/sessionPermissionMode'
 import { AGENT_RESUME_ACTION } from './composables/agentHandlerShared'
 import { useChatFlow, type NotebookSourceItem } from './composables/useChatFlow'
-import type { LibraryChatContext } from './composables/libraryChatContext'
 import {
   clearFollowUps,
   enqueueFollowUp,
@@ -434,11 +433,11 @@ const { greetingMessage } = useGreeting()
  * 根据当前模式返回不同的建议卡片内容
  * - 图片生成模式：显示图片相关建议
  * - 视频生成模式：显示视频相关建议
- * - 智能对话模式（默认）：显示虚幻引擎开发相关建议
+ * - 智能对话模式（默认）：显示游戏开发相关建议
  */
 const suggestions = computed<SuggestionItem[]>(() => {
   /*
-   * 嵌进别的页面时，那个页面自己的起手式更有用 —— 在蓝图详情页里摆一张
+   * 嵌进别的页面时，那个页面自己的起手式更有用 —— 在知识库详情页里摆一张
    * 「帮我生成一张概念图」的卡片，等于在提示一件和这个页面无关的事。
    * 给了就整组换掉，不和通用的混在一起。
    */
@@ -467,19 +466,19 @@ const suggestions = computed<SuggestionItem[]>(() => {
   // 默认：智能对话模式
   return [
     {
-      title: t('assistant.suggestions.blueprintDebug.title'),
-      description: t('assistant.suggestions.blueprintDebug.desc'),
-      prompt: t('assistant.suggestions.blueprintDebug.prompt')
+      title: t('assistant.suggestions.knowledge.title'),
+      description: t('assistant.suggestions.knowledge.desc'),
+      prompt: t('assistant.suggestions.knowledge.prompt')
     },
     {
-      title: t('assistant.suggestions.materialRender.title'),
-      description: t('assistant.suggestions.materialRender.desc'),
-      prompt: t('assistant.suggestions.materialRender.prompt')
+      title: t('assistant.suggestions.spriteFrames.title'),
+      description: t('assistant.suggestions.spriteFrames.desc'),
+      prompt: t('assistant.suggestions.spriteFrames.prompt')
     },
     {
-      title: t('assistant.suggestions.buildPackage.title'),
-      description: t('assistant.suggestions.buildPackage.desc'),
-      prompt: t('assistant.suggestions.buildPackage.prompt')
+      title: t('assistant.suggestions.loopMusic.title'),
+      description: t('assistant.suggestions.loopMusic.desc'),
+      prompt: t('assistant.suggestions.loopMusic.prompt')
     }
   ]
 })
@@ -515,16 +514,6 @@ const props = defineProps({
   notebookSources: {
     type: Array as PropType<NotebookSourceItem[]>,
     default: () => []
-  },
-  /**
-   * 嵌在蓝图库 / 材质库详情页里时，「用户正在看什么」。
-   *
-   * 每一轮请求前注入一条上下文消息，**不进对话历史** —— 所以带的永远是
-   * 当下的选中节点。页面自己算好传进来（`libraryChatContext.ts`）。
-   */
-  libraryContext: {
-    type: Object as PropType<LibraryChatContext | null>,
-    default: null
   },
   /** 起手式卡片。给了就整组顶掉通用的那组（嵌在别的页面里时用） */
   customSuggestions: {
@@ -850,8 +839,7 @@ const {
   scrollToBottomIfNeeded,
   pushUser,
   pushAssistantTyping,
-  currentAgentProcess,
-  libraryContext: computed(() => props.libraryContext)
+  currentAgentProcess
 })
 
 function handleAskModeChange(enabled: boolean): void {
@@ -1136,67 +1124,17 @@ function handleComposerSend(payload: ComposerSendPayload): void {
   /*
    * 对话 id 在**这一刻**定下来，后面全用它。
    *
-   * 下面要 await 抓取，那期间用户完全可能切到别的对话去 —— 再读 `sid.value`
-   * 就把这条话发到别人那里了。
+   * 提交链前面可能还排着上一条，那期间用户完全可能切到别的对话去 ——
+   * 再读 `sid.value` 就把这条话发到别人那里了。
    */
   const chatSid = sid.value
 
-  /*
-   * 闪存**立刻**开抓，不 await。
-   *
-   * 这是整个机制的落点：用户按下发送的那一刻，他眼前是什么就抓什么。晚一秒
-   * 抓到的就可能是另一个选区，而那正是闪存要消灭的东西。
-   *
-   * 对话正在跑时要带上它的内核 session id：这条消息最终落在那一轮或紧接着的下一轮，
-   * 得跟着那一轮盯的工程抓，不能自己按对话戳重算。
-   */
-  /*
-   * 工程归属要**按用户指定的那个**算，不能只读对话戳。
-   *
-   * 从侧边栏工程 A 的「+」新建对话时，归属这时候还只在路由参数上
-   * （`?project=`）—— 对话要等第一条消息发出去才进 store 盖戳（见
-   * `chatSendPrimitives` 的 `stampSessionProject`）。只读戳的话这里拿到 null，
-   * 于是按「当前连接」抓，抓到的是碰巧连着的 B，还把这一轮钉死在 B 上；
-   * 稍后对话才被归入 A。用户从 A 下面点的「+」，第一句话却在 B 上执行。
-   */
-  const sessionProject =
-    chatStore.getProject?.(chatSid) ??
-    (pendingProjectName.value
-      ? {
-          projectName: pendingProjectName.value,
-          ...(typeof route.query.projectPath === 'string' && route.query.projectPath.trim()
-            ? { projectPath: route.query.projectPath.trim() }
-            : {})
-        }
-      : null)
-
-  const capture = agentV3API.captureEditorSnapshot({
-    sessionProject,
-    ...(agentStreamStore.isBusy(chatSid)
-      ? { runningSessionId: chatStore.getAgentSessionId?.(chatSid) || undefined }
-      : {})
-  })
-
   enqueueSubmit(chatSid, async () => {
-    const captured = await capture
-    const withSnapshot: ComposerSendPayload = {
-      ...payload,
-      editorSnapshot: captured.ok ? captured.snapshot : null,
-      // 快照来自哪个工程，这条消息就钉在哪个工程上 —— 排队期间别的工程连上也不改
-      ...(captured.ok
-        ? {
-            sessionProject: {
-              projectName: captured.snapshot.project.projectName,
-              ...(captured.snapshot.project.projectPath
-                ? { projectPath: captured.snapshot.project.projectPath }
-                : {})
-            }
-          }
-        : {})
-    }
+    // 不抓编辑器快照：键在、值为 null 表示「提交时已定」，下游不会再抓
+    const withSnapshot: ComposerSendPayload = { ...payload, editorSnapshot: null }
 
     /*
-     * 抓完**重新判**一次忙不忙 —— 这两秒里那一轮可能已经跑完了。
+     * 进链后**重新判**一次忙不忙 —— 排队期间那一轮可能已经跑完了。
      *
      * 判定到入队/发送之间没有 await，`isBusy` 是同步读的，所以中间没有窗口。
      * 用 `isBusy` 而不是 `isGenerating`：界面停止输出（`done`）之后、主进程发
@@ -1870,21 +1808,10 @@ async function handleComposerSteer(payload: {
   /** 插话没成（这一轮刚好收尾、工程对不上……）时把摘走的字和附件放回输入框 */
   restore?: () => void
 }): Promise<void> {
-  // 等闪存那一两秒里用户可能切了对话 —— 插进哪一轮在开始等之前就定下来
+  // 插进哪一轮在开始等之前就定下来：等待期间用户可能切了对话
   const runningSessionId = chatStore.getAgentSessionId?.(sid.value) || undefined
-  /*
-   * 插话也是一次「发送」，闪存同样在这一刻抓。
-   *
-   * 带 `runningSessionId`：插话注入的是正在跑的那一轮，快照必须来自它盯着的
-   * 那个工程 —— 自己按对话戳重算的话，没盖戳的对话会跟着「最近连上的」走，
-   * 抓到的可能是另一个工程的编辑器。
-   */
-  const captured = await agentV3API.captureEditorSnapshot({
-    sessionProject: chatStore.getProject?.(sid.value) ?? null,
-    runningSessionId
-  })
   const steered = await steerAgent(payload.text, {
-    editorSnapshot: captured.ok ? captured.snapshot : null,
+    editorSnapshot: null,
     images: payload.images,
     attachments: payload.attachments,
     targetSessionId: runningSessionId,

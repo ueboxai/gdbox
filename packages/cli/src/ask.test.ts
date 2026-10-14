@@ -1,29 +1,26 @@
 /** @vitest-environment node */
+import { promises as fs } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { run } from './cli.js'
-import { startFakeBox, type FakeBox, type FakeTool } from './testServer.js'
+import { projectListTool, startFakeBox, type FakeBox, type FakeTool } from './testServer.js'
 
 const TOKEN = 'test-token-0123456789'
 const boxes: FakeBox[] = []
+const dirs: string[] = []
 
 afterEach(async () => {
   await Promise.all(boxes.splice(0).map((box) => box.close().catch(() => undefined)))
+  await Promise.all(dirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })))
 })
 
-function healthTool(online: boolean): FakeTool {
-  return {
-    name: 'ue_session_health',
-    meta: { namespace: 'ue.system', risk: 'safe', projectScoped: false },
-    handle: () => ({
-      content: [{ type: 'text', text: '体检' }],
-      structuredContent: {
-        connections: online
-          ? [{ connectionId: 'c1', projectName: 'Demo', projectPath: 'D:/Games/Demo' }]
-          : []
-      }
-    })
-  }
+const PROJECT = 'D:/Games/Demo'
+
+function projects(online: boolean): FakeTool {
+  return projectListTool([{ name: 'Demo', path: PROJECT, editorConnected: online }])
 }
 
 /** 清单里摆几类命名空间，看 ask 放行了哪些 */
@@ -32,12 +29,12 @@ function tool(name: string, namespace: string, risk = 'safe'): FakeTool {
 }
 
 const CATALOG = [
-  tool('ue_get_actor', 'ue.actor'),
-  tool('material_create', 'ue.material', 'mutating'),
+  tool('godot_check', 'godot'),
+  tool('editor_play', 'godot.editor', 'mutating'),
+  tool('gen_sprite', 'godot.asset', 'mutating'),
   tool('search_assets', 'asset'),
-  tool('project_list', 'project'),
-  tool('library_search', 'library'),
   tool('load_skill', 'core'),
+  tool('generate_video', 'aigc', 'mutating'),
   tool('run_shell_command', 'local.shell', 'destructive'),
   tool('write_local_file', 'local', 'destructive'),
   tool('browser_navigate', 'browser'),
@@ -61,33 +58,66 @@ function taskTool(
   }
 }
 
-async function startBox(tools: FakeTool[], online = true): Promise<NodeJS.ProcessEnv> {
-  const box = await startFakeBox({ token: TOKEN, tools: [healthTool(online), ...tools] })
+async function startBox(
+  tools: FakeTool[],
+  online = true,
+  connectedProjects: string[] = online ? [PROJECT] : []
+): Promise<NodeJS.ProcessEnv> {
+  const box = await startFakeBox({
+    token: TOKEN,
+    tools: [projects(online), ...tools],
+    connectedProjects
+  })
   boxes.push(box)
-  return { UEBOX_URL: box.url, UEBOX_TOKEN: TOKEN }
+  return { GDBOX_URL: box.url, GDBOX_TOKEN: TOKEN }
+}
+
+async function godotProject(): Promise<string> {
+  const dir = await fs.mkdtemp(join(tmpdir(), 'gdbox 工程-'))
+  dirs.push(dir)
+  await fs.writeFile(join(dir, 'project.godot'), 'config/name="跳跳乐"\n')
+  return dir.replace(/\\/g, '/')
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
-describe('uebox ask', () => {
+describe('gdbox ask', () => {
   it('默认只读、不带历史，结论打到 stdout', async () => {
     const calls: Parameters<typeof taskTool>[0] = []
     const env = await startBox([...CATALOG, taskTool(calls)])
 
-    const result = await run(['ask', '列出', '所有点光源'], env)
+    const result = await run(['ask', '检查', '主场景的脚本'], env)
 
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('做完了')
-    expect(calls[0]!.args).toMatchObject({
-      prompt: '列出 所有点光源',
-      context_mode: 'fresh',
-      read_only: true
-    })
-    expect(calls[0]!.project).toBe('D:/Games/Demo')
+    expect(calls[0]!.args).toMatchObject({ context_mode: 'fresh', read_only: true })
+    // 恰好一个编辑器连着：绑到它，并把目录写进给子任务的那句话
+    expect(calls[0]!.project).toBe(PROJECT)
+    expect(calls[0]!.args.prompt).toBe(`目标 Godot 工程：${PROJECT}\n\n检查 主场景的脚本`)
+  })
+
+  /**
+   * 无头工具不需要编辑器：点名的工程编辑器没开时，盒子在执行前就拒了元数据，
+   * 这时去掉绑定再发一次，子任务照样拿得到工程目录。
+   */
+  it('点名的工程编辑器没连着时退回无绑定，路径仍在任务里', async () => {
+    const calls: Parameters<typeof taskTool>[0] = []
+    const dir = await godotProject()
+    const env = await startBox([...CATALOG, taskTool(calls)], false)
+
+    const result = await run(['ask', '给主角加二段跳并验证', '--project', dir, '--json'], env)
+
+    expect(result.exitCode).toBe(0)
+    expect(calls).toHaveLength(1)
+    expect(calls[0]!.project).toBeUndefined()
+    expect(calls[0]!.args.prompt).toContain(`目标 Godot 工程：${dir}`)
+    const envelope = JSON.parse(result.stdout)
+    expect(envelope.project).toEqual({ name: '跳跳乐', path: dir })
+    expect(envelope.warnings.join('')).toContain('editor_*')
   })
 
   /** 子任务在外部会话里每一步都自动批准，范围只能靠白名单收住 */
-  it('只放行引擎、素材库、工程库和技能，shell / 本地文件 / 浏览器 / 第三方 MCP 都不给', async () => {
+  it('只放行 Godot、工程文件、素材库、工程库和技能，shell / 浏览器 / 第三方 MCP 都不给', async () => {
     const calls: Parameters<typeof taskTool>[0] = []
     const env = await startBox([...CATALOG, taskTool(calls)])
 
@@ -96,10 +126,11 @@ describe('uebox ask', () => {
     expect(calls[0]!.args.namespaces).toEqual([
       'asset',
       'core',
-      'library',
-      'project',
-      'ue.actor',
-      'ue.material'
+      'godot',
+      'godot.asset',
+      'godot.editor',
+      'local',
+      'project'
     ])
     expect(calls[0]!.args.read_only).toBeUndefined()
   })
@@ -109,23 +140,23 @@ describe('uebox ask', () => {
     const env = await startBox([
       ...CATALOG,
       taskTool(calls, async (progress) => {
-        await progress('调用 ue_get_actor')
-        await progress('调用 ue_set_property')
+        await progress('调用 godot_check')
+        await progress('调用 godot_run')
         return '调好了'
       })
     ])
     const seen: string[] = []
 
-    const result = await run(['ask', '调灯', '--json'], env, {
+    const result = await run(['ask', '调跳跃', '--json'], env, {
       progress: (message) => seen.push(message)
     })
 
-    expect(seen).toEqual(['调用 ue_get_actor', '调用 ue_set_property'])
+    expect(seen).toEqual(['调用 godot_check', '调用 godot_run'])
     expect(JSON.parse(result.stdout).data.answer).toBe('调好了')
   })
 
-  /** 在素材库里找东西不需要引擎，没工程连着时不该报错 */
-  it('一个工程都没连着时照跑，并说明碰不到引擎', async () => {
+  /** 在素材库里找东西不需要工程，没点名、也没编辑器连着时不该报错 */
+  it('定不下工程时照跑，并说明只能用素材库和工程库', async () => {
     const calls: Parameters<typeof taskTool>[0] = []
     const env = await startBox([...CATALOG, taskTool(calls)], false)
 
@@ -133,7 +164,8 @@ describe('uebox ask', () => {
 
     expect(result.exitCode).toBe(0)
     expect(calls[0]!.project).toBeUndefined()
-    expect(JSON.parse(result.stdout).warnings.join('')).toContain('碰不到引擎')
+    expect(calls[0]!.args.prompt).toBe('找几张砖墙贴图')
+    expect(JSON.parse(result.stdout).warnings.join('')).toContain('--project')
   })
 
   it('没给要做的事时报用法错误', async () => {
@@ -194,7 +226,7 @@ describe('tools call 不许直接调 task', () => {
     const result = await run(['tools', 'call', 'task', '--allow-write', '--json'], env)
 
     expect(result.exitCode).toBe(6)
-    expect(JSON.parse(result.stdout).error.message).toContain('uebox ask')
+    expect(JSON.parse(result.stdout).error.message).toContain('gdbox ask')
     expect(calls).toHaveLength(0)
   })
 })

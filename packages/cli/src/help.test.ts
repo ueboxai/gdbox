@@ -5,7 +5,6 @@ import { helpText, type Lang } from './help.js'
 
 const LANGS: Lang[] = ['zh-CN', 'en-US']
 
-
 /**
  * 东亚宽字符：中文、假名、谚文、全角标点，一个占 2 列。
  *
@@ -76,7 +75,7 @@ describe('帮助文本和实现保持同步', () => {
     'tools list',
     'tools show',
     'tools call',
-    'viewport screenshot'
+    'screenshot'
   ]
 
   it.each(LANGS)('%s 列出了每一条命令', (lang) => {
@@ -96,7 +95,8 @@ describe('帮助文本和实现保持同步', () => {
     '--project',
     '--name',
     '--output',
-    '--world',
+    '--scene',
+    '--frames',
     '--overwrite',
     '--allow-write'
   ]
@@ -120,7 +120,7 @@ describe('帮助文本和实现保持同步', () => {
   })
 
   /**
-   * 1 永远不会出现（`toUeboxError` 兜住了所有异常）。明说这件事，
+   * 1 永远不会出现（`toGdboxError` 兜住了所有异常）。明说这件事，
    * 脚本作者才知道真收到 1 意味着别的事故，而不是某个没写进文档的失败。
    */
   it.each(LANGS)('%s 说明了 1 不会出现', (lang) => {
@@ -139,8 +139,8 @@ describe('例子必须是能照抄的', () => {
   it.each(LANGS)('%s 给了两个 shell 各自验证过的 --args 转义', (lang) => {
     const text = helpText(lang)
 
-    expect(text).toContain(String.raw`--args '{\"name\":\"Floor\"}'`)
-    expect(text).toContain('--args "{""name"":""Floor""}"')
+    expect(text).toContain(String.raw`--args '{\"max_depth\":3}'`)
+    expect(text).toContain('--args "{""max_depth"":3}"')
   })
 
   /** 转义太绕的时候有出路，而且这条出路本身要出现在例子里 */

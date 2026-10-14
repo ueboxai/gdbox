@@ -105,7 +105,7 @@ describe('经验分组', () => {
     expect(wrapper.findAll('.entity-item')).toHaveLength(1)
     expect(wrapper.text()).toContain('角色没有 is_hidden')
     expect(wrapper.find('.count').text()).toBe('1')
-    expect(wrapper.text()).toContain('UE 5.5 · 5.6')
+    expect(wrapper.text()).toContain('Godot 5.5 · 5.6')
   })
 
   it('读失败说读失败', async () => {

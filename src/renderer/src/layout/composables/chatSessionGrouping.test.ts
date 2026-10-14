@@ -275,7 +275,7 @@ describe('chatSessionGrouping', () => {
       [
         { projectName: 'Task2', projectPath: 'D:/A/Task2' },
         { projectName: 'Task2', projectPath: 'E:/B/Task2' },
-        { projectName: 'Task2', projectPath: 'd:\\a\\Task2\\Task2.uproject' }
+        { projectName: 'Task2', projectPath: 'd:\\a\\Task2\\project.godot' }
       ]
     )
 
@@ -308,7 +308,7 @@ describe('chatSessionGrouping', () => {
       mode: 'project',
       sortMode: 'recent',
       connectedProjects: [
-        { projectName: 'Task2', projectPath: 'D:\\A\\Task2\\Task2.uproject' },
+        { projectName: 'Task2', projectPath: 'D:\\A\\Task2\\project.godot' },
         { projectName: 'Solo', projectPath: 'F:/Solo' }
       ]
     })
