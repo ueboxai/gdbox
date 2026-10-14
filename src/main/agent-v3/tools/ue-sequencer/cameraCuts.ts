@@ -1,0 +1,164 @@
+/**
+ * `sequence_camera_cuts` —— 给一条已有序列补上（或补满）相机切轨。
+ *
+ * ## 为什么单独一个工具
+ *
+ * 「Camera Cuts 是空的」和「切轨没盖满播放范围」是黑屏成因里的 A1/A2/A3 ——
+ * 三条加起来是最高频的一类。之前它只作为运镜生成的最后一步存在，
+ * 于是有两种情况没人管：
+ *
+ *   1. 生成运镜时编辑器崩在这一步（真机上发生过），关键帧都在、切轨是空的；
+ *   2. 序列不是我们生成的 —— 用户自己 K 的相机动画，同样会忘了建切轨。
+ *
+ * 两种情况用户都被迫回 Sequencer 手点。这个工具就是那两步手工操作。
+ *
+ * ## 它不顺手重绑
+ *
+ * possessable 指向一个不存在的对象时（相机被删了、或所在关卡没保存就崩了），
+ * 补切轨修不好黑屏。重绑交给 `sequence_rebind` —— 它要调用方点名绑到哪个 Actor，
+ * 这里只知道绑定断了，不知道该绑谁，猜错比不修更糟。
+ *
+ * 所以这里**查出来并指向 sequence_rebind**，而不是假装修好：把切轨绑到一个
+ * 解析不到对象的绑定上，渲出来照样是黑的，而用户会以为已经修好了。
+ */
+
+import { z } from 'zod'
+
+import { callUe } from '../defineUeTool'
+import { defineTool, type UnrealAgentTool } from '../defineTool'
+
+const NAMESPACE = 'ue.sequencer'
+
+const InputSchema = z.object({
+  sequence_path: z
+    .string()
+    .trim()
+    .min(1)
+    .describe('要处理的序列，如 /Game/Cinematics/SQ_BallOrbit'),
+  camera_label: z
+    .string()
+    .trim()
+    .min(1)
+    .optional()
+    .describe(
+      '切到哪台相机 —— 填序列里那条绑定的名字（Sequencer 左侧显示的名字）。' +
+        '序列里只有一条相机绑定时可以不填，会自动选它'
+    ),
+  rebuild: z
+    .boolean()
+    .default(false)
+    .describe(
+      '切轨上已经有段但没盖满时，允许**把已有的段全删掉**重建成一整段。' +
+        '默认关闭：那些段可能是排好的多机位剪辑，删了撤不回来。' +
+        '开之前先用 sequence_audit 看清楚差在哪里，并跟用户确认'
+    )
+})
+
+/**
+ * 绑定断了时的下一步。
+ *
+ * 重绑有工具（sequence_rebind），但这里不知道该绑哪台相机 —— 关卡里可能有好几台，
+ * 也可能那台已经删了要新放。所以只指路：绑哪台由模型看关卡，拿不准就问用户。
+ */
+const REBIND_STEPS = [
+  '这条绑定指向的对象在关卡里已经不存在了，补了切轨照样是黑的。先修绑定：',
+  '  用 sequence_rebind 把它改绑到关卡里那台相机（binding 填这条绑定名，actor 填相机在大纲里的标签）。',
+  '  该绑哪台不确定就先问用户 —— 绑错了不报错，只是拍到别的东西。'
+]
+
+interface CameraCutsOutput {
+  sequence_path: string
+  camera_binding: string
+  /** 这次实际写入的切轨范围，闭开区间 */
+  range: [number, number]
+  /** 本来就盖满了、这次什么都没改 */
+  already_covered: boolean
+  /** 绑定解析不到对象 —— 补了切轨也还是黑的，必须先手动重绑 */
+  binding_broken: boolean
+  /** 这次删掉了几个用户原有的切轨段。只有 rebuild=true 时才可能非 0 */
+  removed_sections: number
+  /**
+   * 写完后序列资产是否存盘成功。没改动时不发；旧插件也不发 ——
+   * 缺这个字段就当「不知道」，回执里不说已存盘
+   */
+  sequence_saved?: boolean
+  candidates?: string[]
+  warnings?: string[]
+}
+
+export function createSequenceCameraCutsTool(): UnrealAgentTool<CameraCutsOutput> {
+  return defineTool({
+    name: 'sequence_camera_cuts',
+    namespace: NAMESPACE,
+    risk: 'mutating',
+    concurrency: 'sequential',
+    description: `给一条已有的 Level Sequence 补上相机切轨（Camera Cuts），让它渲得出画面。
+
+【什么时候用】
+- \`sequence_audit\` 报「没有相机切轨」或「切轨没覆盖完播放范围」
+- 用户说「渲出来是黑的」「按播放没反应」，而序列里相机动画是有的
+- \`sequence_camera_keys\` 在最后一步失败了，只差这条切轨
+
+【它做什么】
+找到序列里的相机绑定（只有一台时自动选，多台要你用 camera_label 点名），
+建一条盖满播放范围的切轨段并绑上去，然后存盘。已经盖满了就什么都不改。
+
+【切轨上已经有段时会拒绝】
+它补全的做法是**把已有的段全删掉**换成一整段。所以切轨上已经有内容却没盖满时，
+它直接报错不动手 —— 那些段可能是别人排好的多机位剪辑。
+确认要删就带 \`rebuild: true\`，删了几个会在返回里报出来。删除撤不回来，先问用户。
+
+【它不做什么】
+不重绑 possessable —— 它不知道该绑哪台相机。绑定已经指向不存在的对象时，
+它会**查出来并让你接着用 sequence_rebind 点名修**，不会假装修好。`,
+    input: InputSchema,
+    execute: async (input) => {
+      const d = await callUe<CameraCutsOutput>(
+        'sequence.camera_cuts',
+        { ...input },
+        { timeoutMs: 60_000 }
+      )
+
+      if (!d?.sequence_path) {
+        return { text: '失败：引擎没有返回结果', isError: true }
+      }
+
+      // 「已存盘」只在插件明说存成功时才讲。存盘失败要说；旧插件不报这个字段，
+      // 那就什么都不说 —— 回执可以不全，不能说错（AGENTS.md §5 第 14 条）
+      const saveNote =
+        d.sequence_saved === true
+          ? '序列已存盘。'
+          : d.sequence_saved === false
+            ? '⚠️ 序列**没**存盘成功，改动只在编辑器内存里，关掉编辑器前要手动保存。'
+            : ''
+
+      const lines = d.already_covered
+        ? [`${d.sequence_path} 的相机切轨本来就盖满了 [${d.range[0]}, ${d.range[1]})，没有改动。`]
+        : [
+            `已给 ${d.sequence_path} 补上相机切轨：`,
+            `切到「${d.camera_binding}」，覆盖 [${d.range[0]}, ${d.range[1]})。${saveNote}`
+          ]
+
+      // 删了用户的东西要说在前面。存了盘才撤不回来；没存成功时 Ctrl+Z 还来得及
+      if (d.removed_sections > 0) {
+        lines.push(
+          `⚠️ 原有的 ${d.removed_sections} 个切轨段已被删除并替换。` +
+            (d.sequence_saved === true
+              ? '序列已存盘，这一步撤不回来。'
+              : d.sequence_saved === false
+                ? '序列没存上盘，现在 Ctrl+Z 还能撤回。'
+                : '')
+        )
+      }
+
+      // 绑定是坏的时候，上面那句「已补上」会误导人 —— 必须立刻跟上真相
+      if (d.binding_broken) lines.push('', ...REBIND_STEPS)
+
+      for (const w of d.warnings ?? []) lines.push(`⚠️ ${w}`)
+
+      lines.push('', '跑一次 sequence_audit 确认 PASS 再交给用户。')
+
+      return { text: lines.join('\n'), details: d }
+    }
+  })
+}
