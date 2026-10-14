@@ -80,11 +80,6 @@ import {
 } from '../agent-v3/capabilities/mcp'
 import { clientConfigSnippet, hostUrl } from '../agent-v3/capabilities/mcp/hostStore'
 import { listToolCatalog, listToolRisks } from '../agent-v3/tools/registry'
-import {
-  restoreAssetSnapshot,
-  snapshotAsset,
-  type AssetSnapshotEntry
-} from '../agent-v3/core/assetSnapshot'
 import { openAssetInEditor } from '../agent-v3/core/openAsset'
 import { reviewChanges } from '../agent-v3/core/reviewChanges'
 import type { AgentReviewTarget } from '../../shared/agentReview'
@@ -130,9 +125,6 @@ import { teamModelCandidates, type TeamStateView } from '../../shared/agentTeam'
 import { readSettings as readAiSettings } from '../ai/store'
 import { setProviderUsageProbe } from '../ai/providerUsage'
 import { DEFAULT_GOAL_MAX_ROUNDS, normalizeGoalMaxRounds } from '../../shared/goalRounds'
-import { buildCrashNotice, type EditorWatchEvent } from '../agent-v3/core/team/editorWatch'
-import { startTeamEditorWatch } from './teamEditorWatch'
-import { createTeamSnapshots } from './teamSnapshots'
 import {
   applyVerdict,
   createTeamGate,
@@ -626,7 +618,6 @@ async function prepareTeam(
     objective: team.objective,
     store,
     live,
-    snapshots: createTeamSnapshots(),
     onVerdict: async (verdict) => {
       options.team = applyVerdict(options.team ?? team, verdict)
       await saveExecutionOptions(ctx.sessionId, options)
@@ -818,63 +809,6 @@ async function awaitTeamWork(
   return null
 }
 
-/** 正在看护的编辑器，按会话记。一轮结束（`finally` 里）就停 */
-const editorWatchBySession = new Map<string, () => void>()
-
-function stopEditorWatch(sessionId: string): void {
-  editorWatchBySession.get(sessionId)?.()
-  editorWatchBySession.delete(sessionId)
-}
-
-/** 给用户看的那一句（界面提示）。给制作人看的在 `buildCrashNotice` */
-function watchNotice(event: EditorWatchEvent): string {
-  if (event.kind === 'crashed') {
-    return `编辑器已崩溃${event.reason ? `（${event.reason.slice(0, 120)}）` : ''}，正在自动重新打开工程…`
-  }
-  if (event.kind === 'recovered') {
-    return `编辑器已重新打开并连接（用时 ${Math.round(event.waitedMs / 1000)} 秒），已通知制作人。`
-  }
-  return `编辑器自动恢复失败：${event.why}`
-}
-
-/**
- * 工作室模式下看护这一局的编辑器：崩了自动重开，并把经过告诉制作人
- * （见 `core/team/editorWatch.ts`）。只管这一局此刻在干的那个工程。
- */
-function attachEditorWatch(
-  agent: Agent,
-  ctx: SessionContext,
-  run: ActiveAgentRun,
-  emit: (channel: string, payload: unknown) => void
-): void {
-  if (!ctx.team) return
-  stopEditorWatch(ctx.sessionId)
-  const isOurs = (projectDir: string): boolean => {
-    const current = run.scope?.connectedProject?.projectPath
-    return Boolean(current) && projectPathKey(current!) === projectPathKey(projectDir)
-  }
-  const stop = startTeamEditorWatch(isOurs, {
-    onEvent: (event) => {
-      // 记进团队的账：任务板上画成一条贯穿所有人的线（落盘失败不影响看护）
-      void ctx.team?.store
-        .recordEvent(
-          event.kind === 'crashed'
-            ? { kind: 'crashed', ...(event.reason ? { detail: event.reason.slice(0, 200) } : {}) }
-            : event.kind === 'recovered'
-              ? { kind: 'recovered' }
-              : { kind: 'recoverFailed', detail: event.why.slice(0, 200) }
-        )
-        .catch(() => undefined)
-      emit('agent-v3:notice', {
-        sessionId: ctx.sessionId,
-        message: watchNotice(event),
-        level: event.kind === 'recovered' ? 'info' : 'warning'
-      })
-      agent.steer({ role: 'user', content: buildCrashNotice(event), timestamp: Date.now() })
-    }
-  })
-  editorWatchBySession.set(ctx.sessionId, stop)
-}
 
 /**
  * 工作室模式下整轮跑在编辑器钥匙的作用域里：制作人和它派出去的每个队员，
@@ -2355,7 +2289,6 @@ export function registerAgentV3IPC(): void {
        */
       attachGoalLoop(agent, ctx, allTools, options, emit, await goalMaxRounds())
       attachTeamGate(agent, ctx, options, allTools, emit)
-      attachEditorWatch(agent, ctx, run, emit)
 
       // 信封拼在用户这句话前面一起发出去，于是它跟着这条消息一起落进 JSONL，
       // 之后再也不会被改写 —— 这正是「只追加、不回头改前缀」的落点。
@@ -2471,7 +2404,6 @@ export function registerAgentV3IPC(): void {
       notifyAgentRun({ type: 'error', sessionId, message })
       return { success: false, error: message }
     } finally {
-      stopEditorWatch(sessionId)
       activeAgents.release(sessionId)
       // 资产锁的**唯一**释放点。用户按停止、模型报错、异常抛穿都走这里；
       // 进程崩了则整张锁表跟着消失 —— 所以不需要 TTL 和心跳。
@@ -2556,7 +2488,6 @@ export function registerAgentV3IPC(): void {
       }
       return { success: false, error: (error as Error).message }
     } finally {
-      stopEditorWatch(args.sessionId)
       activeAgents.release(args.sessionId)
       releaseAll(args.sessionId)
       notifyAgentRun({ type: 'released', sessionId: args.sessionId })
@@ -2768,7 +2699,6 @@ export function registerAgentV3IPC(): void {
       // 续跑里模型照样可能中途把工程打开、拿到引擎工具再开始改东西
       const goalLoop = attachGoalLoop(agent, ctx, allTools, options, emit, await goalMaxRounds())
       attachTeamGate(agent, ctx, options, allTools, emit)
-      attachEditorWatch(agent, ctx, run, emit)
       if (goalLoop) {
         emit('agent-v3:goal', {
           sessionId,
@@ -3065,42 +2995,26 @@ export function registerAgentV3IPC(): void {
   })
 
   /**
-   * 在编辑器里打开「本轮改动」里的某个资产。
-   *
-   * 清单只能告诉用户「M_GlowBreath 是新建的」，说不清它长什么样 ——
-   * 那一步交给编辑器本身，一键打开，眼见为实。见 openAsset.ts 的文件头。
+   * 在 Godot 编辑器里打开「本轮改动」里的某个资源。见 openAsset.ts 的文件头。
    */
   ipcMain.handle('agent-v3:open-asset', async (_event, args: { contentPath: string }) =>
     openAssetInEditor(args.contentPath)
   )
 
   /**
-   * 审查这一轮改过的资产 —— 「它说做完了，到底做成了没有」。
+   * 审查这一轮改过的资源 —— 「它说做完了，到底做成了没有」。
    *
-   * 问的是引擎的当前状态，不是模型的记忆：资产在不在、改动落盘没有、蓝图编译
-   * 过不过、引用有没有指向不存在的东西。见 `core/reviewChanges.ts` 的文件头。
+   * 查的是磁盘上工程的当前状态，见 `core/reviewChanges.ts` 的文件头。
+   * 工程取渲染层带来的那个；没带就用唯一连着的编辑器的工程。
    */
   ipcMain.handle(
     'agent-v3:review-changes',
-    async (_event, args: { targets: AgentReviewTarget[] }) => reviewChanges(args?.targets ?? [])
-  )
-
-  /**
-   * 资产快照 —— **原型**，只给真机验证脚本用（tests/manual/verify-asset-snapshot.mjs）。
-   *
-   * 这条链（保存 → 拷贝 → 还原 → 重载）在真机上能不能站住还没有定论，
-   * 界面不要接它；结论出来之前它随时可能改形状或被整个换掉。
-   */
-  ipcMain.handle(
-    'agent-v3:snapshot:capture',
-    async (
-      _event,
-      args: { projectDir: string; sessionId: string; contentPath: string; maxBytes?: number }
-    ) => snapshotAsset(args)
-  )
-
-  ipcMain.handle('agent-v3:snapshot:restore', async (_event, args: { entry: AssetSnapshotEntry }) =>
-    restoreAssetSnapshot(args.entry)
+    async (_event, args: { targets: AgentReviewTarget[]; projectPath?: string }) => {
+      const connected = projectManager.getInteractiveProjects()
+      const projectRoot =
+        args?.projectPath || (connected.length === 1 ? connected[0].projectPath : undefined)
+      return reviewChanges(args?.targets ?? [], projectRoot)
+    }
   )
 
   ipcMain.handle('agent-v3:load-session', async (_event, args: { sessionId: string }) => ({
@@ -3386,7 +3300,6 @@ export function registerAgentV3IPC(): void {
       // 厂商的原始报错至少能拿去排查
       return { success: false, reason: 'error', error: (error as Error).message }
     } finally {
-      stopEditorWatch(sessionId)
       activeAgents.release(sessionId)
     }
   })
@@ -3687,30 +3600,6 @@ export function registerAgentV3IPC(): void {
       return { success: true, statuses: await reconnectMcp() }
     } catch (error) {
       return { success: false, error: (error as Error).message }
-    }
-  })
-
-  // ── 一键开启 UE 5.8 官方 MCP ──────────────────────────────────────────
-  // 手工流程要在两个设置面板里点四步，大部分用户走不完。见 epicSetup.ts
-  ipcMain.handle('agent-v3:mcp:epic-status', async () => {
-    try {
-      const { inspectAllProjects } = await import('../agent-v3/capabilities/mcp/epicSetupRuntime')
-      return { success: true, projects: await inspectAllProjects() }
-    } catch (error) {
-      return { success: false, error: (error as Error).message, projects: [] }
-    }
-  })
-
-  ipcMain.handle('agent-v3:mcp:epic-setup', async (_event, args: { connectionId: string }) => {
-    try {
-      const { setupProject } = await import('../agent-v3/capabilities/mcp/epicSetupRuntime')
-      const result = await setupProject(args.connectionId)
-      // 真起来了就立刻重连，用户在设置页当场看到「已连接」，
-      // 而不是被告知「去点一下重新连接」
-      const statuses = result.running ? await reconnectMcp() : currentStatuses()
-      return { ...result, statuses }
-    } catch (error) {
-      return { success: false, error: (error as Error).message, statuses: currentStatuses() }
     }
   })
 

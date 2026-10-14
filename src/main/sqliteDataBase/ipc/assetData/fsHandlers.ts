@@ -4,31 +4,12 @@ import { promises as fs } from 'fs'
 import { join } from 'path'
 
 import { FileProcessorManager } from '../../../utils/fileProcessor/FileProcessorManager'
-import { parsePackageDirName } from '../../../utils/libraryPackage'
-import type { LibraryKind } from '../../../../shared/libraryPackage'
+/** 扫描时一个条目算什么 */
+export type ScanEntryType = 'folder' | 'file'
 
-/**
- * 扫描时一个条目算什么。
- *
- * 多出来的 `package` 是蓝图包 / 材质包（`xxx.ueblueprint` / `xxx.uematerial`）——
- * 它在磁盘上是目录，但**是一条内容，不是一层结构**：里面的 `cover.png`、
- * `textures/` 属于这个包，被当成独立资产索引就等于把一个条目拆成一堆碎片。
- *
- * 现有消费方（`AssetImportService`）严格按 `folder` / `file` 过滤，
- * 因此 `package` 会被安全忽略 —— 把它变成资产库里的一行是后面那步的事。
- */
-export type ScanEntryType = 'folder' | 'file' | 'package'
-
-export function classifyScanEntry(
-  name: string,
-  isDirectory: boolean
-): { type: ScanEntryType; library?: LibraryKind } {
-  if (!isDirectory) return { type: 'file' }
-
-  const parsed = parsePackageDirName(name)
-  if (parsed) return { type: 'package', library: parsed.library }
-
-  return { type: 'folder' }
+export function classifyScanEntry(name: string, isDirectory: boolean): { type: ScanEntryType } {
+  void name
+  return { type: isDirectory ? 'folder' : 'file' }
 }
 
 export function registerAssetFsIPC(): void {
@@ -45,7 +26,6 @@ export function registerAssetFsIPC(): void {
             name: item.name,
             path: fullPath,
             type: classified.type,
-            library: classified.library,
             size: item.isFile() ? stats.size : null,
             modifiedTime: stats.mtime.toISOString()
           }
@@ -76,7 +56,7 @@ export function registerAssetFsIPC(): void {
 
         let totalFilesScanned = 0
         let totalFoldersScanned = 0
-        let totalPackagesScanned = 0
+        const totalPackagesScanned = 0
         let skippedFilesCount = 0
         let skippedFoldersCount = 0
         let scannedTotalBytes = 0
@@ -114,7 +94,6 @@ export function registerAssetFsIPC(): void {
             const folders: Record<string, unknown>[] = []
             const files: Record<string, unknown>[] = []
             // 新增的这一路不跟着上面两个 Record<string, unknown>[] 走 —— lint 棘轮只准变小
-            const packages: Array<Record<string, unknown>> = []
 
             for (const { item, fullPath, stats, isAccessible, error } of itemsWithStats) {
               if (!isAccessible) {
@@ -140,19 +119,13 @@ export function registerAssetFsIPC(): void {
                 name: item.name,
                 path: fullPath,
                 type: classified.type,
-                library: classified.library,
-                size: item.isFile() ? stats!.size : null,
+                    size: item.isFile() ? stats!.size : null,
                 modifiedTime: stats!.mtime.toISOString(),
                 depth: currentDepth,
                 relativePath: fullPath.replace(folderPath, '').replace(/^[\\/]/, '')
               }
 
-              if (classified.type === 'package') {
-                // 是一条内容，不是一层结构：**不往里递归**。
-                // 包里的 cover.png / textures/ 属于这个包，不是独立资产。
-                packages.push(fileInfo)
-                totalPackagesScanned++
-              } else if (item.isDirectory()) {
+              if (item.isDirectory()) {
                 folders.push(fileInfo)
                 totalFoldersScanned++
                 queue.push({ path: fullPath, depth: currentDepth + 1 })
@@ -163,8 +136,8 @@ export function registerAssetFsIPC(): void {
               }
             }
 
-            allItems.push(...folders, ...files, ...packages)
-            pendingBatch.push(...folders, ...files, ...packages)
+            allItems.push(...folders, ...files)
+            pendingBatch.push(...folders, ...files)
 
             if (pendingBatch.length >= batchSize) {
               batchIndex++
@@ -214,7 +187,6 @@ export function registerAssetFsIPC(): void {
         console.log(`📳 [FolderScan] 源文件夹: ${folderPath}`)
         console.log(`📳 [FolderScan] 成功扫描文件: ${totalFilesScanned} 个`)
         console.log(`📳 [FolderScan] 成功扫描文件夹: ${totalFoldersScanned} 个`)
-        console.log(`📳 [FolderScan] 蓝图包 / 材质包: ${totalPackagesScanned} 个（未展开）`)
         console.log(`📳 [FolderScan] 成功扫描总大小: ${scannedGB} GB`)
         console.log(`📳 [FolderScan] 跳过的文件: ${skippedFilesCount} 个`)
         console.log(`📳 [FolderScan] 跳过的目录: ${skippedFoldersCount} 个`)

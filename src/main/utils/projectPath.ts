@@ -3,13 +3,13 @@
  *
  * 单独一个文件是为了能脱离 electron 测试 —— `appSettingsManager` 会拉起
  * `app.getPath()`，在 vitest 里跑不起来，而这段逻辑恰恰是最需要测的：
- * 用户在 `D:\Games\My.uproject` 上点了「移除 UnrealAgentLink」，下次盒子
- * 拿到的可能是 `d:/games/my.uproject`，比不上就等于黑名单没生效，插件又被
- * 装回去，正好复现要修的那个投诉。
+ * 同一个工程从文件对话框进来是 `D:\Games\My`，从编辑器插件报上来可能是
+ * `d:/games/my`，比不上就会在工程库里出现两张卡片。
  */
 
 import * as path from 'path'
-import { realpathSync } from 'node:fs'
+import { readFileSync, realpathSync } from 'node:fs'
+import { parseProjectFile } from '../godot/projectFile'
 
 /**
  * 把项目路径规范成可比较的形式。
@@ -69,8 +69,8 @@ export function projectComparisonKey(
  * 存库要的是人看得懂、打得开的原样路径，只统一分隔符。
  *
  * 为什么需要：同一个工程进库的路子不止一条，各自给的写法也不一样 ——
- * 用户在首页点导入，文件对话框给的是 `I:\UE Project\X`；UE 插件上报的是
- * 虚幻内部写法 `I:/UE Project/X`。两种写法都往库里存，库里就长期躺着
+ * 用户在首页点导入，文件对话框给的是 `I:\Games\X`；编辑器插件上报的是
+ * Godot 内部写法 `I:/Games/X`。两种写法都往库里存，库里就长期躺着
  * 两种斜杠，任何一处忘了规范化就当场变成「同一个工程出现两张卡片」。
  */
 export function toNativeProjectPath(projectPath: string): string {
@@ -79,17 +79,22 @@ export function toNativeProjectPath(projectPath: string): string {
 }
 
 /**
- * 工程封面的候选图片，按优先级排列，与 UE 项目浏览器一致：工程根目录下的
- * `<Name>.png` 是在编辑器里显式设置的缩略图，优先于编辑器自动截的
- * `Saved/AutoScreenshot.png`。导入和封面自动同步共用这一份，免得两边漂开。
+ * 工程封面的候选图片，按优先级排列：`project.godot` 里 `config/icon` 指的那张，
+ * 其次是工程根目录下的 `icon.png` / `icon.svg`（新建工程的默认图标）。
+ * 导入和封面自动同步共用这一份，免得两边漂开。
  */
 export function projectThumbnailCandidates(
   projectDir: string,
-  uprojectPath?: string | null
+  projectFilePath?: string | null
 ): string[] {
-  const candidates = uprojectPath
-    ? [path.join(projectDir, `${path.parse(uprojectPath).name}.png`)]
-    : []
-  candidates.push(path.join(projectDir, 'Saved', 'AutoScreenshot.png'))
-  return candidates
+  const candidates: string[] = []
+  try {
+    const text = readFileSync(projectFilePath || path.join(projectDir, 'project.godot'), 'utf8')
+    const icon = parseProjectFile(text).icon
+    if (icon?.startsWith('res://')) candidates.push(path.join(projectDir, icon.slice(6)))
+  } catch {
+    // 读不到工程文件就只剩默认图标那两个
+  }
+  candidates.push(path.join(projectDir, 'icon.png'), path.join(projectDir, 'icon.svg'))
+  return [...new Set(candidates)]
 }

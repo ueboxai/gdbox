@@ -1,6 +1,7 @@
 import { ipcMain, type WebContents } from 'electron'
 import { observeAgentRuns } from '../agent-v3/host/runObserver'
-import { createProjectListTool } from '../agent-v3/tools/adapted/project/splitByRisk'
+import { getPublicDatabase } from '../sqliteDataBase'
+import { getAllProjects } from '../sqliteDataBase/models/project'
 import type { ToolRisk } from '../agent-v3/tools/defineTool'
 import { resolveApiKey } from '../ai/credentials'
 import { selectConversationHistory } from '../ai/realtime/conversationHistory'
@@ -100,18 +101,15 @@ export async function runLocalVoiceTool(name: string): Promise<string> {
   }
 
   if (name === LIST_PROJECTS) {
-    const tool = createProjectListTool() as {
-      execute: (args: Record<string, unknown>) => Promise<unknown>
+    try {
+      const projects = getAllProjects(getPublicDatabase()).map((project) => ({
+        name: project.projectName ?? '',
+        engineVersion: project.EngineAssociation ?? ''
+      }))
+      return summarizeProjects(projects)
+    } catch (error) {
+      return `没查到工程列表：${(error as Error).message}。别猜，让用户说清楚工程名。`
     }
-    const result = (await tool.execute({ action: 'list_projects' })) as {
-      success?: boolean
-      projects?: unknown
-      error?: unknown
-    }
-    if (!result?.success) {
-      return `没查到工程列表：${String(result?.error || '未知原因')}。别猜，让用户说清楚工程名。`
-    }
-    return summarizeProjects(result.projects)
   }
 
   // 名字对不上说明模型调了一个我们没注册的工具。回一句让它自我纠正的话，

@@ -19,7 +19,7 @@
  * 其他平台右键事件不可靠（macOS 的托盘菜单是系统自己弹的），退回
  * `setContextMenu`，靠几路信号做防抖重建：界面报上来的最近对话变了、
  * `projectManager` 的工程连接变了、项目库变了、语言变了；不做定时轮询 ——
- * 没信号的变化（盘上文件没了、没装插件的工程被 UE 打开改写了 ini）等
+ * 没信号的变化（盘上文件没了、没装插件的工程被 Godot 打开改写了 projects.cfg）等
  * 下一次信号驱动的重建自然会读到；定时器则不管托盘用没用过，都在
  * 主线程上周期性跑同步 ini 读取 / 查库 / existsSync。
  *
@@ -44,14 +44,14 @@ import {
 } from '../../shared/trayActions'
 import { findMainWindow, sendToWindow } from '../appWindows'
 import { mt, onLanguageChanged } from '../i18n'
-import { getRecentProjectsFromAllEngines } from '../ipc/epicProjects'
-import { openUprojectFile } from '../services/project/openUproject'
+import { readGodotRecentProjects } from '../godot/recentProjects'
+import { isGodotProjectRunning } from '../godot/processes'
+import { openProject, projectDirOf } from '../services/project/openProject'
 import { onProjectLibraryChanged } from '../services/project/projectLibraryEvents'
 import { projectManager } from '../services/project/projectManager'
 import { logger } from '../services'
 import { getPublicDatabase } from '../sqliteDataBase'
 import { getProjectByPath } from '../sqliteDataBase/models/project'
-import UnrealProcessDetector from '../utils/UnrealProcessDetector'
 
 import { applyProjectState, createLaunchTracker } from './launchTracker'
 import { trayOpenOutcome } from './openOutcome'
@@ -70,7 +70,7 @@ import { createTtlCache } from './ttlCache'
 
 export interface TrayControllerDeps {
   /**
-   * 托盘「打开虚幻盒子」和非 darwin 左键共用的那个动作，含「窗口没了就地重建」
+   * 托盘「打开 GDBox」和非 darwin 左键共用的那个动作，含「窗口没了就地重建」
    * —— `createWindow` 是 index.ts 的局部函数，反向 import 会绕成环，只能注入
    */
   showMainWindow: () => void
@@ -157,7 +157,14 @@ export function startTrayMenuController(tray: Tray, deps: TrayControllerDeps): v
       const queryDeps = projectQueryDeps()
       return await recentCandidatesCache.get(() =>
         getTrayRecentCandidates({
-          listRecent: () => getRecentProjectsFromAllEngines(),
+          // 是否在库里交给 findRecord 判：查不到记录的那条会被跳过
+          listRecent: async () =>
+            (await readGodotRecentProjects()).map((entry) => ({
+              projectPath: entry.projectPath,
+              projectName: '',
+              lastOpenTime: entry.lastOpenTime,
+              isImported: true
+            })),
           findRecord: queryDeps.findRecord,
           fileExists: existsSync
         })
@@ -309,8 +316,8 @@ export function startTrayMenuController(tray: Tray, deps: TrayControllerDeps): v
     // 「运行中」只认连上盒子的工程：没装插件的那份编辑器盒子看不见，
     // 不查进程的话「启动中」一过期再点就是第二个编辑器。只在点下去时查 —— 枚举进程不便宜
     openFile: async (path) => {
-      const running = await UnrealProcessDetector.findRunningProjectByPath(path).catch(() => null)
-      return running ? { success: true, alreadyRunning: true } : openUprojectFile(path)
+      const running = await isGodotProjectRunning(projectDirOf(path)).catch(() => false)
+      return running ? { success: true, alreadyRunning: true } : openProject(path)
     },
     report: (result, project) => {
       const outcome = trayOpenOutcome(result, project, mt)
@@ -443,14 +450,14 @@ export function startTrayMenuController(tray: Tray, deps: TrayControllerDeps): v
        * 内部把枚举失败也吞成空数组，这层分不出「枚举失败」和「真没枚举到」
        * —— 所有调用方共享这个约定，对账只能保证抛出来的不算死。
        */
-      const alive = await UnrealProcessDetector.findRunningProjectByPath(
-        candidate.originPath
-      ).catch((error) => {
-        logger.warn('[托盘] 进程对账查询失败，标记保留:', error)
-        return undefined
-      })
+      const alive = await isGodotProjectRunning(projectDirOf(candidate.originPath)).catch(
+        (error) => {
+          logger.warn('[托盘] 进程对账查询失败，标记保留:', error)
+          return undefined
+        }
+      )
       if (alive === undefined) continue
-      if (alive === null) launchTracker.drop(candidate.projectKey)
+      if (alive === false) launchTracker.drop(candidate.projectKey)
     }
   }
 

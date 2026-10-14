@@ -9,7 +9,7 @@
  */
 import type { TrayAction } from '../../shared/trayActions'
 import type { MainTranslator } from '../i18n'
-import type { OpenUprojectResult } from '../services/project/openUproject'
+import type { OpenProjectResult as OpenUprojectResult } from '../services/project/openProject'
 
 export interface TrayOpenOutcome {
   title: string

@@ -8,11 +8,11 @@
  * - 点第二下绝不再开一个编辑器：「启动中」由 `tracker.isLaunching` 拦 ——
  *   它覆盖「openFile 还没回来」和「回来成功在等引擎连上」两段；
  *   「运行中」点下去这一刻现查 `isRunning` —— 菜单是弹出时刻的快照，
- *   挂着期间工程可能被别处（首页、直接双击 .uproject）拉起来
+ *   挂着期间工程可能被别处（首页、从 Godot 项目管理器）拉起来
  * - 打开失败必须把标记摘掉 —— 进行中的标记不吃 TTL，不摘就永远灰着；
  *   `openFile` 真抛出来也按失败处理，口头契约不该是唯一防线
  */
-import type { OpenUprojectResult } from '../services/project/openUproject'
+import type { OpenProjectResult as OpenUprojectResult } from '../services/project/openProject'
 
 import type { LaunchTracker } from './launchTracker'
 import type { TrayRecentProject } from './trayMenu'
@@ -25,7 +25,7 @@ export interface TrayProjectOpenerDeps {
    * 拦死才是「点了没反应还不知为啥」
    */
   isRunning: (projectKey: string) => boolean
-  /** 真正打开 .uproject（`openUprojectFile`）；契约上不抛，抛了按打开失败处理 */
+  /** 真正打开工程（`openProject`）；契约上不抛，抛了按打开失败处理 */
   openFile: (path: string) => Promise<OpenUprojectResult>
   /**
    * 把打开结果交出去反馈（controller 里经 `trayOpenOutcome` 翻成系统通知）。

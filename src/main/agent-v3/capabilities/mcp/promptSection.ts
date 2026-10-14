@@ -27,7 +27,6 @@
  * 这类信息必须常驻，而且很便宜：没配 server 时只有两句话，见 `NO_SERVER_LINES`。
  */
 
-import { isEpicServerId } from './epicToolsets'
 import type { McpServerStatus } from './types'
 
 /** 一条 server 的英文摘要。提示词全英文，见 createAgent.ts 的说明 */
@@ -36,8 +35,7 @@ function describe(status: McpServerStatus): string {
 
   if (status.connected) {
     const name = status.serverName ? ` (${status.serverName})` : ''
-    const engine = isEpicServerId(status.id) ? " — Unreal Engine's own built-in toolsets" : ''
-    return `- \`${status.id}\`${name}: connected, ${status.toolCount} tool(s), prefixed \`mcp_${status.id}_\`.${engine}`
+    return `- \`${status.id}\`${name}: connected, ${status.toolCount} tool(s), prefixed \`mcp_${status.id}_\``
   }
 
   // 原因原样带上。这是用户唯一能拿去排查的东西，概括一下反而没用了
@@ -56,7 +54,7 @@ function describe(status: McpServerStatus): string {
  * 讲清楚，这几句的唯一任务是让模型别把「现在没有」说成「不可能有」。
  */
 export const BLENDER_INSTALLABLE =
-  'Blender (the official Blender Lab MCP, giving Blender modelling and a UE round-trip)'
+  'Blender (the official Blender Lab MCP, giving Blender modelling and a glTF round-trip into Godot)'
 
 /**
  * 设置页此刻真的能一键装上的东西。
@@ -154,20 +152,6 @@ export function buildMcpSection(
     ...statuses.map(describe)
   ]
 
-  // 引擎内置 server 不讲清楚用法就等于没接：模型只看到 3 个工具名，
-  // 猜不到后面还挂着约 900 个，会直接判定「这个 server 没什么用」。
-  if (statuses.some((s) => s.connected && isEpicServerId(s.id))) {
-    lines.push(
-      '',
-      "A server marked as Unreal Engine's own toolsets exposes only 3 tools directly (`list_toolsets`, `describe_toolset`, `call_tool`), but roughly 900 engine tools sit behind them — Niagara, PCG, animation and Sequencer, MetaHuman, Gameplay Ability System, StateTree, UMG, physics, and more.",
-      "To use them: call `list_toolsets` to see what exists, `describe_toolset` to get a toolset's tool names and input schemas, then dispatch through `call_tool`. Do not conclude a capability is missing without checking `list_toolsets` first.",
-      // 这里只写**核实过**的理由。初稿还写了「接了资产快照和撤销」——
-      // 查下去 `core/assetSnapshot.ts` 的 IPC handler 根本没有调用方，
-      // 那是一句假话，而且是写给模型当决策依据的假话。
-      "Prefer this project's own built-in `ue.*` tools when both could do the job — they work on Unreal Engine 5.0 through 5.8, they do not need the Python plugin, and their arguments are schema-validated. Reach for the engine toolsets for things the built-in tools do not cover.",
-      "These toolsets only exist on Unreal Engine 5.8 and newer, and they require the project's Python plugin. If a call fails because Python is unavailable, say so plainly instead of retrying."
-    )
-  }
 
   if (unavailable.length > 0) {
     // 这三句是整个改动的重点。模型的默认反应是「工具不在 = 我没这个能力」，

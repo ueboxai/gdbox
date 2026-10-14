@@ -6,7 +6,6 @@
  */
 
 import { McpClientManager } from './McpClientManager'
-import { discoverEpicMcpServersFromRuntime } from './epicToolsets'
 import {
   McpServerHost,
   type McpServerHostOptions,
@@ -29,13 +28,6 @@ export {
   writeHostSettings
 } from './hostStore'
 export type { McpHostSettings } from './hostStore'
-export {
-  discoverEpicMcpServers,
-  discoverEpicMcpServersFromRuntime,
-  EPIC_MCP_PLUGIN_NAME,
-  EPIC_MCP_READ_ONLY_TOOLS,
-  supportsOfficialMcp
-} from './epicToolsets'
 export { mcpSettingsPath, readMcpSettings, writeMcpSettings } from './store'
 export * from './types'
 
@@ -62,19 +54,13 @@ export function ensureConnected(): Promise<McpClientManager> {
       const { enabledPluginMcpServers } = await import('../plugins/registry')
       const fromPlugins = await enabledPluginMcpServers().catch(() => ({}))
 
-      // UE 5.8 起引擎内置了官方 MCP server，自动发现、自动接上（见 epicToolsets.ts）。
-      // 放在最前面合并 —— 用户在 mcp.json 里手写同名条目就能覆盖掉自动发现的结果，
-      // 这是唯一能让他改端口或干脆停掉的口子。
-      const fromEngine = await discoverEpicMcpServersFromRuntime()
-
-      const all = { ...fromEngine, ...settings.mcpServers, ...fromPlugins }
+      const all = { ...settings.mcpServers, ...fromPlugins }
       const count = Object.keys(all).length
       if (count > 0) {
         console.log(
           `[AgentV3][MCP] 正在连接 ${count} 个 server` +
             `（用户 ${Object.keys(settings.mcpServers).length}` +
-            ` / 插件 ${Object.keys(fromPlugins).length}` +
-            ` / 引擎内置 ${Object.keys(fromEngine).length}）…`
+            ` / 插件 ${Object.keys(fromPlugins).length}）…`
         )
         await instance.connectAll(all)
       }

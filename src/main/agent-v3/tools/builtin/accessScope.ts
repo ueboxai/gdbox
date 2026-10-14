@@ -8,8 +8,8 @@
  *
  * 这个模块是一份**白名单**，而且是用户自己开关的：
  *
- *   - `full`（默认）：这一层完全不参与判断，直接放行，连引擎清单都不去扫。
- *   - `ue-only`：只剩装好的引擎、导入盒子的工程、素材库。用户主动选了才收窄。
+ *   - `full`（默认）：这一层完全不参与判断，直接放行。
+ *   - `ue-only`（历史键名）：只剩导入盒子的工程、素材库。用户主动选了才收窄。
  *
  * 两层是「与」的关系 —— 白名单里的位置照样要过黑名单（工程目录里摆一个
  * `.ssh/` 一样碰不到），所以调用方两个都要问，顺序无所谓。
@@ -43,7 +43,6 @@ import { join } from 'path'
 import { appSettingsManager, type AgentFileAccessScope } from '../../../appSettingsManager'
 import { getPublicDatabase } from '../../../sqliteDataBase'
 import { getAllProjects } from '../../../sqliteDataBase/models/project'
-import UnrealPathManagerUtil from '../../../utils/UnrealPathManager'
 import { canonicalDir } from './pathBoundary'
 
 /** 一个允许访问的位置。`label` 是拒绝时说给模型听的，别用内部术语 */
@@ -59,44 +58,18 @@ interface AllowedRoot {
 }
 
 /**
- * 两份清单都缓存 30 秒。这个判定挂在**每一次读文件、列目录**上，
- * 不缓存的话，模型翻二十个目录就要把两份清单各算二十遍。
+ * 工程清单缓存 30 秒。这个判定挂在**每一次读文件、列目录**上。
  *
- * ## 但两份的代价差着几个数量级，所以过期的处理方式也不一样
- *
- * - **引擎清单**贵：`findUnrealEnginePaths()` 读 Epic 的 manifest 目录，
- *   再对每个引擎做几次 `fs.access`。过期了就等 30 秒，不额外重算 ——
- *   会话中途装一个新引擎本来就不是常见事。
- * - **工程清单**便宜：一次本地 sqlite `SELECT`，比它保护的那次磁盘读还快。
- *   所以在**真要拒绝之前**会无条件重查一遍，见 `assertInAccessScope`。
- *
- * 这么分是因为缓存唯一会造成的错误是**误拒**，而误拒里唯一真会发生的
- * 是「刚导入的工程还没进缓存」—— 用户导完工程立刻让 agent 去看一眼，
- * 是最自然不过的下一步。花一次 SELECT 把这种错消掉，很划算。
+ * 缓存唯一会造成的错误是**误拒**，而误拒里唯一真会发生的是「刚导入的工程
+ * 还没进缓存」。所以在**真要拒绝之前**会无条件重查一遍（一次本地 sqlite
+ * `SELECT`），见 `assertInAccessScope`。
  */
 const CACHE_MS = 30_000
 
-let engineCache: { at: number; roots: string[] } | undefined
 let projectCache: { at: number; roots: string[] } | undefined
 
 function fresh<T>(entry: { at: number; roots: T } | undefined): T | undefined {
   return entry && Date.now() - entry.at < CACHE_MS ? entry.roots : undefined
-}
-
-async function getEngineRoots(): Promise<string[]> {
-  const cached = fresh(engineCache)
-  if (cached) return cached
-
-  // 用 scanEngines：`findUnrealEnginePaths()` 把「这趟没读到」吞成空数组，
-  // 而空数组在这里的含义是「一个引擎目录都不许碰」。
-  const { engines, degraded } = await UnrealPathManagerUtil.scanEngines()
-  const roots = engines.map((engine) => engine.rootPath).filter(Boolean)
-
-  // 读失败的结果不进缓存。缓存住的话，一次读不到会让 agent 在接下来 30 秒里
-  // 拒绝每一次引擎目录访问，而拒绝理由说的是「不在允许范围内」—— 把用户支到
-  // 一个根本没错的设置项上去。不缓存最多是下次再读一遍。
-  if (!degraded) engineCache = { at: Date.now(), roots }
-  return roots
 }
 
 /** 用户导入盒子的工程目录。`force` 用在拒绝前那一次重查上 */
@@ -114,26 +87,18 @@ function getProjectRoots(force: boolean): string[] {
 /**
  * 算出当前允许的位置。
  *
- * 每个来源单独 try —— 数据库还没初始化、引擎扫描失败，都只该让**那一类**
+ * 每个来源单独 try —— 数据库还没初始化，只该让**那一类**
  * 位置缺席，不该让整份白名单塌成空的（空白名单等于什么都不让碰）。
  */
 async function collectAllowedRoots(forceProjects = false): Promise<AllowedRoot[]> {
   const allowed: AllowedRoot[] = []
 
   try {
-    for (const root of await getEngineRoots()) {
-      allowed.push({ root: canonicalDir(root), label: `引擎目录 ${root}` })
-    }
-  } catch {
-    // 扫不出引擎不代表工程和素材库也不能用
-  }
-
-  try {
     for (const root of getProjectRoots(forceProjects)) {
       allowed.push({ root: canonicalDir(root), label: `工程 ${root}` })
     }
   } catch {
-    // 同上：数据库没起来时，引擎目录照样该放行
+    // 数据库没起来时，素材库照样该放行
   }
 
   // 素材库和 skills 目录都在 userData 底下，路径是拼出来的，不会失败。
@@ -153,7 +118,7 @@ async function collectAllowedRoots(forceProjects = false): Promise<AllowedRoot[]
   return allowed
 }
 
-/** 把允许的位置说给模型听。全列出来太长（九个引擎 + 一堆工程），列前几个够它明白了 */
+/** 把允许的位置说给模型听。全列出来太长，列前几个够它明白了 */
 const MAX_LISTED_ROOTS = 6
 
 function refusal(target: string, allowed: AllowedRoot[]): string {
@@ -161,11 +126,11 @@ function refusal(target: string, allowed: AllowedRoot[]): string {
   const rest = allowed.length - listed.length
   const places =
     allowed.length === 0
-      ? '（这台机器上暂时没扫到引擎，也没有导入过工程）'
+      ? '（还没有导入过工程）'
       : `${listed.join('、')}${rest > 0 ? `，等 ${allowed.length} 个位置` : ''}`
 
   return (
-    `${target} 不在允许访问的范围里。用户把「文件访问范围」设成了「仅虚幻相关」` +
+    `${target} 不在允许访问的范围里。用户把「文件访问范围」设成了「仅游戏开发相关」` +
     `，只能碰：${places}。\n` +
     '不要换一种路径写法再试，也不要绕去 run_shell_command —— 换个写法一样会被挡。\n' +
     '要放开有两条路，**都得用户点头**：\n' +
@@ -195,7 +160,7 @@ function currentScope(): AgentFileAccessScope {
 /**
  * 路径超出用户设定的访问范围时返回说明，允许则返回 undefined。
  *
- * `full` 档直接返回 undefined，**不会**去扫引擎、查数据库 —— 默认档上
+ * `full` 档直接返回 undefined，**不会**去查数据库 —— 默认档上
  * 这个函数的开销必须是零，否则每读一个文件都要付一次代价。
  */
 export async function assertInAccessScope(path: string): Promise<string | undefined> {
@@ -212,8 +177,6 @@ export async function assertInAccessScope(path: string): Promise<string | undefi
 
   // 要拒绝之前把工程清单重查一遍。缓存唯一会造成的错误就是误拒 ——
   // 刚导入的工程还没进缓存，而「导完就让它去看一眼」正是最自然的下一步。
-  // 只重查工程（一次 sqlite SELECT），引擎照旧吃缓存：贵的那份不为
-  // 「会话中途装了个新引擎」这种罕见情况买单
   const latest = await collectAllowedRoots(true)
   if (inScope(latest)) return undefined
 
@@ -225,7 +188,6 @@ export const __testing = {
   MAX_LISTED_ROOTS,
   collectAllowedRoots,
   resetCache: (): void => {
-    engineCache = undefined
     projectCache = undefined
   }
 }

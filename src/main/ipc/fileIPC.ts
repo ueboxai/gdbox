@@ -10,7 +10,7 @@ import { glob } from 'glob'
 import { BrowserWindow } from 'electron'
 import { projectManager } from '../services/project'
 import { parseExcelBuffer } from '../utils/excelParser'
-import { readUeJsonFile, readUeTextFile } from '../utils/ueTextFile'
+import { parseProjectFile } from '../godot/projectFile'
 
 // ============================================================================
 // 类型定义
@@ -59,8 +59,7 @@ async function readIniFile(
   section?: string,
   key?: string
 ): Promise<Record<string, unknown>> {
-  // ini 多半是引擎写的，编码交给 readUeTextFile 判断
-  const content = await readUeTextFile(filePath)
+  const content = (await fs.readFile(filePath, 'utf8')).replace(/^\uFEFF/, '')
 
   const sections: IniData = {}
   let currentSection = ''
@@ -243,7 +242,7 @@ async function pickDirectory(): Promise<Record<string, unknown>> {
 }
 
 /**
- * 获取当前 UE 项目信息
+ * 获取当前连着的 Godot 工程
  * 从 ProjectManager 获取当前已连接的项目
  */
 async function getCurrentUEProject(): Promise<Record<string, unknown>> {
@@ -313,77 +312,38 @@ async function readUEProjectConfig(
 }
 
 /**
- * 获取 UE 项目完整信息
- * 读取 .uproject 文件并解析项目元数据
- * @param projectPath 项目路径（可以是 .uproject 文件路径或项目目录）
+ * 读 Godot 工程信息（通道名沿用历史的 getUEProjectInfo）
+ * @param projectPath 工程目录或 project.godot 的路径
  */
 async function getUEProjectInfo(projectPath: string): Promise<Record<string, unknown>> {
+  const empty = { projectName: '', engineVersion: '', description: '', modules: [], plugins: [] }
   if (!projectPath) {
-    return {
-      success: false,
-      error: '未提供项目路径',
-      projectName: '',
-      engineVersion: '',
-      description: '',
-      modules: [],
-      plugins: [],
-      projectPath: ''
-    }
+    return { success: false, error: '未提供工程路径', ...empty, projectPath: '' }
   }
-
   try {
-    // 确定 .uproject 文件路径
-    let uprojectPath = projectPath
     const stat = await fs.stat(projectPath)
-
-    if (stat.isDirectory()) {
-      // 如果是目录，查找 .uproject 文件
-      const files = await fs.readdir(projectPath)
-      const uprojectFile = files.find((f) => f.endsWith('.uproject'))
-      if (!uprojectFile) {
-        return {
-          success: false,
-          error: '目录中未找到 .uproject 文件',
-          projectName: '',
-          engineVersion: '',
-          description: '',
-          modules: [],
-          plugins: [],
-          projectPath
-        }
-      }
-      uprojectPath = path.join(projectPath, uprojectFile)
-    }
-
-    // 读取并解析 .uproject 文件（中文工程会被引擎存成 UTF-16）
-    const projectData = await readUeJsonFile<Record<string, unknown>>(uprojectPath)
-
-    // 提取项目名称（从文件名）
-    const projectName = path.basename(uprojectPath, '.uproject')
-    const projectDir = path.dirname(uprojectPath)
-
+    const projectDir = stat.isDirectory() ? projectPath : path.dirname(projectPath)
+    const projectFile = path.join(projectDir, 'project.godot')
+    const text = await fs.readFile(projectFile, 'utf8')
+    const summary = parseProjectFile(text)
+    const description = /^config\/description="((?:[^"\\]|\\.)*)"/m.exec(text)?.[1] ?? ''
+    const plugins = /^enabled=PackedStringArray\(([^)]*)\)/m.exec(text)?.[1]
     return {
       success: true,
-      projectName,
-      engineVersion: projectData.EngineAssociation || '',
-      description: projectData.Description || '',
-      category: projectData.Category || '',
-      modules: projectData.Modules || [],
-      plugins: projectData.Plugins || [],
-      targetPlatforms: projectData.TargetPlatforms || [],
+      projectName: summary.name || path.basename(projectDir),
+      engineVersion: summary.engineVersion || '',
+      description,
+      modules: [],
+      plugins: plugins ? [...plugins.matchAll(/"([^"]+)"/g)].map((m) => m[1]) : [],
       projectPath: projectDir,
-      uprojectPath
+      uprojectPath: projectFile
     }
   } catch (error) {
-    console.warn(`[File IPC] 读取项目信息失败: ${projectPath}`, error)
+    console.warn(`[File IPC] 读取工程信息失败: ${projectPath}`, error)
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),
-      projectName: '',
-      engineVersion: '',
-      description: '',
-      modules: [],
-      plugins: [],
+      ...empty,
       projectPath
     }
   }

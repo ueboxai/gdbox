@@ -28,7 +28,7 @@ import {
 import { resolveKeywordCriteria } from '../../../../sqliteDataBase/models/assetSearchIndex'
 import type { AssetSearchCriteria } from '../../../../sqliteDataBase/models/assetSearch'
 import { getTagByName } from '../../../../sqliteDataBase/models/tag'
-import { humanBytes } from '../ue-content-browser/formatBytes'
+import { humanBytes } from '../../formatBytes'
 import { resolveFolder } from './folderLookup'
 import { runAcrossVaults, VAULT_SCOPE_DESCRIPTION } from './vaultScope'
 

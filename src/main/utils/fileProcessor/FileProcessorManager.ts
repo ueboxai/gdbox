@@ -1,5 +1,5 @@
 import { BaseFileProcessor, FileMetadata } from './BaseFileProcessor'
-import { UnrealAssetProcessor } from './UnrealAssetProcessor'
+import { GodotAssetProcessor } from './GodotAssetProcessor'
 
 /**
  * 文件处理器管理器
@@ -16,8 +16,8 @@ export class FileProcessorManager {
    * 初始化所有处理器
    */
   private initializeProcessors(): void {
-    // 注册虚幻引擎资产处理器
-    this.processors.push(new UnrealAssetProcessor())
+    // Godot 资源处理器
+    this.processors.push(new GodotAssetProcessor())
 
     // 未来可以在这里添加其他处理器
     // this.processors.push(new BlenderAssetProcessor())

@@ -11,7 +11,7 @@ import {
 } from '../../models/assetData'
 import { AssetDependencyResolver } from '../../../utils/assetDependency/AssetDependencyResolver'
 import { getAssetClassNameCn } from '../../../utils/assetClassUtils'
-import { UnrealAssetProcessor } from '../../../utils/fileProcessor/UnrealAssetProcessor'
+import { GodotAssetProcessor } from '../../../utils/fileProcessor/GodotAssetProcessor'
 import { splitSoftPath, type AssetImportStatusSummary } from '../../../../shared/assetDependency'
 import { buildImportStatusSummary, parseImports } from '../../../utils/assetDependency/importStatus'
 
@@ -155,7 +155,7 @@ export function registerAssetDependencyIPC(): void {
       const realMissingImports: string[] = []
       if (missingImports.length > 0) {
         const resolver = new AssetDependencyResolver({})
-        const processor = new UnrealAssetProcessor()
+        const processor = new GodotAssetProcessor()
         const mainAssetPath = currentAsset.originPath || currentAsset.filePath || ''
 
         if (mainAssetPath && existsSync(mainAssetPath)) {

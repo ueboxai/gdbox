@@ -7,8 +7,6 @@ import { registerWebdavIPC } from './webdav'
 import { registerShellIPC } from './shell'
 import { registerPathIPC } from './path'
 import { registerAssistantIPC } from './assistant'
-import { registerUnrealPathIPC } from './unrealPath'
-import { registerUnrealProcessIPC } from './unrealProcess'
 import { registerAgentV3IPC } from './agentV3'
 import { registerAgentBrowserIPC } from './agentBrowser'
 import { registerUpdaterIPC } from './updater'
@@ -35,18 +33,15 @@ import { registerBackupIpc } from './backup'
 import { registerFileIPC } from './fileIPC'
 import { registerScreenshotIPC } from './screenshot'
 import { registerScreenRecorderIPC } from './screenRecorder'
-import { registerEditorHealthIPC } from './editorHealth'
 import { registerNetworkVaultHandlers } from './networkVault'
 import { registerNetworkVaultV2Handlers } from './networkVaultV2'
 import { registerCatalogLibraryIPC } from './catalogLibrary'
 import { registerDiagnosticsIPC } from './diagnostics'
 // 导入assetImport以注册其IPC处理器
 import './assetImport'
-import './projectImport'
 import './projectArchiveUpload'
 import './projectTemplate'
 import { registerContextMenuIPC } from './contextMenu'
-import { registerLibraryPackageIPC } from './libraryPackage'
 
 /**
  * 注册所有IPC处理函数
@@ -75,12 +70,8 @@ export function registerAllIPC(setAppIconTheme: SetAppIconTheme): void {
 
   // 注册路径相关IPC
   registerPathIPC()
-  // 注册虚幻AI助手相关IPC
+  // 注册 AI 助手相关IPC
   registerAssistantIPC()
-  // 注册 Unreal 引擎相关IPC
-  registerUnrealPathIPC()
-  // 注册 Unreal 引擎进程检测相关IPC
-  registerUnrealProcessIPC()
   // 注册 Agent V3 相关IPC（pi 内核，V2 已下线）
   registerAgentV3IPC()
   // Agent 浏览器的界面通道（嵌入模式的面板位置 / 关闭）
@@ -162,9 +153,6 @@ export function registerAllIPC(setAppIconTheme: SetAppIconTheme): void {
   // 注册屏幕录制相关 IPC
   registerScreenRecorderIPC()
 
-  // 顶栏状态监控按钮
-  registerEditorHealthIPC()
-
   // 注册局域网协作库相关 IPC
   registerNetworkVaultHandlers()
 
@@ -180,6 +168,4 @@ export function registerAllIPC(setAppIconTheme: SetAppIconTheme): void {
   // 注册输入框右键菜单 IPC
   registerContextMenuIPC()
 
-  // 注册蓝图包 / 材质包的磁盘读写 IPC
-  registerLibraryPackageIPC()
 }

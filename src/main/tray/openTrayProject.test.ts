@@ -1,7 +1,7 @@
 /** @vitest-environment node */
 import { describe, expect, it, vi } from 'vitest'
 
-import type { OpenUprojectResult } from '../services/project/openUproject'
+import type { OpenProjectResult as OpenUprojectResult } from '../services/project/openProject'
 import { createLaunchTracker, LAUNCH_TTL_MS } from './launchTracker'
 import { createTrayProjectOpener, type TrayProjectOpenerDeps } from './openTrayProject'
 import type { TrayRecentProject } from './trayMenu'

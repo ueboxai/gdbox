@@ -23,7 +23,7 @@ import {
   SCAN_EXCLUDE_DIRS,
   SCAN_EXCLUDE_FILES
 } from './NetworkVaultTypes'
-import { UnrealAssetProcessor } from '../utils/fileProcessor/UnrealAssetProcessor'
+import { GodotAssetProcessor } from '../utils/fileProcessor/GodotAssetProcessor'
 import { PathManager } from '../utils/PathManager'
 
 // 图片格式列表（用于缩略图生成）
@@ -1344,7 +1344,7 @@ export class NetworkVaultSync {
 
     // 第二阶段：逐个解析资产
     const assets: NetworkVaultAsset[] = []
-    const processor = parseMetadata ? new UnrealAssetProcessor() : null
+    const processor = parseMetadata ? new GodotAssetProcessor() : null
     const pathManager = PathManager.getInstance()
     const total = filePaths.length
 
@@ -1383,12 +1383,12 @@ export class NetworkVaultSync {
             asset.engineVersion = parsed.engineVersion || undefined
 
             // 保存缩略图到网络共享目录
-            // 注意: imgLocalPath 只是文件名，UnrealAssetProcessor 将缩略图保存到公共缩略图目录
+            // 注意: imgLocalPath 只是文件名，GodotAssetProcessor 将缩略图保存到公共缩略图目录
             // 所以需要使用 getPublicThumbnailFilePath 而非 getThumbnailFilePath（后者返回保管库特定路径）
             if (parsed.metadata?.imgLocalPath) {
               const thumbFileName = parsed.metadata.imgLocalPath as string
               // 🔧 修复：使用 getThumbnailFilePath（对于网络库返回 networkPath/.thumbnails）
-              // 与 UnrealAssetProcessor.saveFirstThumbnailToElectronPath 保持一致
+              // 与 GodotAssetProcessor.saveFirstThumbnailToElectronPath 保持一致
               const localThumbPath = pathManager.getThumbnailFilePath(thumbFileName)
 
               // 等待缩略图文件存在（最多等待 500ms）
@@ -1989,7 +1989,7 @@ export class NetworkVaultSync {
     // 现在 folderPathToKey 映射已完整，开始解析新资产元数据
     onProgress?.(25, 100, `解析 ${newFilePaths.length} 个新文件`)
     const newAssets: NetworkVaultAsset[] = []
-    const processor = new UnrealAssetProcessor()
+    const processor = new GodotAssetProcessor()
     const pathManager = PathManager.getInstance()
 
     for (let i = 0; i < newFilePaths.length; i++) {
@@ -2269,7 +2269,7 @@ export class NetworkVaultSync {
       // 5. 只对新文件解析元数据
       onProgress?.(20, 100, `解析 ${newFilePaths.length} 个新文件`)
       const newAssets: NetworkVaultAsset[] = []
-      const processor = new UnrealAssetProcessor()
+      const processor = new GodotAssetProcessor()
       const pathManager = PathManager.getInstance()
 
       for (let i = 0; i < newFilePaths.length; i++) {

@@ -73,37 +73,12 @@ export function readProbeVerdict(output: Record<string, unknown> | undefined): P
 }
 
 /**
- * 真正去问引擎的那个探针。找这个工程此刻连着的编辑器，没连着就是 unknown。
+ * 真正去问引擎的那个探针。
  *
- * 依赖全部懒加载：它们会一路拉进 WebSocket 服务和项目管理，整理员的单元测试不该碰它们。
+ * 虚幻版本是到连着的编辑器里跑 Python 的 `dir()`；Godot 这边还没接上
+ * （对应做法是问 `ClassDB.class_has_method`），先一律回 unknown ——
+ * 经验照旧以试用身份写入，交给试用期去验。
  */
-export function createEditorProbe(timeoutMs = 30_000): EditorProbe {
-  return async (query) => {
-    try {
-      const [
-        { projectManager },
-        { projectPathKey },
-        { runWithTargetConnectionId },
-        { runEditorPython }
-      ] = await Promise.all([
-        import('../../services/project/projectManager'),
-        import('../core/projectPathKey'),
-        import('../core/projectTargetContext'),
-        import('../core/editorPython')
-      ])
-      const wanted = projectPathKey(query.projectRoot)
-      const connectionId = projectManager
-        .getInteractiveProjects()
-        .find((project) => projectPathKey(project.projectPath) === wanted)?.connectionId
-      if (!connectionId) return 'unknown'
-
-      const result = await runWithTargetConnectionId(
-        { connectionId, projectPath: query.projectRoot },
-        () => runEditorPython(buildProbeScript(query), '经验验真（只读）', timeoutMs)
-      )
-      return result.success ? readProbeVerdict(result.output) : 'unknown'
-    } catch {
-      return 'unknown'
-    }
-  }
+export function createEditorProbe(_timeoutMs = 30_000): EditorProbe {
+  return async () => 'unknown'
 }

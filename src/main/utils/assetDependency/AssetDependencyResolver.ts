@@ -1,11 +1,7 @@
 import path from 'path'
 import { promises as fs } from 'fs'
-import { UnrealAssetProcessor } from '../fileProcessor/UnrealAssetProcessor'
-import {
-  SoftPathResolver,
-  deriveSoftPathFromRealPath,
-  fixChineseEncoding
-} from './softPathResolver'
+import { GodotAssetProcessor } from '../fileProcessor/GodotAssetProcessor'
+import { SoftPathResolver, deriveSoftPathFromRealPath } from './softPathResolver'
 
 /**
  * 资产依赖信息接口
@@ -104,7 +100,7 @@ export class AssetDependencyResolver {
   /** 只被软引用过、而且没找到的依赖文件 —— 后来若被硬引用到，要补报缺失 */
   private readonly missingSoftOnly = new Set<string>()
   private readonly errors: DependencyError[] = []
-  private readonly processor = new UnrealAssetProcessor() // 复用单一实例，避免每批次重新创建
+  private readonly processor = new GodotAssetProcessor() // 复用单一实例，避免每批次重新创建
 
   constructor(config: DependencyResolverConfig = {}) {
     this.config = {
@@ -323,18 +319,16 @@ export class AssetDependencyResolver {
    */
   private async extractDependencyPaths(assets: AssetDependencyInfo[]): Promise<string[]> {
     const realPathsSet = new Set<string>()
-    // 按文件扩展名认虚幻包，不能看 classKey：资产库记录里的 classKey 是分类（blueprint、
-    // animblueprint……），只有现场解析出来的才是 'uasset'。以前只认 'uasset'，导入到工程时
-    // 主资产（取自库记录）的依赖一条都不解析，整个蓝图只拷过去它自己；关卡（'umap'）同理。
-    const uassetAssets = assets.filter((asset) =>
-      /\.(uasset|umap)$/i.test(asset.originPath || asset.realPath || '')
+    // 只有文本格式的场景、资源、脚本、着色器带依赖，按扩展名认
+    const textAssets = assets.filter((asset) =>
+      /\.(tscn|tres|gd|gdshader)$/i.test(asset.originPath || asset.realPath || '')
     )
 
     // 提取所有softPath并去重
-    const softPathSet = new Set(uassetAssets.map((asset) => asset.softPath))
+    const softPathSet = new Set(textAssets.map((asset) => asset.softPath))
     const softPathsLookup = new Set(Array.from(softPathSet))
 
-    for (const asset of uassetAssets) {
+    for (const asset of textAssets) {
       if (!asset.imports || !Array.isArray(asset.imports)) continue
       // 没给 importsStrong 的（库里的老记录）按老行为：全部当硬引用
       const strong = Array.isArray(asset.importsStrong) ? new Set(asset.importsStrong) : null
@@ -363,8 +357,7 @@ export class AssetDependencyResolver {
   }
 
   /**
-   * 将虚幻引擎软路径转换为真实文件路径
-   * 增强版：支持向上搜索 Content Root
+   * 把 `res://` 依赖换成磁盘路径（相对主资源所在的工程根）
    */
   public async convertSoftPathToRealPath(
     mainAssetSoftPath: string,
@@ -467,7 +460,7 @@ export class AssetDependencyResolver {
             originPath: filePath,
             imports: imports,
             importsStrong: importsStrong,
-            classKey: metadata?.metadata?.classKey || 'uasset',
+            classKey: metadata?.metadata?.classKey || path.extname(filePath).slice(1),
             name: metadata?.metadata?.name || path.basename(filePath, path.extname(filePath)),
             engineVersion: metadata?.metadata?.engineVersion,
             imgLocalPath:
@@ -478,7 +471,7 @@ export class AssetDependencyResolver {
           assets.push(asset)
         }
       } catch (error) {
-        // 只被软引用的依赖缺了不拦截：UE 打开时同样会跳过它
+        // 只被软引用的依赖缺了不拦截
         if (!this.strongPaths.has(filePath)) {
           this.missingSoftOnly.add(filePath)
           console.warn(`[AssetDependencyResolver] 软引用的依赖不存在，跳过: ${filePath}`)
@@ -503,107 +496,12 @@ export class AssetDependencyResolver {
     })
   }
 
-  /**
-   * 生成软路径（与UnrealAssetProcessor.ts保持一致）
-   * @param result 解析后的资产元数据
-   * @param basename 文件名（带扩展名）
-   * @param realPath 真实物理路径
-   * @returns 软路径 (如 /Game/Path/To/Asset)
-   */
-  private getSoftPath(result: any, basename: string, realPath: string): string {
-    // 缓存键用文件真实路径，理由同 UnrealAssetProcessor.getSoftPath：
-    // UE5 的包不带 Guid，「Guid_文件名」会退化成 `undefined_<文件名>`，
-    // 同名资产互相串路径。
-    const cacheKey = realPath || `${result?.header?.Guid}_${basename}`
-    const endsWith = '/' + basename
-
-    // 缓存检查 - 这里简单复用 pathCache
-    if (this.softPathCache.has(cacheKey)) {
-      return this.softPathCache.get(cacheKey)!
-    }
-
-    let softPath = ''
-    const gamePathRegex = /\/Game\/[^.]+/
-    const pathDerivedSoftPath = deriveSoftPathFromRealPath(realPath)
-
-    try {
-      // 对于位于 Unreal Content/备份 Game 目录下的资产，磁盘路径最稳定，优先采用
-      if (pathDerivedSoftPath && pathDerivedSoftPath.endsWith(endsWith)) {
-        this.softPathCache.set(cacheKey, pathDerivedSoftPath)
-        return pathDerivedSoftPath
-      }
-
-      // 第一步：优先尝试 FolderName
-      if (result && result.header) {
-        const originalPath = result.header.FolderName
-        softPath = fixChineseEncoding(originalPath)
-
-        if (softPath && softPath.startsWith('/Game')) {
-          if (softPath.endsWith(endsWith)) {
-            this.softPathCache.set(cacheKey, softPath)
-            return softPath
-          }
-        }
-      }
-
-      // 第二步：名称查找优化
-      if (basename && result && Array.isArray(result.names)) {
-        for (const nameObj of result.names) {
-          const originalName = nameObj.Name
-          const name = fixChineseEncoding(originalName)
-          if (name && name.endsWith(endsWith) && name.startsWith('/Game')) {
-            softPath = name
-            break
-          }
-        }
-        if (softPath && softPath.startsWith('/Game') && softPath.endsWith(endsWith)) {
-          this.softPathCache.set(cacheKey, softPath)
-          return softPath
-        }
-      }
-
-      // 第三步：双重循环优化
-      outerLoop: if (result && Array.isArray(result.gatherableTextData)) {
-        for (const item of result.gatherableTextData) {
-          for (const context of item.SourceSiteContexts) {
-            const originalDesc = context.SiteDescription
-            const desc = fixChineseEncoding(originalDesc)
-            if (desc && desc.startsWith('/Game') && desc.endsWith(endsWith)) {
-              const match = desc.match(gamePathRegex)
-              if (match) {
-                softPath = match[0]
-                break outerLoop
-              }
-            }
-          }
-        }
-      }
-      if (softPath && softPath.startsWith('/Game') && softPath.endsWith(endsWith)) {
-        this.softPathCache.set(cacheKey, softPath)
-        return softPath
-      }
-
-      // 第四步：路径处理优化
-      const contentIndex = realPath.indexOf('Content')
-      if (contentIndex !== -1) {
-        const relativePath = realPath.slice(contentIndex + 7).replace(/\\/g, '/')
-        // 去除扩展名
-        softPath = '/Game' + relativePath.replace(/\.[^.]*$/, '')
-      }
-
-      // 最终回退方案
-      this.softPathCache.set(cacheKey, softPath || '')
-    } catch (e) {
-      console.error('Error in getSoftPath:', e)
-      softPath = ''
-    }
-
-    // 默认回退
-    if (!softPath) {
-      const nameWithoutExt = path.basename(realPath, path.extname(realPath))
-      softPath = `/Game/${nameWithoutExt}`
-    }
-
+  /** 资源的 `res://` 路径：在工程里就相对工程根算，不在就只用文件名 */
+  private getSoftPath(_result: unknown, basename: string, realPath: string): string {
+    const cached = this.softPathCache.get(realPath)
+    if (cached) return cached
+    const softPath = deriveSoftPathFromRealPath(realPath) || `res://${basename}`
+    this.softPathCache.set(realPath, softPath)
     return softPath
   }
 

@@ -6,7 +6,6 @@ import {
   type TurnCompleteNotification
 } from '../appSettingsManager'
 import { agentBrowser } from '../services/agentBrowser'
-import UnrealPathManagerUtil from '../utils/UnrealPathManager'
 
 export type AppIconTheme = 'light' | 'dark'
 export type SetAppIconTheme = (theme: AppIconTheme) => void
@@ -203,25 +202,4 @@ export function registerAppSettingsIPC(setAppIconTheme: SetAppIconTheme): void {
     return appSettingsManager.getAutoEnableUnrealAgentLink()
   })
 
-  /**
-   * 手动修复并清理引擎目录中残留的 UnrealAgentLink 插件
-   */
-  ipcMain.handle('app-settings:repairUnrealAgentLinkEngineResidue', async () => {
-    try {
-      const summary = await UnrealPathManagerUtil.repairUnrealAgentLinkEngineResidue()
-      return {
-        success: summary.failedEngines.length === 0,
-        ...summary
-      }
-    } catch (error) {
-      return {
-        success: false,
-        scannedEngineCount: 0,
-        cleanedEngineCount: 0,
-        skippedEngineCount: 0,
-        failedEngines: [],
-        error: error instanceof Error ? error.message : String(error)
-      }
-    }
-  })
 }

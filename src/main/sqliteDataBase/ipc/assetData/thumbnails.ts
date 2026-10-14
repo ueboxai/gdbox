@@ -14,7 +14,7 @@ import { normalizeVaultRelativePath } from '../../../utils/vaultPathNormalize'
 import { FolderTypeDetector } from '../../../utils/folderTypeDetector'
 import { PathManager } from '../../../utils/PathManager'
 import ThumbnailManager from '../../../utils/ThumbnailManager'
-import { UnrealAssetProcessor } from '../../../utils/fileProcessor/UnrealAssetProcessor'
+import { GodotAssetProcessor } from '../../../utils/fileProcessor/GodotAssetProcessor'
 import { VaultManager, VaultType } from '../../VaultManager'
 import { vaultAccessKeyHeadersFromUrl } from '../../../networkV2/vaultAccessKeys'
 import { getVaultDatabase } from '../../index'
@@ -1297,7 +1297,7 @@ async function regenerateAssetThumbnail(
     }
 
     if (extension === 'uasset' || extension === 'umap') {
-      const processor = new UnrealAssetProcessor()
+      const processor = new GodotAssetProcessor()
       const metadata = await processor.processFile(localSourcePath)
       const fileName =
         typeof metadata.metadata?.imgLocalPath === 'string' ? metadata.metadata.imgLocalPath : ''

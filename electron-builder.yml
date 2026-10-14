@@ -1,5 +1,5 @@
-appId: com.unreal.agent
-productName: 虚幻盒子
+appId: com.gdbox.app
+productName: GDBox
 copyright: Copyright © 2026 虚幻盒子科技有限公司
 directories:
   buildResources: build
@@ -8,8 +8,6 @@ files:
   - out/**
   - node_modules/**
   - resources/icon*.{png,ico}
-  - resources/plugins/*.zip
-  - resources/plugins/ualink-config.json
   - LICENSE
   - THIRD-PARTY-NOTICES.md
   - licenses/**
@@ -43,9 +41,12 @@ extraResources:
     to: icon-dark.ico
   # 注意：这里曾经有一条 resources/project —— 随包发的工程模板。
   # 现在模板全部走线上模板源（见 docs/community-templates.md），安装包里不再带模板。
-  # UE5 Agent Skills（Skill 模式知识增强）
+  # Agent 技能包
   - from: resources/skills
     to: skills
+  # Godot 侧的东西：GDBox Link 编辑器插件、无头试玩运行器
+  - from: resources/godot
+    to: godot
   # uebox 命令行（自包含：dist + 生产依赖 + 给外部 Agent 的 Skill）。
   # 由 scripts/build-cli-bundle.mjs 产出，build:win 里先跑它再打包。
   # 不发 npm 包，只随安装包走。
@@ -64,22 +65,19 @@ extraResources:
   # 分发说明和对应源码入口见 THIRD-PARTY-NOTICES.md。
 
 win:
-  executableName: unreal-agent
+  executableName: gdbox
   # 跟 exe 放在同一层（不是 resources/ 里）—— `uebox.cmd` 靠 %~dp0 找同目录的
-  # unreal-agent.exe 当 Node 用。放在 win 下而不是顶层：这是个 .cmd，
+  # gdbox.exe 当 Node 用。放在 win 下而不是顶层：这是个 .cmd，
   # 发到 macOS/Linux 包里只是垃圾文件。
   extraFiles:
     - from: build/uebox.cmd
       to: uebox.cmd
   icon: build/icon.ico
-  legalTrademarks: UE Box
+  legalTrademarks: GDBox
   requestedExecutionLevel: asInvoker
 nsis:
-  # 安装包文件名写死 `uebox` 而不是 `${name}`：`${name}` 取的是 package.json 的
-  # name，那个值同时决定 Electron 的 userData 目录（%APPDATA%/unreal-box），改它
-  # 会让已装用户的设置、数据库、聊天记录全部失联。对外的名字和存数据的目录名
-  # 本来就该分开，这里只改对外那半边。
-  artifactName: uebox-${version}-setup.${ext}
+  # 安装包文件名单独写，不跟 package.json 的 name（那个值决定 userData 目录）。
+  artifactName: gdbox-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
@@ -93,7 +91,7 @@ mac:
   target:
     - dmg
     - zip
-  artifactName: uebox-${version}-${arch}-mac.${ext}
+  artifactName: gdbox-${version}-${arch}-mac.${ext}
   entitlements: build/entitlements.mac.plist
   icon: build/icon.icns
   entitlementsInherit: build/entitlements.mac.plist
@@ -104,7 +102,7 @@ mac:
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
 dmg:
-  artifactName: uebox-${version}-${arch}-mac.${ext}
+  artifactName: gdbox-${version}-${arch}-mac.${ext}
 linux:
   target:
     - AppImage
@@ -113,7 +111,7 @@ linux:
   maintainer: 虚幻盒子科技有限公司
   category: Utility
 appImage:
-  artifactName: uebox-${version}.${ext}
+  artifactName: gdbox-${version}.${ext}
 npmRebuild: false
 # 这里**不写 publish**，由 scripts/build-win-installer.js 按需注入。
 #

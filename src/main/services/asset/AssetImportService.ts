@@ -17,7 +17,7 @@ import {
   getAssetFolderByKey
 } from '../../sqliteDataBase/models/assetFolder'
 import { FileProcessorManager } from '../../utils/fileProcessor/FileProcessorManager'
-import { UnrealAssetProcessor } from '../../utils/fileProcessor/UnrealAssetProcessor'
+import { GodotAssetProcessor } from '../../utils/fileProcessor/GodotAssetProcessor'
 import { AssetBackupManager, type BackupAssetInfo } from '../../utils/assetBackup'
 import {
   buildImportThumbnail,
@@ -45,8 +45,6 @@ import {
 import { calculateFastFileHash } from '../../sqliteDataBase/ipc/assetData/fileUtils'
 import { findIdenticalLocalAssets } from '../../sqliteDataBase/ipc/assetData/importDedup'
 import { deriveFallbackSoftPath, deriveSoftPathFromDiskPath } from './backupSoftPath'
-import { defaultAnalyzer } from '../project/packageImports'
-import { readPackageScriptModules, type SourcePluginLookup } from '../project/requiredPlugins'
 
 /**
  * 生成安全的 assetKey，防止文件名过长导致 Windows MAX_PATH 错误
@@ -130,8 +128,6 @@ export interface ImportOptions {
   packageToFolderKey?: Map<string, string>
   // 新增：引擎版本号（来自 UE 插件报告，如 "5.3.2-29314046+++UE5+Release-5.3"）
   engineVersion?: string
-  /** 从虚幻加资产时，原工程的「模块 → 插件」查找表。有它才记 pluginInfo */
-  sourcePluginLookup?: SourcePluginLookup
 }
 
 export class AssetImportService {
@@ -220,8 +216,8 @@ export class AssetImportService {
     }
 
     try {
-      // 使用 UnrealAssetProcessor 重新解析文件
-      const processor = new UnrealAssetProcessor()
+      // 使用 GodotAssetProcessor 重新解析文件
+      const processor = new GodotAssetProcessor()
       const fileMetadata = await processor.processFile(targetFilePath)
 
       // 更新数据库中的资产数据
@@ -235,7 +231,7 @@ export class AssetImportService {
           softPath: fileMetadata.metadata.softPath,
           assetClass: fileMetadata.metadata.assetClass,
           className: fileMetadata.metadata.className,
-          // 修复：手动计算中文类名和颜色，因为 UnrealAssetProcessor 可能不返回这些 UI 字段
+          // 修复：手动计算中文类名和颜色，因为 GodotAssetProcessor 可能不返回这些 UI 字段
           classNameCn:
             fileMetadata.metadata.classNameCn ||
             getAssetClassNameCn(fileMetadata.metadata.className),
@@ -1027,18 +1023,6 @@ export class AssetImportService {
 
       // 🎯 结束预处理阶段计时
       perfCollector.endPhase('assetParsing', processedUassets)
-
-      // 从虚幻加进来的：趁原工程还在手边，记下每个资产用到的模块归哪个插件。
-      // 导到别的工程时，那边没装的插件就能说出全名和 Fab 链接，而不是只有一个模块名。
-      // 读的是源文件的导入表，每个包一两毫秒；失败就不记，不拦导入
-      if (options.sourcePluginLookup) {
-        for (const [filePath, metadata] of processedMetadata) {
-          if (!/\.(uasset|umap)$/i.test(filePath) || !metadata?.metadata) continue
-          const modules = await readPackageScriptModules(filePath, defaultAnalyzer)
-          const info = modules ? options.sourcePluginLookup(modules) : undefined
-          if (info) metadata.metadata.assetPluginInfo = info
-        }
-      }
 
       // 初始化资产备份管理器和预处理备份信息（仅在备份模式下）
       const backupManager = isBackupMode ? new AssetBackupManager() : null

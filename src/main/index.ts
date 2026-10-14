@@ -37,7 +37,6 @@ import { keepMainWindowInTray, showOrCreateMainWindow } from './mainWindowLifecy
 import { agentBrowser } from './services/agentBrowser'
 import { startAgentNotifications } from './services/agentNotifications'
 import { startExperienceCurator } from './agent-v3/experience/scheduler'
-import { startEditorCrashWatch } from './services/editorCrashWatch'
 import { closeSearchBrowser } from './services/browserSearch'
 import { windowStateManager } from './windowStateManager'
 import { fitMacWindow, mainWindowChrome } from './mainWindowAppearance'
@@ -650,11 +649,10 @@ appReady?.then(async () => {
     // 启动服务管理器（它内部已经打过「所有服务启动完成」，这里不再复述）
     await serviceManager.start()
 
-    // [项目级插件自动升级] App 启动时静默检查并升级所有已导入项目的 UALink 插件
-    // 替代旧的引擎级安装方案，解决用户插件版本停留在旧版本的问题
+    // 启动时把各工程里已装的 GDBox Link 升到随包版本
     import('./sqliteDataBase/ipc/project')
       .then((module) => module.upgradeAllProjectPlugins())
-      .catch((e) => logger.warn('[UALink] 启动升级检查失败:', e))
+      .catch((e) => logger.warn('[GDBox Link] 启动升级检查失败:', e))
 
     // 注册所有IPC处理函数
     registerAllIPC(setAppIconTheme)
@@ -705,9 +703,6 @@ appReady?.then(async () => {
 
     // 经验整理员：会话结束后从原始账里提炼经验，写进工程的 .uebox/experience（见 agent-v3/experience/）
     startExperienceCurator()
-
-    // 编辑器崩溃看门人：认出崩溃、关掉崩溃报告窗口、重开工程，并告诉等着的 agent
-    startEditorCrashWatch()
 
     // 初始化自动更新服务（仅在非开发环境或明确启用时）
     if (!is.dev || process.env.ENABLE_AUTO_UPDATE === 'true') {

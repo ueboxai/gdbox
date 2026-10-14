@@ -357,13 +357,13 @@ async function performServerScan(
   let newAssetsCount = 0
   let parseErrors = 0
 
-  let unrealProcessor: any = null
-  const getUnrealProcessor = async () => {
-    if (!unrealProcessor) {
-      const { UnrealAssetProcessor } = await import('../utils/fileProcessor/UnrealAssetProcessor')
-      unrealProcessor = new UnrealAssetProcessor()
+  let godotProcessor: any = null
+  const getGodotProcessor = async () => {
+    if (!godotProcessor) {
+      const { GodotAssetProcessor } = await import('../utils/fileProcessor/GodotAssetProcessor')
+      godotProcessor = new GodotAssetProcessor()
     }
-    return unrealProcessor
+    return godotProcessor
   }
 
   const changeLogEntries: Array<{
@@ -414,7 +414,7 @@ async function performServerScan(
 
       if (ext === 'uasset' || ext === 'umap') {
         try {
-          const processor = await getUnrealProcessor()
+          const processor = await getGodotProcessor()
           const metadata = await processor.processFile(file.fullPath)
 
           if (metadata && metadata.assetType !== 'InvalidAsset') {

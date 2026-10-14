@@ -4,17 +4,16 @@
  * ## 为什么不是「项目库里最近的三条」
  *
  * 托盘菜单的开销按「用户此刻想接着干活」算 —— 他最可能想重开的是**引擎最近
- * 开过**的工程（Epic Launcher 那份 `EditorSettings.ini` 名单，和首页最近列表
- * 同源）。项目库自己的排序是给首页看的，会把他上周手动理过的顺序搬上来，
+ * 开过**的工程（Godot 项目管理器那份 `projects.cfg` 名单，见 `godot/recentProjects.ts`）。项目库自己的排序是给首页看的，会把他上周手动理过的顺序搬上来，
  * 不等于「最近用过」。
  *
- * 但**只**列引擎名单里 `isImported` 的那些：菜单里点开走 `openUprojectFile`，
+ * 但**只**列引擎名单里 `isImported` 的那些：菜单里点开走 `openProject`，
  * 那是盒子管理的工程的入口，没进库的点开也接不上「插件装没装上」那套反馈。
  *
  * ## 路径看哪条
  *
  * 显示名和打开路径一律用**库记录**的（`projectName` / `originPath`），不用
- * UE 名单里的 `projectPath` —— 后者是从 ini 里读的原始写法，首页双击开的
+ * Godot 名单里的 `projectPath` —— 后者是从 cfg 里读的原始写法，首页双击开的
  * 是 `originPath`，两边不一致就会出现「首页能开、托盘点了报找不到」。
  * 找记录也按目录比（`getProjectByPath` 内部会做规范化），不重写一套比较。
  *
@@ -26,14 +25,14 @@
  * 不经过缓存。混在一起的话，要么 running 跟着名单旧十秒，要么 IO 跟着
  * running 每趟重跑 —— 两头都不该。
  */
-import { dirname, extname } from 'path'
+import { basename, dirname } from 'path'
 
 import type { TrayRecentProject } from './trayMenu'
 import { TRAY_RECENT_LIMIT } from '../../shared/trayActions'
 
 /** `getRecentProjectsFromAllEngines` 的返回里，这里用得上的部分 */
 export interface RecentEntry {
-  /** `.uproject` 文件完整路径 */
+  /** 工程目录 */
   projectPath: string
   projectName: string
   lastOpenTime: string
@@ -59,7 +58,7 @@ export interface RunningProjectsDeps {
 }
 
 export interface TrayRecentCandidatesDeps {
-  /** Epic 各引擎版本的最近打开名单（`getRecentProjectsFromAllEngines`） */
+  /** Godot 的最近工程名单（`readGodotRecentProjects`） */
   listRecent: () => Promise<RecentEntry[]>
   /** 按项目目录查库记录（`getProjectByPath`，内部已做路径规范化） */
   findRecord: (projectDir: string) => ProjectRecordLike | undefined
@@ -68,9 +67,9 @@ export interface TrayRecentCandidatesDeps {
 
 export type TrayProjectCandidate = Pick<TrayRecentProject, 'projectKey' | 'name' | 'originPath'>
 
-/** 插件报的路径可能是项目目录，也可能直接是 `.uproject` 文件 —— 统一成目录再比 */
+/** 插件报的路径可能是项目目录，也可能直接是 `project.godot` —— 统一成目录再比 */
 function projectDirOf(reportedPath: string): string {
-  return extname(reportedPath).toLowerCase() === '.uproject' ? dirname(reportedPath) : reportedPath
+  return basename(reportedPath).toLowerCase() === 'project.godot' ? dirname(reportedPath) : reportedPath
 }
 
 /**
@@ -97,7 +96,7 @@ export async function getTrayRecentCandidates(
   deps: TrayRecentCandidatesDeps
 ): Promise<TrayProjectCandidate[]> {
   /*
-   * 同一个工程可能被多个引擎版本各记了一条（5.3 开过、5.5 也开过）——
+   * 同一个工程可能被记了不止一条（路径写法不同）——
    * 按 projectKey 去重，留 `lastOpenTime` 最新的那条。
    */
   const picked = new Map<string, TrayProjectCandidate & { lastOpenTime: string }>()
@@ -107,7 +106,7 @@ export async function getTrayRecentCandidates(
 
     const record = deps.findRecord(projectDirOf(entry.projectPath))
     if (!record?.originPath) continue
-    // 库里的 .uproject 已经不在盘上：菜单里列出来点了必败，不列
+    // 库里的工程已经不在盘上：菜单里列出来点了必败，不列
     if (!deps.fileExists(record.originPath)) continue
 
     const existing = picked.get(record.projectKey)

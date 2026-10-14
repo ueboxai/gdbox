@@ -25,7 +25,6 @@ import {
   type Attempt,
   type ConnectRequest
 } from '../../capabilities/mcp/addServer'
-import { EPIC_SERVER_ID_PREFIX } from '../../capabilities/mcp/epicToolsets'
 import type { McpServerConfig, McpServerStatus } from '../../capabilities/mcp/types'
 import { defineTool, type ToolOutcome, type UnrealAgentTool } from '../defineTool'
 
@@ -80,12 +79,12 @@ export async function runConnect(
     return { text: built.error, isError: true, details: { id: request.id, connected: false } }
   }
 
-  // 引擎和插件自己的 server 不是这里能接管的，overwrite 也不行：改它们去设置里改
+  // 插件自己的 server 不是这里能接管的，overwrite 也不行：改它们去设置里改
   const reserved = await deps.reservedIds?.().catch(() => [] as string[])
-  if (request.id.startsWith(EPIC_SERVER_ID_PREFIX) || reserved?.includes(request.id)) {
+  if (reserved?.includes(request.id)) {
     return {
       text:
-        `「${request.id}」是虚幻引擎或插件自带的 server，不归这个工具管，这次什么都没做。\n` +
+        `「${request.id}」是插件自带的 server，不归这个工具管，这次什么都没做。\n` +
         '要接的是另一台就换个标识重来；要改它本身请用户去 设置 → MCP 里改。',
       isError: true,
       details: { id: request.id, connected: false }
@@ -249,7 +248,7 @@ const connectMcpServerTool = defineTool({
 开头装配一次。所以：告诉用户接好了、让他发下一条消息，从那条起才能调
 \`mcp_<标识>_*\`。这一轮硬调只会拿到"工具不存在"。
 
-【Blender 和 UE 官方 server 不走这里】偏好设置 → MCP 里有它们的一键接入，
+【Blender 不走这里】偏好设置 → MCP 里有它的一键接入，
 那边会连安装脚本和环境变量一起办好。让用户去点那个按钮。
 
 【标识（id）怎么起】短、全小写、见名知意（filesystem / github / figma），

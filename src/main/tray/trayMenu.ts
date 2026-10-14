@@ -14,9 +14,9 @@ import type { MainTranslator } from '../i18n'
 export interface TrayRecentProject {
   /** 项目库记录的 key —— 「运行中」判断靠它对上插件报上来的路径 */
   projectKey: string
-  /** 显示名：项目库里那条记录的名字，不是 UE 列表里从路径猜的 */
+  /** 显示名：项目库里那条记录的名字，不是 Godot 名单里从路径猜的 */
   name: string
-  /** 打开时传给 `openUprojectFile` 的路径：记录里的 `.uproject` 绝对路径 */
+  /** 打开时传给 `openProject` 的路径：记录里的工程路径 */
   originPath: string
   /** 引擎那头正连着它 —— 菜单里只标出来、不让再点一遍 */
   running: boolean
@@ -65,9 +65,9 @@ function menuLabel(raw: string): string {
  *   ───（有最近项目时）
  *   最近项目 + 条目
  *   ───
- *   打开虚幻盒子 / 退出
+ *   打开 GDBox / 退出
  *
- * 「打开虚幻盒子」和「退出」两个应用级动作沉在最底下是一组的：Windows 托盘
+ * 「打开 GDBox」和「退出」两个应用级动作沉在最底下是一组的：Windows 托盘
  * 菜单从图标向上弹出、底边贴着光标，上面两组列表条目数会变，只有最底下
  * 这组位置恒定，用户抬手就能点到。
  *

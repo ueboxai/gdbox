@@ -2,8 +2,7 @@ import { app, ipcMain, shell } from 'electron'
 import { spawn } from 'child_process'
 import { existsSync } from 'fs'
 import { isAbsolute } from 'path'
-import { openUprojectFile } from '../services/project/openUproject'
-import type { OpenUprojectResult } from '../services/project/openUproject'
+import { openProject, type OpenProjectResult } from '../services/project/openProject'
 import { openSafeExternalUrl } from '../security'
 
 /**
@@ -56,21 +55,20 @@ export function registerShellIPC(): void {
   })
 
   /**
-   * 打开 .uproject 文件，如果启用了自动启用 UnrealAgentLink 设置，
-   * 则在打开前先确保插件被启用。
+   * 用 Godot 编辑器打开工程（通道名沿用历史的 openUproject）。
    *
-   * 实现住在 `services/project/openUproject.ts` —— 托盘菜单的「最近项目」
+   * 实现住在 `services/project/openProject.ts` —— 托盘菜单的「最近项目」
    * 不走 IPC，也要同一套「先装插件、失败带原因、开了才藏窗口」。
    */
   ipcMain.handle(
     'shell:openUproject',
     async (
       _event,
-      uprojectPath: string,
+      projectPath: string,
       options?: { forImport?: boolean }
-    ): Promise<OpenUprojectResult> => {
+    ): Promise<OpenProjectResult> => {
       void _event
-      return openUprojectFile(uprojectPath, options)
+      return openProject(projectPath, options)
     }
   )
 

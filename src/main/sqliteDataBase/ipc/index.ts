@@ -1,4 +1,3 @@
-import { registerProductIPC } from './product'
 import { registerAssetFolderIPC } from './assetFolder'
 import { registerAssetDataIPC } from './assetData'
 import { registerTagIPC } from './tag'
@@ -28,11 +27,8 @@ import { registerNotebookImagesIPC } from './notebookImages'
 import { registerNotebookRagIPC } from './notebookRag'
 import { registerNotebookInfographicIPC } from './notebookInfographic'
 import { registerNotebookOutputsIPC } from './notebookOutputs'
-import { registerCrashLogsIpc } from './crashLogs'
 import { registerWechatIPC } from './wechat'
-import { registerEpicProjectsIPC } from '../../ipc/epicProjects'
 import { registerLibraryStoreIpc } from './libraryStore'
-import { registerLegacyImportIPC } from './legacyImport'
 
 /**
  * 注册所有数据库相关的IPC处理函数
@@ -42,8 +38,6 @@ export const registerDatabaseIPC = (): void => {
   // 注册设置相关的IPC处理函数（公共数据库）
   registerSettingsIPC()
 
-  // 注册产品相关的IPC处理函数（公共数据库）
-  registerProductIPC()
 
   // 注册保管库相关的IPC处理函数（公共数据库）
   registerVaultIPC()
@@ -112,28 +106,21 @@ export const registerDatabaseIPC = (): void => {
   registerNotebookInfographicIPC()
   registerNotebookOutputsIPC()
 
-  // 注册崩溃日志 IPC 处理函数（文件系统读取）
-  registerCrashLogsIpc()
 
   // 注册3D生成任务 IPC 处理函数（公共数据库）
 
   // 注册微信公众号文章采集 IPC 处理函数
   registerWechatIPC()
 
-  // 注册Epic项目读取 IPC 处理函数
-  registerEpicProjectsIPC()
 
   // 注册蓝图库 AI 对话 IPC 处理函数（公共数据库）
 
   // 注册蓝图库 / 材质库本地持久化 IPC 处理函数（公共数据库）
   registerLibraryStoreIpc()
 
-  // 注册旧版蓝图迁移 IPC 处理函数（读取外部 DB）
-  registerLegacyImportIPC()
 }
 
 // 导出所有模块的IPC注册函数，方便单独使用
-export * from './product'
 export * from './tag'
 export * from './tagGroup'
 export * from './assetFolder'
@@ -154,5 +141,3 @@ export * from './notebook'
 export * from './notebookChatV2'
 export * from './notebookRag'
 export * from './notebookInfographic'
-export * from './crashLogs'
-export * from './legacyImport'

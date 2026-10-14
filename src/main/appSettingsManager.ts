@@ -11,7 +11,7 @@ import { DEFAULT_GOAL_MAX_ROUNDS, normalizeGoalMaxRounds } from '../shared/goalR
  * Agent 浏览器窗口的显示方式。
  *
  * - `window`：独立窗口。看得最清楚，也最容易被用户接管，但它会抢焦点、
- *   盖在虚幻上面 —— 用户正在编辑器里干活时，这是一次打断。
+ *   盖在编辑器上面 —— 用户正在编辑器里干活时，这是一次打断。
  * - `embedded`：嵌在助手页面右侧分屏，对话和网页同屏看。**这是默认档**：
  *   一样看得见（安全前提不变），但不抢窗口。
  * - `hidden`：不显示。**这一档会削弱这套能力的核心安全性质** ——
@@ -23,8 +23,8 @@ export type AgentBrowserMode = 'window' | 'embedded' | 'hidden'
 /**
  * agent 能读写这台电脑上的哪些位置。
  *
- * - `ue-only`：只剩虚幻相关的位置 —— 装好的引擎、导入盒子的工程、素材库。
- *   想把 agent 圈在虚幻这一摊里的用户自己去设置里选它。
+ * - `ue-only`（历史键名）：只剩导入盒子的工程和素材库。
+ *   想把 agent 圈在工程这一摊里的用户自己去设置里选它。
  * - `full`：除凭据、密钥、浏览器数据（见 `pathBoundary.ts`）之外，哪儿都能碰。
  *   **这是默认档。** 真实用法里「把 D:/素材 整理一下 / 导进来」「看一眼这份
  *   导出的 FBX」是常态而不是例外，默认收窄的结果是绝大多数人第一次用就撞墙，
@@ -57,12 +57,17 @@ interface AppSettings {
   enableFollowUpSuggestions: boolean
   /** 应用语言设置 */
   language: 'zh-CN' | 'en-US'
-  /** 启动项目时自动启用 UnrealAgentLink 插件 */
+  /**
+   * Godot 编辑器可执行文件。空串表示自动查找（PATH、winget、scoop、Steam），
+   * 见 `godot/locate.ts`。
+   */
+  godotPath: string
+  /** 打开工程时自动装上并启用 GDBox Link 编辑器插件（历史键名） */
   autoEnableUnrealAgentLink: boolean
   /**
-   * 明确拒绝安装 UnrealAgentLink 的项目（规范化后的 .uproject 路径）。
+   * 明确拒绝安装 GDBox Link 的工程目录。
    *
-   * 用户在项目上点过「移除 UnrealAgentLink」就进这个名单。没有它的话，
+   * 用户在工程上点过「移除 GDBox Link」就进这个名单。没有它的话，
    * 用户手动删掉插件、下次从盒子打开项目又会被装回去 —— 在用户眼里就是
    * 「这东西删不掉」。
    */
@@ -167,14 +172,15 @@ interface AppSettings {
  */
 const DEFAULT_SETTINGS: AppSettings = {
   // 默认关：不问一声就登记开机启动、静默进托盘，用户嫌打扰，安全软件也按可疑处理。
-  // 盒子是从项目里开虚幻时才用得上，想常驻的人去设置页打开
+  // 盒子是从项目里开 Godot 时才用得上，想常驻的人去设置页打开
   autoLaunch: false,
   enableFollowUpSuggestions: false,
   language: 'zh-CN',
+  godotPath: '',
   autoEnableUnrealAgentLink: true,
   ualinkOptOutProjects: [],
   // 默认嵌入助手：安全前提「用户看得见 agent 在操作什么」照样成立，
-  // 但不会弹一个独立窗口盖在虚幻上面打断用户。默认值不该是把它藏起来的那一档
+  // 但不会弹一个独立窗口盖在编辑器上面打断用户。默认值不该是把它藏起来的那一档
   agentBrowserMode: 'embedded',
   // 默认整台电脑。收窄档挡下的第一件事往往是「把 D:/素材 导进来」这种完全正当的
   // 需求，而这一层本来就挡不住 shell（见 accessScope.ts），兜底靠的是凭据黑名单
@@ -189,7 +195,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   agentDisabledTools: [],
   agentAlwaysAllowedTools: [],
   agentResidentTools: {},
-  // 默认开着，但只在窗口不在前台时响。盒子干的是长活，用户派完就切回虚幻里
+  // 默认开着，但只在窗口不在前台时响。盒子干的是长活，用户派完就切回编辑器里
   // 接着做自己的事 —— 而审批**超时五分钟按拒绝算**，不提醒的话他回来只看到
   // 一句「这一步被拒绝了」，从头到尾没人问过他
   notifyTurnComplete: 'unfocused',
@@ -253,6 +259,7 @@ class AppSettingsManager {
           autoLaunch: mergedSettings.autoLaunch,
           enableFollowUpSuggestions: mergedSettings.enableFollowUpSuggestions,
           language: mergedSettings.language,
+          godotPath: mergedSettings.godotPath,
           autoEnableUnrealAgentLink: mergedSettings.autoEnableUnrealAgentLink,
           ualinkOptOutProjects: mergedSettings.ualinkOptOutProjects,
           agentBrowserMode: mergedSettings.agentBrowserMode,
@@ -616,52 +623,60 @@ class AppSettingsManager {
     return this.settings.language
   }
 
-  /**
-   * 设置启动项目时自动启用 UnrealAgentLink 插件
-   */
-  setAutoEnableUnrealAgentLink(enabled: boolean): void {
-    this.saveSettings({ autoEnableUnrealAgentLink: enabled })
-    logger.info(`启动项目自动启用 UnrealAgentLink 插件已${enabled ? '启用' : '禁用'}`)
+  getGodotPath(): string {
+    return this.settings.godotPath
+  }
+
+  setGodotPath(path: string): void {
+    this.saveSettings({ godotPath: path.trim() })
   }
 
   /**
-   * 获取启动项目时自动启用 UnrealAgentLink 插件设置
+   * 设置打开工程时自动启用 GDBox Link 插件
+   */
+  setAutoEnableUnrealAgentLink(enabled: boolean): void {
+    this.saveSettings({ autoEnableUnrealAgentLink: enabled })
+    logger.info(`打开工程时自动启用 GDBox Link 插件已${enabled ? '启用' : '禁用'}`)
+  }
+
+  /**
+   * 获取打开工程时自动启用 GDBox Link 插件设置
    */
   getAutoEnableUnrealAgentLink(): boolean {
     return this.settings.autoEnableUnrealAgentLink
   }
 
   /**
-   * 这个项目是否明确拒绝过 UnrealAgentLink
+   * 这个工程是否明确拒绝过 GDBox Link
    */
-  isUALinkOptedOut(uprojectPath: string): boolean {
-    if (!uprojectPath) return false
-    const target = projectComparisonKey(uprojectPath)
+  isUALinkOptedOut(projectDir: string): boolean {
+    if (!projectDir) return false
+    const target = projectComparisonKey(projectDir)
     return (this.settings.ualinkOptOutProjects || []).some(
       (item) => projectComparisonKey(item) === target
     )
   }
 
   /**
-   * 记住/撤销「这个项目不要装 UnrealAgentLink」
+   * 记住/撤销「这个工程不要装 GDBox Link」
    *
-   * @param uprojectPath .uproject 绝对路径
+   * @param projectDir 工程目录
    * @param optOut true = 不再自动安装；false = 恢复自动安装
    */
-  setUALinkOptOut(uprojectPath: string, optOut: boolean): void {
-    if (!uprojectPath) return
-    const target = projectComparisonKey(uprojectPath)
+  setUALinkOptOut(projectDir: string, optOut: boolean): void {
+    if (!projectDir) return
+    const target = projectComparisonKey(projectDir)
     const current = this.settings.ualinkOptOutProjects || []
     const without = current.filter((item) => projectComparisonKey(item) !== target)
 
     // 已经是想要的状态就不写盘，省得每次打开项目都刷一遍配置文件
     if (optOut && without.length === current.length) {
-      this.saveSettings({ ualinkOptOutProjects: [...without, uprojectPath] })
+      this.saveSettings({ ualinkOptOutProjects: [...without, projectDir] })
     } else if (!optOut && without.length !== current.length) {
       this.saveSettings({ ualinkOptOutProjects: without })
     }
 
-    logger.info(`UnrealAgentLink ${optOut ? '已加入' : '已移出'}项目黑名单: ${uprojectPath}`)
+    logger.info(`GDBox Link ${optOut ? '已加入' : '已移出'}项目黑名单: ${projectDir}`)
   }
 }
 

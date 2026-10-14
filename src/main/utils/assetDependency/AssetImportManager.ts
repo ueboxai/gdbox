@@ -4,7 +4,7 @@ import {
   type DependencyProgress
 } from './AssetDependencyResolver'
 import { getAppWindows } from '../../appWindows'
-import { UnrealAssetProcessor } from '../fileProcessor/UnrealAssetProcessor'
+import { GodotAssetProcessor } from '../fileProcessor/GodotAssetProcessor'
 import { getDatabase } from '../../sqliteDataBase'
 import { createAssetData } from '../../sqliteDataBase/models/assetData'
 import type { AssetData } from '../../sqliteDataBase/models/assetData'
@@ -70,7 +70,7 @@ export interface ImportResult {
  */
 export class AssetImportManager {
   private readonly dependencyResolver: AssetDependencyResolver
-  private readonly assetProcessor: UnrealAssetProcessor
+  private readonly assetProcessor: GodotAssetProcessor
   private readonly config: Required<AssetImportConfig>
 
   constructor(config: AssetImportConfig = {}) {
@@ -87,7 +87,7 @@ export class AssetImportManager {
       networkV2VaultId: config.networkV2VaultId ?? ''
     }
 
-    this.assetProcessor = new UnrealAssetProcessor()
+    this.assetProcessor = new GodotAssetProcessor()
     this.dependencyResolver = new AssetDependencyResolver({
       maxIterations: this.config.maxDependencyDepth,
       batchSize: this.config.batchSize,

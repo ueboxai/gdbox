@@ -13,10 +13,11 @@ export interface ProjectRecord {
   id?: number
   projectKey: string
   projectName?: string | null
+  /** Godot 版本（project.godot 的 config/features 里那个，如 "4.3"）。列名沿用历史 */
   EngineAssociation?: string | null
-  projectData?: string | null // 原始 .uproject JSON 字符串
+  projectData?: string | null // project.godot 原文
   projectPath?: string | null // 规范化后的项目目录路径
-  originPath?: string | null // .uproject 文件绝对路径
+  originPath?: string | null // project.godot 绝对路径
   projectConfig?: string | null // INI 汇总/JSON 快照
   image?: string | null // 封面文件名或路径
   coverMode?: ProjectCoverMode | null // 索引；封面服务的磁盘记录是来源

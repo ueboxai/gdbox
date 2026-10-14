@@ -19,8 +19,6 @@ import { TaskStatus } from '../types'
 import { getDatabase, getPublicDatabase } from '../../sqliteDataBase'
 import { tableExists, getTableColumns } from '../../sqliteDataBase/dbUtils'
 import { getSetting, setSetting } from '../../sqliteDataBase/models/settings'
-import { executeUECommand } from '../../sqliteDataBase/ipc/ueCommandBridge'
-import { createProjectTool } from '../../agent-v3/tools/adapted/project/projectTool'
 import { runWithTargetConnectionId } from '../../agent-v3/core/projectTargetContext'
 
 export interface HttpServerOptions {
@@ -310,8 +308,7 @@ export class HttpServer {
 
     // WebSocket连接信息
     this.app.get('/api/websocket/connections', this.handleWebSocketConnections.bind(this))
-    this.app.post('/api/debug/ue-command', this.handleDebugUeCommand.bind(this))
-    this.app.post('/api/debug/project-manage', this.handleDebugProjectManage.bind(this))
+    this.app.post('/api/debug/editor-command', this.handleDebugEditorCommand.bind(this))
     this.app.get('/api/debug/tools', this.handleDebugListTools.bind(this))
     this.app.post('/api/debug/tool', this.handleDebugRunTool.bind(this))
     this.app.post('/api/debug/agent', this.handleDebugRunAgent.bind(this))
@@ -1356,7 +1353,7 @@ export class HttpServer {
     )
   }
 
-  private async handleDebugUeCommand(req: Request, res: Response): Promise<void> {
+  private async handleDebugEditorCommand(req: Request, res: Response): Promise<void> {
     try {
       if (!this.isLoopbackRequest(req)) {
         res.status(403).json({
@@ -1380,69 +1377,20 @@ export class HttpServer {
         return
       }
 
-      const result = await executeUECommand({
+      // 直接发给连着的 Godot 编辑器（GDBox Link）。调插件命令时用它，不经过 agent
+      const { serviceManager } = await import('../../services')
+      const ws = serviceManager.getWebSocketService()
+      const connectionId =
+        typeof req.body?.connectionId === 'string' ? req.body.connectionId : undefined
+      const result = await ws.callRequest(
         command,
-        params: params as Record<string, unknown>,
-        projectPath: typeof req.body?.projectPath === 'string' ? req.body.projectPath : undefined
-      })
-
-      res.status(result.success ? 200 : 400).json(result)
-    } catch (error) {
-      logger.error('Debug UE command failed:', error)
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      })
-    }
-  }
-
-  private async handleDebugProjectManage(req: Request, res: Response): Promise<void> {
-    try {
-      if (!this.isLoopbackRequest(req)) {
-        res.status(403).json({
-          success: false,
-          error: 'Debug project manage endpoint is restricted to local requests'
-        })
-        return
-      }
-
-      const input =
-        req.body && typeof req.body === 'object' && !Array.isArray(req.body)
-          ? (req.body as Record<string, unknown>)
-          : null
-
-      if (!input?.action || typeof input.action !== 'string') {
-        res.status(400).json({
-          success: false,
-          error: 'Missing required field: action'
-        })
-        return
-      }
-
-      const projectTool = createProjectTool() as {
-        execute?: (args: Record<string, unknown>) => Promise<unknown>
-      }
-
-      if (!projectTool.execute) {
-        res.status(500).json({
-          success: false,
-          error: 'Project management tool is not executable'
-        })
-        return
-      }
-
-      // 同 `/api/debug/tool`：默认不等 `open_project` 那 180 秒，
-      // 一个掐不断的 HTTP 请求不该挂三分钟。要等就自己传 waitSeconds
-      const result = await projectTool.execute({ waitSeconds: 0, ...input })
-      const success = !(
-        result &&
-        typeof result === 'object' &&
-        'success' in result &&
-        result.success === false
+        params as Record<string, unknown>,
+        connectionId,
+        30_000
       )
-      res.status(success ? 200 : 400).json(result)
+      res.status(200).json({ success: true, result })
     } catch (error) {
-      logger.error('Debug project manage failed:', error)
+      logger.error('Debug editor command failed:', error)
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : String(error)

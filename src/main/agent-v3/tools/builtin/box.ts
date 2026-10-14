@@ -224,7 +224,7 @@ const statusInput = z.object({
     .array(z.enum(STATUS_SECTIONS))
     .optional()
     .describe(
-      '只看哪几块，省略就全看。editors：正在运行的虚幻编辑器；imports：素材导入任务和卡住待处理的导入；' +
+      '只看哪几块，省略就全看。editors：连着的 Godot 编辑器；imports：素材导入任务和卡住待处理的导入；' +
         'mcp：接入的第三方 MCP 服务和连接状态；skills：技能清单和开关；notebooks：知识库清单；backups：数据库备份'
     )
 })
@@ -233,13 +233,13 @@ const statusInput = z.object({
 const RECENT_IMPORTS = 5
 
 async function editorsSection(): Promise<string> {
-  const { default: detector } = await import('../../../utils/UnrealProcessDetector')
-  const running = await detector.getRunningProjects()
-  if (running.length === 0) return '没有正在运行的虚幻编辑器。'
-  return running
+  const { projectManager } = await import('../../../services/project/projectManager')
+  const connected = projectManager.getInteractiveProjects()
+  if (connected.length === 0) return '没有连着的 Godot 编辑器。'
+  return connected
     .map(
       (p) =>
-        `- ${p.projectName}${p.engineVersion ? `（UE ${p.engineVersion}）` : ''}｜pid ${p.pid}｜${p.projectPath}`
+        `- ${p.projectName}${p.engineVersion ? `（Godot ${p.engineVersion}）` : ''}｜${p.projectPath}`
     )
     .join('\n')
 }

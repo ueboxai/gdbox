@@ -64,11 +64,11 @@ export function getCatalogService(): CatalogService {
     },
     resolveLore,
     copyPackage: async (sourceSeed, targetSeed) => {
-      // 复用工程导入的"整包复制"（.uasset + .uexp/.ubulk 等分片一起，已存在且同大小的跳过）
-      const { copyUnrealPackage } = await import('../ipc/projectImport')
-      return await copyUnrealPackage(sourceSeed, targetSeed)
+      // 资源连同 .import / .uid 旁挂文件一起拷，已存在且同大小的跳过
+      const { copyGodotAsset } = await import('../godot/copyAsset')
+      return await copyGodotAsset(sourceSeed, targetSeed)
     },
-    sessionLabel: `Unreal Box on ${process.env.COMPUTERNAME || 'this computer'}`
+    sessionLabel: `GDBox on ${process.env.COMPUTERNAME || 'this computer'}`
   })
   return service
 }
