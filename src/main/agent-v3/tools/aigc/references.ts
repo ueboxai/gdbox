@@ -2,7 +2,7 @@
  * 参考图的读取与整理（图生图那一半）。
  *
  * 「在场景里搭白盒 → 截一张 → 让它照着白盒出渲染成品图」是这个工具最主要的
- * 用法，而那条路上参考图就是 `ue_screenshot` 落在磁盘上的那个文件。所以这里
+ * 用法，而那条路上参考图就是 `godot_screenshot` 落在磁盘上的那个文件。所以这里
  * **收本地绝对路径**，而不是只收 base64 —— 否则模型得先把一张图读成 base64
  * 再原样贴进参数里，几十万个字符白白过一遍上下文。
  *
@@ -121,14 +121,14 @@ export async function loadReferenceImage(
   if (!isAbsolute(value)) {
     throw new ReferenceImageError(
       `参考图 "${value}" 不是绝对路径。` +
-        '给完整路径（比如 ue_screenshot 返回值里的 path），不要给相对路径。'
+        '给完整路径（比如 godot_screenshot 存下的截图路径），不要给相对路径。'
     )
   }
 
   // 只过敏感位置那道黑名单，**不过**用户设的「文件访问范围」。
   // 两个原因：参考图的路径要么是用户自己在对话里给的（他指名要用这张图，
-  // 不算 agent 在盘里乱翻），要么是 ue_screenshot 刚写到临时目录的那一张 ——
-  // 而临时目录不在「仅虚幻相关」的白名单里，一并管住的话，截图当参考图
+  // 不算 agent 在盘里乱翻），要么是截图工具刚写到盒子数据目录的那一张 ——
+  // 而那个目录不在「仅游戏开发相关」的白名单里，一并管住的话，截图当参考图
   // 这条最常用的路会在收窄档下整条断掉。
   const denied = assertPathAllowed(value)
   if (denied) throw new ReferenceImageError(denied)
@@ -138,7 +138,7 @@ export async function loadReferenceImage(
     bytes = await fs.readFile(value)
   } catch {
     throw new ReferenceImageError(
-      `参考图读不到：${value}。确认这个文件存在，或者先用 ue_screenshot 拍一张。`
+      `参考图读不到：${value}。确认这个文件存在，或者先用 godot_screenshot 拍一张。`
     )
   }
 

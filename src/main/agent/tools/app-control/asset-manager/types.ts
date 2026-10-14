@@ -13,15 +13,13 @@ export interface FormattedAsset {
   /** 已有标签，逗号分隔 */
   tags?: string
   /**
-   * 这个资产是哪个引擎版本存的（如 `5.7.0`）。**.uasset 只能往同版本或更高版本导**，
-   * 所以这一栏是「能不能进我这个工程」的唯一判据。
+   * 这个资产是哪个引擎版本存的（如 `4.3`，目前只有 Godot 工程记录带它）。
+   * Godot 3 和 4 的场景、资源互不兼容，给某个工程挑素材时这是先要看的一栏。
    *
-   * 它一度不在返回里，而 `search_assets` 的入参**早就支持按 engineVersion 过滤** ——
-   * 于是挑素材的时候完全是盲的：实测批量导入时，
-   * 34 成 17 败，其中 16 条全是「资产引擎版本 (UE 5.7) 高于目标项目版本 (UE 5.5)」。
-   * 而这件事本来在挑的时候就能看出来。
+   * 沿用自虚幻盒子：那边它一度不在返回里，挑素材完全是盲的，
+   * 实测批量导入 34 成 17 败，其中 16 条都是版本不合 —— 而这本来在挑的时候就能看出来。
    *
-   * 库里没记录的资产（老库、非 .uasset 的外部文件）这一栏不出现，不编。
+   * 库里没记录的资产这一栏不出现，不编。
    */
   engineVersion?: string
   /** 资产图片 URL，用于图生图功能 */
@@ -125,98 +123,85 @@ export interface JumpToFolderParams {
   folderKey: string
 }
 
-// 资产类型映射
+// 资产类型映射：分类名 → 库里记的 Godot 类型名（见 `GodotAssetProcessor`）
 export const ASSET_TYPE_MAP: Record<string, string[]> = {
-  // === 基础核心资源 ===
-  StaticMesh: ['StaticMesh'],
-  SkeletalMesh: ['SkeletalMesh'],
-
-  // === 贴图 / 材质 ===
-  Texture2D: ['Texture2D', 'Texture'],
+  // === 贴图 / 材质 / 着色器 ===
+  Texture2D: ['Texture2D', 'CompressedTexture2D', 'AtlasTexture', 'ImageTexture'],
   Material: [
-    'Material',
-    'MaterialInstanceConstant',
-    'MaterialFunction',
-    'MaterialParameterCollection'
+    'StandardMaterial3D',
+    'ORMMaterial3D',
+    'ShaderMaterial',
+    'CanvasItemMaterial',
+    'ParticleProcessMaterial'
   ],
+  Shader: ['Shader', 'ShaderInclude', 'VisualShader'],
 
-  // === 逻辑 / 蓝图 / 动画 / 特效 ===
-  Blueprint: [
-    'Blueprint',
-    'BlueprintGeneratedClass',
-    'WidgetBlueprint',
-    'EditorUtilityWidgetBlueprint',
-    'BlueprintFunctionLibrary'
-  ],
-  Animation: ['AnimSequence', 'AnimBlueprint', 'BlendSpace1D', 'LevelSequence'],
-  Niagara: ['NiagaraSystem', 'Niagara'],
-  Particle: ['ParticleSystem'],
-
-  // === 关卡 ===
-  Level: ['World', 'Level'],
+  // === 动画 / 2D ===
+  Animation: ['Animation', 'AnimationLibrary', 'SpriteFrames'],
+  TileSet: ['TileSet'],
 
   // === 声音 ===
-  Sound: ['SoundWave'],
+  Audio: ['AudioStreamWAV', 'AudioStreamOggVorbis', 'AudioStreamMP3'],
 
   // === 其他 ===
-  Physics: ['PhysicsAsset'],
-  Skeleton: ['Skeleton'],
+  Font: ['FontFile', 'SystemFont', 'FontVariation'],
+  Theme: ['Theme'],
 
-  // === 通用文件（fbx/obj 等扫描为 File 时用）===
+  // === 通用文件（认不出类型的文件）===
   File: ['File']
 }
 
 /**
- * 文件格式映射字典
- * 将语义化的关键词映射到具体的文件格式（扩展名）和虚幻引擎资产类型
- */
-/**
- * 别名里**不要放 `uasset`**。
+ * 文件格式映射字典：把语义化的关键词映射到扩展名和 Godot 类型名。
  *
- * 每个虚幻资产落盘都是 `.uasset`，把它列进某个别名，那个别名就会匹配
- * 库里所有 UE 资产 —— 筛选等于没做。真机上量到的：问「有哪些模型」，
- * 返回里混着 Material 和 AnimSequence；「蓝图」「特效」「材质」同理，
- * 六个别名都受影响。
+ * 小写的是扩展名，首字母大写的是类型名，两半按「或」匹配（见 `AssetSearcher`）。
  *
- * 类型名（StaticMesh / Material / Blueprint…）本来就会去匹配 assetType，
- * UE 资产靠它就能正确命中，不需要再兜一层扩展名。
+ * 场景和脚本**按扩展名**认，不按类型：库里场景的类型记的是根节点类型
+ * （Node2D、CharacterBody2D…），脚本记的是 `GDScript (CharacterBody2D)`，
+ * 用类型名去比一个都对不上。
+ *
+ * 别名里不要放一个「什么都匹配」的值（虚幻盒子时期是 `uasset`）：
+ * 那个别名就会匹配全库，筛选等于没做。
  */
 export const FORMAT_ALIAS_MAP: Record<string, string[]> = {
   // === 3D 模型 ===
-  模型: ['fbx', 'obj', 'glb', 'gltf', 'StaticMesh', 'SkeletalMesh'],
-  静态模型: ['fbx', 'obj', 'StaticMesh'],
-  骨骼模型: ['fbx', 'SkeletalMesh'],
-  网格: ['fbx', 'obj', 'glb', 'gltf', 'StaticMesh', 'SkeletalMesh'],
+  模型: ['glb', 'gltf', 'fbx', 'obj', 'blend', 'Model3D'],
+  网格: ['glb', 'gltf', 'fbx', 'obj', 'blend', 'Model3D'],
 
-  // === 贴图/材质 ===
-  贴图: ['png', 'jpg', 'jpeg', 'tga', 'exr', 'hdr', 'Texture2D', 'Texture'],
-  纹理: ['png', 'jpg', 'jpeg', 'tga', 'exr', 'hdr', 'Texture2D', 'Texture'],
-  材质: ['Material', 'MaterialInstanceConstant', 'MaterialFunction'],
-  图片: ['png', 'jpg', 'jpeg', 'bmp', 'tga', 'tiff'],
+  // === 贴图/材质/着色器 ===
+  贴图: ['png', 'jpg', 'jpeg', 'webp', 'svg', 'tga', 'exr', 'hdr', 'Texture2D'],
+  纹理: ['png', 'jpg', 'jpeg', 'webp', 'svg', 'tga', 'exr', 'hdr', 'Texture2D'],
+  精灵: ['png', 'webp', 'svg', 'SpriteFrames', 'AtlasTexture'],
+  图片: ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'tga', 'tiff', 'svg'],
+  材质: ['StandardMaterial3D', 'ORMMaterial3D', 'ShaderMaterial', 'CanvasItemMaterial'],
+  着色器: ['gdshader', 'gdshaderinc', 'Shader', 'VisualShader'],
 
-  // === 动画 ===
-  动画: ['AnimSequence', 'AnimBlueprint', 'BlendSpace1D', 'fbx'],
-  动作: ['AnimSequence', 'fbx'],
+  // === 场景 / 脚本 ===
+  场景: ['tscn', 'scn'],
+  关卡: ['tscn', 'scn'],
+  脚本: ['gd', 'cs'],
+  代码: ['gd', 'cs', 'gdshader'],
 
-  // === 蓝图 ===
-  蓝图: ['Blueprint', 'BlueprintGeneratedClass', 'WidgetBlueprint'],
-  UI: ['WidgetBlueprint'],
+  // === 动画 / 2D ===
+  动画: ['Animation', 'AnimationLibrary', 'SpriteFrames'],
+  瓦片: ['TileSet'],
+  瓦片集: ['TileSet'],
+  UI: ['Theme', 'Control', 'CanvasLayer'],
+  主题: ['Theme'],
 
-  // === 粒子/特效 ===
-  特效: ['NiagaraSystem', 'Niagara', 'ParticleSystem'],
-  粒子: ['NiagaraSystem', 'Niagara', 'ParticleSystem'],
+  // === 特效 ===
+  特效: ['ParticleProcessMaterial', 'GPUParticles2D', 'GPUParticles3D', 'CPUParticles2D', 'CPUParticles3D'],
+  粒子: ['ParticleProcessMaterial', 'GPUParticles2D', 'GPUParticles3D', 'CPUParticles2D', 'CPUParticles3D'],
 
   // === 声音 ===
-  音频: ['wav', 'mp3', 'ogg', 'SoundWave'],
-  声音: ['wav', 'mp3', 'ogg', 'SoundWave'],
-
-  // === 关卡 ===
-  关卡: ['World', 'Level', 'umap'],
-  地图: ['World', 'Level', 'umap'],
+  音频: ['wav', 'mp3', 'ogg', 'AudioStreamWAV', 'AudioStreamOggVorbis', 'AudioStreamMP3'],
+  声音: ['wav', 'mp3', 'ogg', 'AudioStreamWAV', 'AudioStreamOggVorbis', 'AudioStreamMP3'],
+  音效: ['wav', 'ogg', 'AudioStreamWAV', 'AudioStreamOggVorbis'],
+  音乐: ['ogg', 'mp3', 'AudioStreamOggVorbis', 'AudioStreamMP3'],
 
   // === 其他常用 ===
-  资产: ['uasset'],
-  虚幻资产: ['uasset'],
+  字体: ['ttf', 'otf', 'woff', 'woff2', 'FontFile'],
+  资源: ['tres', 'res'],
   文档: ['txt', 'md', 'pdf', 'doc', 'docx'],
-  配置: ['json', 'xml', 'ini', 'cfg']
+  配置: ['json', 'xml', 'ini', 'cfg', 'godot']
 }

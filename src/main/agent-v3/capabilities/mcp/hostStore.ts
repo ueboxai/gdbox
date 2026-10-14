@@ -12,7 +12,7 @@
  * 否则「对外暴露」这件事根本没法投入使用。
  *
  * 所以：
- *   - **端口固定**，默认 17861（盒子自身的 HTTP 服务是 17860，挨着放好记），
+ *   - **端口固定**，默认 17871（盒子连编辑器的 WebSocket 是 17870，挨着放好记），
  *     用户可改。端口被占用时报错让用户换一个 —— 不能悄悄退回随机端口，
  *     那等于又把配置搞失效了。
  *   - **token 只生成一次**并存盘，之后一直复用。
@@ -30,8 +30,8 @@ import { app } from 'electron'
 
 const FILE = 'mcp-server.json'
 
-/** 盒子自身的 HTTP 服务占 17860，这个挨着放 */
-export const DEFAULT_HOST_PORT = 17861
+/** 盒子连编辑器的 WebSocket 占 17870，这个挨着放 */
+export const DEFAULT_HOST_PORT = 17871
 
 export interface McpHostSettings {
   /** 开机是否自动启动 */
@@ -105,12 +105,12 @@ export async function readHostSettings(): Promise<McpHostSettings> {
  * 这个服务原来默认关闭，用户要去设置里显式开一次。那条默认挡住的主要是误装误用，
  * 但代价是**我们自己随包发的命令行开箱不可用** —— 装完盒子敲 `uebox doctor`
  * 直接拿到 `SERVICE_UNAVAILABLE`，而用户完全想不到要去「MCP 设置」里开一个
- * 名叫「对外暴露虚幻引擎能力」的开关。CLI 和第三方 MCP 客户端是两件事，
+ * 名叫「对外暴露引擎能力」的开关。CLI 和第三方 MCP 客户端是两件事，
  * 却共用同一个开关，这个耦合本身就是错的。
  *
  * 服务仍只监听 127.0.0.1，并强制 token。写工具是否开放由
  * `includeMutating` 决定，老配置里明确的只读选择会保留。
- * 而引擎的本地通道本来就一直开着（插件桥接的 17860 是常驻的）。
+ * 而编辑器的本地通道本来就一直开着（GDBox Link 插件连的那个端口是常驻的）。
  *
  * ## 老用户怎么迁移
  *

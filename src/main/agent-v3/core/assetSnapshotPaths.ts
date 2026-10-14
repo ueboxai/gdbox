@@ -98,7 +98,7 @@ export function resolveExistingPackageFile(projectDir: string, contentPath: stri
 /** 快照根目录：跟着工程走，且在版本控制忽略范围内 */
 export function snapshotRootFor(projectDir: string, sessionId: string): string {
   const safeSession = String(sessionId || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_')
-  return path.join(projectDir, 'Saved', 'UnrealBox', 'Snapshots', safeSession)
+  return path.join(projectDir, 'Saved', 'GDBox', 'Snapshots', safeSession)
 }
 
 /** 快照文件路径：镜像 Content 的层级，和 AutoSave 的做法一致，出问题时人能看懂 */

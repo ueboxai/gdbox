@@ -79,7 +79,7 @@ function toLocalPath(value: unknown): string | undefined {
  *
  * 1. `filePath` 是**保管库里那一份**。备份类型的库（默认保管库、AIGC 资产库都是）
  *    导入时会把文件复制进库，数据库里存的是**相对保管库的路径**
- *    （`20260906_.../Game/.../SM_x.uasset`），所以相对路径要拼回库根目录 ——
+ *    （`20260906_.../art/player_idle.png`），所以相对路径要拼回库根目录 ——
  *    原来这里只认绝对路径，相对的直接跳过。
  *
  * 2. `originPath` 是**当初从哪儿导入的**，不是库里的落点。它排在第二位是兜底：
@@ -92,8 +92,8 @@ function toLocalPath(value: unknown): string | undefined {
  *
  * 3. 缩略图（`imgLocalPath` / `customPoster`）只能垫底。它是导入时压出来的
  *    **1024 以内、quality 80 的副本**，不是原文件。而 search_assets 明写着
- *    「把 real_path 填进 ue_content_import 的 files」—— 把它排在前面，
- *    用户要导 4K 贴图，进工程的会是那张压缩缩略图。
+ *    「把 real_path 那个文件复制进工程」—— 把它排在前面，
+ *    用户要用 4K 贴图，进工程的会是那张压缩缩略图。
  */
 function resolveRealPath(asset: AssetRow, vaultPath?: string): string | undefined {
   try {
@@ -174,9 +174,9 @@ export function formatAssets(assets: AssetRow[], options?: FormatAssetsOptions):
       ...(formatTags(asset.tagNames ?? asset.tags)
         ? { tags: formatTags(asset.tagNames ?? asset.tags)! }
         : {}),
-      // 引擎版本：.uasset 能不能进目标工程全看它（只能平进或往高版本进）。
-      // 库里早就存着、搜索也早就能按它过滤，唯独结果里不给 —— 挑素材那一步因此
-      // 完全是盲的，撞上版本墙只能等导入失败了才知道（见 FormattedAsset.engineVersion）
+      // 引擎版本：Godot 3 / 4 的场景、资源互不兼容，挑素材时先看它。
+      // 库里早就存着、搜索也早就能按它过滤，唯独结果里不给的话，挑素材那一步就
+      // 完全是盲的（见 FormattedAsset.engineVersion）
       ...(asset.engineVersion ? { engineVersion: String(asset.engineVersion) } : {}),
       // 添加图片 URL，用于图生图功能
       imageUrl: asset.customPoster || asset.imgLocalPath || undefined,

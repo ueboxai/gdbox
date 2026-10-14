@@ -215,20 +215,20 @@ describe('落库之后', () => {
 
 describe('未绑定知识库', () => {
   it('新建真正可见的知识库，再把报告作为来源放进去', async () => {
-    const result = (await run({ title: '虚幻盒子功能调研报告', content: '# 报告正文' }, null)) as {
+    const result = (await run({ title: 'GDBox 功能调研报告', content: '# 报告正文' }, null)) as {
       content: Array<{ text?: string }>
     }
 
-    expect(createdNotebook).toHaveBeenCalledWith({ fake: true }, { title: '虚幻盒子功能调研报告' })
+    expect(createdNotebook).toHaveBeenCalledWith({ fake: true }, { title: 'GDBox 功能调研报告' })
     expect(createdSource).toHaveBeenCalledWith(
       { fake: true },
       expect.objectContaining({
         notebookId: 'nb-created',
         type: 'text',
-        title: '虚幻盒子功能调研报告'
+        title: 'GDBox 功能调研报告'
       })
     )
-    expect(result.content[0].text).toContain('已新建知识库「虚幻盒子功能调研报告」')
+    expect(result.content[0].text).toContain('已新建知识库「GDBox 功能调研报告」')
   })
 
   it('可单独指定新知识库标题', async () => {
@@ -236,12 +236,12 @@ describe('未绑定知识库', () => {
       {
         title: '功能调研报告',
         content: '# 报告正文',
-        notebookTitle: 'Unreal Box 调研'
+        notebookTitle: 'GDBox 调研'
       },
       null
     )
 
-    expect(createdNotebook).toHaveBeenCalledWith({ fake: true }, { title: 'Unreal Box 调研' })
+    expect(createdNotebook).toHaveBeenCalledWith({ fake: true }, { title: 'GDBox 调研' })
   })
 
   it('网页抓取失败时不留下空知识库', async () => {

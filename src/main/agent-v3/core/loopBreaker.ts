@@ -24,14 +24,14 @@
  *
  * ## 世界变了，旧账就作废
  *
- * 「一字不差地重发」只在**中间什么都没变**时才是撞墙。改代码 → `cpp_compile` →
- * 再改 → 再 `cpp_compile` 是正常的修错循环：编译参数一字不差，但源文件已经不同了。
+ * 「一字不差地重发」只在**中间什么都没变**时才是撞墙。改脚本 → `godot_check` →
+ * 再改 → 再 `godot_check` 是正常的修错循环：编译参数一字不差，但源文件已经不同了。
  * 所以任何一次**成功的非只读调用**（改了文件、改了资产、跑了命令）都把所有失败
  * 计数清零。只读调用（搜索、读文件）不清零 —— 它们不改变下一次调用的结果。
  *
  * 另外有一类工具，同一组参数本来就该得到不同结果（编译、打包、试玩、截图、
  * 跑命令）：它们的结果取决于工程此刻的状态，而状态可能被盒子之外的东西改掉
- * （用户在编辑器里动手、UE 自己热重载）。这类给更宽的阈值，而不是完全放开 ——
+ * （用户在编辑器里动手、编辑器自己重新导入）。这类给更宽的阈值，而不是完全放开 ——
  * 什么都没变就连发五次编译，仍然是撞墙。
  */
 
@@ -56,15 +56,9 @@ export const MAX_VOLATILE_FAILURES = 5
 
 /** 同一组参数本来就可能得到不同结果的工具 */
 export const VOLATILE_TOOLS: ReadonlySet<string> = new Set([
-  'cpp_compile',
-  'cpp_full_rebuild',
-  'blueprint_compile',
-  'blueprint_compile_all',
-  'material_compile',
-  'ue_playtest',
-  'ue_autoplay',
-  'ue_screenshot',
-  'project_package',
+  'godot_check',
+  'godot_run',
+  'godot_screenshot',
   'run_shell_command'
 ])
 

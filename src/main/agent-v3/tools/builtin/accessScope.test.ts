@@ -1,17 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
- * 四个来源全部换成桩。真实现要读 Epic 的 manifest、查 sqlite、问 electron 的
- * userData —— 跑测试的机器上装没装引擎、导没导工程，都不该影响结论。
+ * 来源全部换成桩。真实现要查 sqlite、问 electron 的 userData ——
+ * 跑测试的机器上导没导工程，都不该影响结论。
  */
 const getAgentFileAccessScope = vi.fn<() => 'ue-only' | 'full'>()
-const findUnrealEnginePaths = vi.fn()
 const getAllProjects = vi.fn()
 
 vi.mock('electron', () => ({
   app: {
     getPath: (name: string): string =>
-      name === 'userData' ? 'C:/Users/me/AppData/Roaming/unreal-box' : `C:/${name}`
+      name === 'userData' ? 'C:/Users/me/AppData/Roaming/gdbox' : `C:/${name}`
   }
 }))
 
@@ -27,69 +26,56 @@ vi.mock('../../../sqliteDataBase/models/project', () => ({
   getAllProjects: () => getAllProjects()
 }))
 
-vi.mock('../../../utils/UnrealPathManager', () => ({
-  default: {
-    findUnrealEnginePaths: () => findUnrealEnginePaths(),
-    // scanEngines 是 findUnrealEnginePaths 的「说实话」版本；用例照旧只摆布
-    // 后者，这里把结果包一层，degraded 默认 false
-    scanEngines: async (): Promise<{ engines: unknown[]; degraded: boolean }> => ({
-      engines: await findUnrealEnginePaths(),
-      degraded: false
-    })
-  }
-}))
-
 import { assertInAccessScope, __testing } from './accessScope'
+
+const VAULT_FILE = 'C:/Users/me/AppData/Roaming/gdbox/database/vaults/system_vault_aigc/AIGC/x.png'
 
 beforeEach(() => {
   vi.clearAllMocks()
   __testing.resetCache()
   getAgentFileAccessScope.mockReturnValue('ue-only')
-  findUnrealEnginePaths.mockResolvedValue([{ rootPath: 'C:/Program Files/Epic Games/UE_5.5' }])
-  getAllProjects.mockReturnValue([{ projectPath: 'I:/UnrealAgent/MyGame' }])
+  getAllProjects.mockReturnValue([{ projectPath: 'I:/Games/MyGame' }])
 })
 
 /**
  * 放开档必须是「什么都不做」。这个判定挂在每一次读文件、列目录上 ——
- * 在这一档上多扫一次引擎目录，代价是用户每次让它翻文件夹都卡几百毫秒。
+ * 在这一档上多查一次库，代价是用户每次让它翻文件夹都多等一下。
  */
 describe('整台电脑', () => {
   it('一律放行', async () => {
     getAgentFileAccessScope.mockReturnValue('full')
-    expect(await assertInAccessScope('D:/素材/建筑/wall.fbx')).toBeUndefined()
+    expect(await assertInAccessScope('D:/素材/建筑/wall.png')).toBeUndefined()
   })
 
-  it('不去扫引擎、也不查工程库', async () => {
+  it('不查工程库', async () => {
     getAgentFileAccessScope.mockReturnValue('full')
     await assertInAccessScope('D:/随便什么/x.txt')
-    expect(findUnrealEnginePaths).not.toHaveBeenCalled()
     expect(getAllProjects).not.toHaveBeenCalled()
   })
 })
 
-describe('仅虚幻相关（默认档）', () => {
+describe('仅游戏开发相关', () => {
   // 设置读不出来时退回默认档 `full`，和「没选过」同一个兜底 —— 否则设置页显示
   // 「整台电脑」，实际却按收窄档挡，界面和生效的对不上。凭据目录由 pathBoundary 另外挡
   it('读设置抛错时按默认档（整台电脑）走', async () => {
     getAgentFileAccessScope.mockImplementation(() => {
       throw new Error('配置文件坏了')
     })
-    expect(await assertInAccessScope('D:/素材/wall.fbx')).toBeUndefined()
+    expect(await assertInAccessScope('D:/素材/wall.png')).toBeUndefined()
   })
 
   it.each([
-    'I:/UnrealAgent/MyGame',
-    'I:/UnrealAgent/MyGame/Content/Meshes/wall.uasset',
-    'I:\\UnrealAgent\\MyGame\\Config\\DefaultEngine.ini',
-    'C:/Program Files/Epic Games/UE_5.5/Engine/Plugins',
-    'C:/Users/me/AppData/Roaming/unreal-box/database/vaults/system_vault_aigc/AIGC/x.png',
-    'C:/Users/me/AppData/Roaming/unreal-box/skills/my-skill/SKILL.md'
+    'I:/Games/MyGame',
+    'I:/Games/MyGame/scenes/player.tscn',
+    'I:\\Games\\MyGame\\project.godot',
+    VAULT_FILE,
+    'C:/Users/me/AppData/Roaming/gdbox/skills/my-skill/SKILL.md'
   ])('放行 %s', async (p) => expect(await assertInAccessScope(p)).toBeUndefined())
 
   it.each([
-    'D:/素材/建筑/wall.fbx',
+    'D:/素材/建筑/wall.png',
     'C:/Users/me/Desktop/ref.png',
-    'I:/UnrealAgent/AnotherGame/Content/x.uasset'
+    'I:/Games/AnotherGame/scenes/x.tscn'
   ])('挡下 %s', async (p) => expect(await assertInAccessScope(p)).toBeDefined())
 
   /**
@@ -97,25 +83,21 @@ describe('仅虚幻相关（默认档）', () => {
    * `MyGameBackup`；不折叠 `..` 时从工程里能一路跳回盘根。
    */
   it('同前缀的邻居目录不算在范围内', async () => {
-    expect(await assertInAccessScope('I:/UnrealAgent/MyGameBackup/secrets.txt')).toBeDefined()
+    expect(await assertInAccessScope('I:/Games/MyGameBackup/secrets.txt')).toBeDefined()
   })
 
   it('用 `..` 跳出工程之后照样挡住', async () => {
-    expect(await assertInAccessScope('I:/UnrealAgent/MyGame/../../secrets.txt')).toBeDefined()
+    expect(await assertInAccessScope('I:/Games/MyGame/../../secrets.txt')).toBeDefined()
   })
 })
 
-/**
- * 缓存。算一次白名单要真扫盘（Epic 的 manifest + 每个引擎几次 fs.access），
- * 而这个判定挂在每一次读文件、列目录上。
- */
+/** 缓存。这个判定挂在每一次读文件、列目录上 */
 describe('白名单缓存', () => {
   it('命中的路径在缓存期内只算一遍', async () => {
-    await assertInAccessScope('I:/UnrealAgent/MyGame/A')
-    await assertInAccessScope('I:/UnrealAgent/MyGame/B')
-    await assertInAccessScope('I:/UnrealAgent/MyGame/C')
+    await assertInAccessScope('I:/Games/MyGame/A')
+    await assertInAccessScope('I:/Games/MyGame/B')
+    await assertInAccessScope('I:/Games/MyGame/C')
 
-    expect(findUnrealEnginePaths).toHaveBeenCalledTimes(1)
     expect(getAllProjects).toHaveBeenCalledTimes(1)
   })
 
@@ -125,32 +107,16 @@ describe('白名单缓存', () => {
    * 必须把工程清单重查一遍。
    */
   it('拒绝之前重查工程，刚导入的工程当场就能用', async () => {
-    await assertInAccessScope('I:/UnrealAgent/MyGame')
+    await assertInAccessScope('I:/Games/MyGame')
     expect(getAllProjects).toHaveBeenCalledTimes(1)
 
-    // 用户在这期间导入了 NewGame
     getAllProjects.mockReturnValue([
-      { projectPath: 'I:/UnrealAgent/MyGame' },
-      { projectPath: 'I:/UnrealAgent/NewGame' }
+      { projectPath: 'I:/Games/MyGame' },
+      { projectPath: 'I:/Games/NewGame' }
     ])
 
-    expect(await assertInAccessScope('I:/UnrealAgent/NewGame/Content')).toBeUndefined()
+    expect(await assertInAccessScope('I:/Games/NewGame/scenes')).toBeUndefined()
     expect(getAllProjects).toHaveBeenCalledTimes(2)
-  })
-
-  /**
-   * 重查只针对便宜的那一份。引擎扫描是真扫盘，不能让模型对着一个范围外的
-   * 目录连试几次就变成连着几次全盘扫描 —— 而「会话中途装了个新引擎」
-   * 本来就不是常见事，不值得为它买单。
-   */
-  it('连续被拒时不重扫引擎，只重查工程', async () => {
-    await assertInAccessScope('D:/素材/a')
-    await assertInAccessScope('D:/素材/b')
-    await assertInAccessScope('D:/素材/c')
-
-    expect(findUnrealEnginePaths).toHaveBeenCalledTimes(1)
-    // 三次拒绝 = 三次重查（第一次那趟走的是缓存未命中，不额外算）
-    expect(getAllProjects).toHaveBeenCalledTimes(4)
   })
 })
 
@@ -160,21 +126,16 @@ describe('白名单缓存', () => {
  */
 describe('拒绝时说的话', () => {
   it('列出当前允许的位置，并给出两条出路', async () => {
-    const said = (await assertInAccessScope('D:/素材/wall.fbx'))!
-    expect(said).toContain('D:/素材/wall.fbx')
-    expect(said).toContain('I:/UnrealAgent/MyGame')
-    expect(said).toContain('import_project')
+    const said = (await assertInAccessScope('D:/素材/wall.png'))!
+    expect(said).toContain('D:/素材/wall.png')
+    expect(said).toContain('I:/Games/MyGame')
+    expect(said).toContain('我的项目')
     expect(said).toContain('文件访问范围')
     expect(said).toMatch(/不要换一种路径写法再试/)
   })
 
-  /**
-   * 默认收窄之后，这段话会是很多人遇到的第一次拒绝。它必须自带
-   * 「怎么放开」，而且要交代清楚**这不是故障** —— 否则模型会把它当成
-   * 一个技术错误，要么闷头重试，要么给用户糊一句看不懂的报错。
-   */
   it('带上切换路径，并让模型自己判断要不要转达', async () => {
-    const said = (await assertInAccessScope('D:/素材/wall.fbx'))!
+    const said = (await assertInAccessScope('D:/素材/wall.png'))!
     expect(said).toContain('设置 → AI 助手 → 隐私 → 文件访问范围')
     expect(said).toContain('整台电脑')
     expect(said).toContain('不是故障')
@@ -186,7 +147,8 @@ describe('拒绝时说的话', () => {
       Array.from({ length: 12 }, (_, i) => ({ projectPath: `I:/Games/P${i}` }))
     )
     const said = (await assertInAccessScope('D:/x'))!
-    expect(said).toContain('等 15 个位置')
+    // 12 个工程 + 素材库 + 技能目录
+    expect(said).toContain('等 14 个位置')
     expect(said).not.toContain('I:/Games/P11')
   })
 })
@@ -196,17 +158,10 @@ describe('拒绝时说的话', () => {
  * 而用户只会看到「这个目录不在范围里」，看不出是数据库没起来。
  */
 describe('某个来源取不到时', () => {
-  it('数据库没起来，引擎目录照样放行', async () => {
+  it('数据库没起来，素材库照样放行', async () => {
     getAllProjects.mockImplementation(() => {
       throw new Error('公共数据库未初始化')
     })
-    expect(
-      await assertInAccessScope('C:/Program Files/Epic Games/UE_5.5/Engine/Build')
-    ).toBeUndefined()
-  })
-
-  it('引擎扫描失败，工程照样放行', async () => {
-    findUnrealEnginePaths.mockRejectedValue(new Error('扫描失败'))
-    expect(await assertInAccessScope('I:/UnrealAgent/MyGame/Content')).toBeUndefined()
+    expect(await assertInAccessScope(VAULT_FILE)).toBeUndefined()
   })
 })

@@ -180,7 +180,7 @@ describe('box_status', () => {
     const out = await text(tool, { sections: ['skills'] })
 
     expect(out).toContain('asset-library｜关')
-    expect(out).not.toContain('## 虚幻编辑器')
+    expect(out).not.toContain('## Godot 编辑器')
   })
 })
 

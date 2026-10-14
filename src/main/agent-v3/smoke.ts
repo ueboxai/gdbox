@@ -137,7 +137,7 @@ export async function runAgentV3Smoke(): Promise<AgentV3SmokeReport> {
   // 4. compaction 工具函数
   try {
     const usage = estimateContextTokens([
-      { role: 'user', content: '虚幻盒子 agent-v3 P0 构建验证', timestamp: 0 }
+      { role: 'user', content: 'GDBox agent-v3 P0 构建验证', timestamp: 0 }
     ] as Parameters<typeof estimateContextTokens>[0])
     estimatedTokens = usage.tokens
   } catch (error) {

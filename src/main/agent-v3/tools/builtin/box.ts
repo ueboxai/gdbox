@@ -160,7 +160,7 @@ export function createBoxSessionsTool(): UnrealAgentTool<unknown> {
     namespace: 'box',
     risk: 'safe',
     description:
-      '看虚幻盒子里内置助手的对话记录。\n\n' +
+      '看 GDBox 里内置助手的对话记录。\n\n' +
       '【什么时候用】用户说「盒子里刚才那个对话」「助手上次做到哪了」「看看它改了什么」时；' +
       '或者要接着盒子助手没做完的活干，先读一遍它做过什么、卡在哪。\n' +
       '先 list 找到对话，再 read 读内容。读到的是对话正文、每步调了哪些工具、工具结果的开头 —— ' +
@@ -339,7 +339,7 @@ async function backupsSection(): Promise<string> {
 }
 
 const SECTION_TITLES: Record<StatusSection, string> = {
-  editors: '虚幻编辑器',
+  editors: 'Godot 编辑器',
   imports: '素材导入',
   mcp: '第三方 MCP',
   skills: '技能',
@@ -362,7 +362,7 @@ export function createBoxStatusTool(): UnrealAgentTool<unknown> {
     namespace: 'box',
     risk: 'safe',
     description:
-      '一次看清虚幻盒子此刻的状态：正在运行的虚幻编辑器、素材导入任务（含卡住的）、' +
+      '一次看清 GDBox 此刻的状态：连着的 Godot 编辑器、素材导入任务（含卡住的）、' +
       '接入的第三方 MCP 服务通不通、技能清单与开关、知识库清单、数据库备份。\n\n' +
       '【什么时候用】用户问「导入卡住了吗」「那个 MCP 连上没」「我装了哪些技能」这类关于盒子本身的问题；' +
       '或者要用 box_manage 动手之前，先看一眼现状拿到 id。只关心某几块就传 sections。',
@@ -524,7 +524,7 @@ export function createBoxManageTool(): UnrealAgentTool<unknown> {
       DESTRUCTIVE_ACTIONS.has(args.action) ? 'destructive' : 'mutating',
     concurrency: 'sequential',
     description:
-      '管理虚幻盒子本身：开关技能、重连或删掉第三方 MCP 服务、续传或放弃卡住的素材导入、重新导入资产、备份盒子数据库。\n\n' +
+      '管理 GDBox 本身：开关技能、重连或删掉第三方 MCP 服务、续传或放弃卡住的素材导入、重新导入资产、备份盒子数据库。\n\n' +
       '【先看再动】target 用 box_status 拿到的名字或 id，别猜。\n' +
       '【不可逆的】abandon_import 会清掉服务端暂存，之后不能再续传；remove_mcp_server 会把那条配置删掉。' +
       '做之前跟用户说清楚。\n' +

@@ -50,7 +50,7 @@ import type { RealtimeToolDefinition } from './types'
  * 认得出系统通知。
  */
 export const VOICE_INSTRUCTIONS = [
-  '你是虚幻盒子当前对话的语音助手。用户可能在讨论代码、文件、任务，也可能在操作虚幻编辑器。',
+  '你是 GDBox 当前对话的语音助手。用户可能在讨论代码、文件、任务，也可能在操作 Godot 编辑器。',
   '说话要短：一到两句，像同事在旁边搭话，不要念清单、不要复述参数。',
   '【中途开启语音】历史消息就是当前对话的上文。用户说「可以，你推送吧」「继续」时，先接上最近的建议或问题。',
   `普通回复里的「要不要继续」不是工具审批；用户明确同意建议后，用 ${LIST_SESSIONS} 找到标记为「当前语音对话」的对话，`,
@@ -58,19 +58,19 @@ export const VOICE_INSTRUCTIONS = [
   '没有对应对话时才用默认派发，并写清历史中的任务和用户这次的要求。建议含多项而用户没说清选哪项时才追问。',
   `只有系统通知明确有等待审批的操作才用 ${APPROVE_TASK}；没有待审批操作不等于没有上下文。`,
   '',
-  `【你自己不干活】要动场景、蓝图、资产、工程的，一律调 ${DISPATCH_TASK}，`,
+  `【你自己不干活】要动场景、节点、脚本、素材、工程的，一律调 ${DISPATCH_TASK}，`,
   '把用户的话转成一句明确的中文指令。真正执行的是后台 Agent，它带着权限与确认。',
   '改写只许补全指代、不许删减：用户说的限定条件（「别动接口」「改完跑测试」「只改那一盏」）',
-  '一个都不能丢，照他的原话写进指令里。「优化蓝图循环」不是「把循环改成批处理，别动接口，改完跑测试」。',
+  '一个都不能丢，照他的原话写进指令里。「优化脚本循环」不是「把循环改成批处理，别动接口，改完跑测试」。',
   '',
-  `【先查再问】先从当前对话识别用户说的工程；只有在操作虚幻工程且历史无法确定目标时，调 ${LIST_PROJECTS} 或 ${LIST_OPEN_EDITORS} 去看一眼。`,
+  `【先查再问】先从当前对话识别用户说的工程；只有在操作 Godot 工程且历史无法确定目标时，调 ${LIST_PROJECTS} 或 ${LIST_OPEN_EDITORS} 去看一眼。`,
   '这两个很快，随便调。只有看过还是对不上，才回头问用户。别一上来就追问名字。',
   '',
   '【他说「这个」的时候】先从最近的对话记录找指代。上一条提到的文件、代码、报错、建议都可能是「这个」，不能一律当作编辑器选中对象。',
   '上文刚提到具体文件路径，用户问「这个文件是什么」，就是在追问那个文件；依据历史中已知的说明回答，不假装重新读过文件。',
   `需要核实磁盘内容或继续处理文件时，用 ${LIST_SESSIONS} 找当前语音对话，再用 ${DISPATCH_TASK} 的 session 把具体路径和问题交回原 Agent。`,
-  '查看或解释对话中的文件不要求连接虚幻编辑器；Godot 等其他项目也不以虚幻编辑器连接为前提。历史无法确定文件时才问具体路径。',
-  `只有用户明确指向虚幻编辑器里的选中/打开对象，且历史没有给出明确目标时，才调 ${LOOK_AT_EDITOR}。`,
+  '查看或解释对话中的文件不要求连接 Godot 编辑器；读写工程文件、检查和试玩也都不需要编辑器开着。历史无法确定文件时才问具体路径。',
+  `只有用户明确指向 Godot 编辑器里的选中/打开对象，且历史没有给出明确目标时，才调 ${LOOK_AT_EDITOR}。`,
   '看到了就**说出名字再动手**（「你是说那盏 主聚光灯 吧？我这就调暗」）——',
   '他能当场纠正你，比做完了再发现搞错了强。派活的指令里也要写上那个名字，别写「这个」。',
   '',
@@ -80,7 +80,7 @@ export const VOICE_INSTRUCTIONS = [
   '【后厨可以同时开好几个灶】互不相干的活能真正同时做，不用干等。',
   `派活时用 ${DISPATCH_TASK} 的 worker 参数给这件活挑个灶：`,
   '**新名字 = 另起一个灶同时跑；已有的名字 = 排在那个灶后面**。',
-  '判据只有一条：**两件活会不会动到同一个东西**（同一个 Actor、同一张图、同一批资产、同一个工程）。',
+  '判据只有一条：**两件活会不会动到同一个东西**（同一个场景、同一个节点、同一张图、同一个工程）。',
   '会动到、或者拿不准 → 用那个灶的名字排队。',
   '**做两个不同的东西就是不相干** —— 一个做大本钟、一个做游轮，哪怕都叫「建模」，也该起两个名字同时做。',
   '别按活的**种类**归堆（建模 / 材质），要按它**动的是哪个东西**归堆。',
@@ -142,8 +142,8 @@ export const VOICE_TOOLS: RealtimeToolDefinition[] = [
   {
     name: DISPATCH_TASK,
     description:
-      '把一件要在虚幻引擎里做的事派给后台 Agent：改场景、调灯光材质、改蓝图、' +
-      '打开工程、编译、运行、撤销等。**立刻返回任务号，不等执行结果** —— ' +
+      '把一件要在 Godot 工程里做的事派给后台 Agent：改场景和节点、写脚本、调灯光材质、' +
+      '生成素材、检查报错、试玩、撤销等。**立刻返回任务号，不等执行结果** —— ' +
       '拿到就先跟用户说一声你开始做了。高风险操作后台会向用户确认。' +
       '**每次都要给 worker 挑一个灶**：填新名字就和正在跑的活同时做，' +
       '填已有的名字就排在它后面。挑法见 worker 的说明。',
@@ -157,7 +157,7 @@ export const VOICE_TOOLS: RealtimeToolDefinition[] = [
         worker: {
           type: 'string',
           description:
-            '这件活交给哪个「灶」—— 一个短名字，说清这件活**动的是哪个东西**（主聚光灯 / BP_Player / 大本钟 / moba 工程）。' +
+            '这件活交给哪个「灶」—— 一个短名字，说清这件活**动的是哪个东西**（主聚光灯 / Player 场景 / 大本钟 / 平台跳跃工程）。' +
             '**填一个已经在用的灶名 = 排在它后面做**（同一个灶一次只做一件）；' +
             '**填一个新名字 = 另起一个灶，和现在跑着的真正同时做**。' +
             '判据只有一条：**这件活会不会动到别的灶正在动的那个东西**。' +
@@ -296,22 +296,22 @@ export const VOICE_TOOLS: RealtimeToolDefinition[] = [
   {
     name: LIST_PROJECTS,
     description:
-      '列出盒子里已登记的虚幻工程（只读，很快）。用户提到某个工程但名字说不全时，' +
+      '列出盒子里已登记的 Godot 工程（只读，很快）。用户提到某个工程但名字说不全时，' +
       '先用它去对，别直接追问。',
     parameters: { type: 'object', properties: {}, required: [] }
   },
   {
     name: LIST_OPEN_EDITORS,
     description:
-      '列出当前已经打开并连上盒子的虚幻编辑器（只读，很快）。' +
-      '只有需要操作虚幻编辑器、判断连接状态时用它；对话中的代码和文件问题不需要查编辑器连接。',
+      '列出当前已经打开并连上盒子的 Godot 编辑器（只读，很快）。' +
+      '只有需要操作 Godot 编辑器、判断连接状态时用它；对话中的代码和文件问题不需要查编辑器连接。',
     parameters: { type: 'object', properties: {}, required: [] }
   },
   {
     name: LOOK_AT_EDITOR,
     description:
       '看用户此刻在编辑器里选中/打开着什么（只读，很快）。' +
-      '先从对话历史解析指代；只有用户明确指向虚幻编辑器里的选中/打开对象且历史无法确定目标时才调用。' +
+      '先从对话历史解析指代；只有用户明确指向 Godot 编辑器里的选中/打开对象且历史无法确定目标时才调用。' +
       '追问上文提到的文件、代码或报错不调用此工具，也不要求连接编辑器。' +
       '看到之后把名字说出来跟他确认，派活时也用那个名字，不要在指令里写「这个」。',
     parameters: { type: 'object', properties: {}, required: [] }
@@ -348,7 +348,7 @@ export function summarizeProjects(projects: unknown): string {
       const name = typeof row?.name === 'string' ? row.name.trim() : ''
       if (!name) return ''
       const engine = typeof row?.engineVersion === 'string' ? row.engineVersion.trim() : ''
-      return engine ? `${name}（引擎 ${engine}）` : name
+      return engine ? `${name}（Godot ${engine}）` : name
     })
     .filter(Boolean)
 
@@ -371,17 +371,17 @@ export function summarizeOpenEditors(projects: unknown): string {
       const name = typeof row?.projectName === 'string' ? row.projectName.trim() : ''
       if (!name) return ''
       const engine = typeof row?.engineVersion === 'string' ? row.engineVersion.trim() : ''
-      return engine ? `${name}（引擎 ${engine}）` : name
+      return engine ? `${name}（Godot ${engine}）` : name
     })
     .filter(Boolean)
 
   if (lines.length === 0) {
-    return '现在没有打开并连上的虚幻编辑器。这只影响虚幻编辑器现场操作，不影响对话上下文或本地文件；确实需要操作虚幻编辑器时再打开并连接工程。'
+    return '现在没有打开并连上的 Godot 编辑器。这只影响编辑器现场操作，不影响对话上下文、本地文件、检查和试玩；确实需要操作编辑器时，请用户用 Godot 打开工程并启用 GDBox Link 插件。'
   }
   return `当前连着 ${lines.length} 个编辑器：\n${truncateForSpeech(lines)}`
 }
 
-/** 一句里最多念几个名字。选中三十个 Actor 时逐个念完，用户早就走了 */
+/** 一句里最多念几个名字。选中三十个节点时逐个念完，用户早就走了 */
 const MAX_SPOKEN_NAMES = 5
 
 function joinNames(names: string[], total: number): string {
@@ -408,7 +408,7 @@ export function summarizeEditorFocus(input: {
   focus?: FocusContext | null
 }): string {
   if (!input.connected) {
-    return '没有连着的虚幻编辑器，无法读取编辑器选中状态。这不影响理解对话历史或处理本地文件；若用户在追问上文的文件，回到历史回答或交给原 Agent 核实。只有确实要读取编辑器现场时才需要连接。'
+    return '没有连着的 Godot 编辑器，无法读取编辑器选中状态。这不影响理解对话历史或处理本地文件；若用户在追问上文的文件，回到历史回答或交给原 Agent 核实。只有确实要读取编辑器现场时才需要连接。'
   }
 
   const focus = input.focus || {}
@@ -428,7 +428,7 @@ export function summarizeEditorFocus(input: {
 
   const editor = focus.focusedEditor
   if (editor?.name) {
-    parts.push(`正开着 ${editor.name}`)
+    parts.push(`正开着 ${editor.name} 场景`)
     if (focus.focusedGraph?.name) parts.push(`看的是 ${focus.focusedGraph.name} 这张图`)
   }
 
@@ -441,18 +441,18 @@ export function summarizeEditorFocus(input: {
   const actors = focus.selectedActors ?? []
   if (actors.length > 0) {
     const labels = actors.map((actor) => actor.label || actor.name)
-    parts.push(`关卡里选中 ${joinNames(labels, focus.selectedActorCount ?? actors.length)}`)
+    parts.push(`场景里选中 ${joinNames(labels, focus.selectedActorCount ?? actors.length)} 节点`)
   }
 
   const assets = focus.contentBrowser?.selectedAssets ?? []
   if (assets.length > 0) {
     const names = assets.map((asset) => asset.name)
     const total = focus.contentBrowser?.selectedAssetCount ?? assets.length
-    parts.push(`内容浏览器里选中 ${joinNames(names, total)}`)
+    parts.push(`文件系统面板里选中 ${joinNames(names, total)}`)
   }
 
   if (parts.length === 0) {
-    return `${where}但他什么都没选、也没打开资产编辑器。先从对话历史找目标；历史也无法确定时再问他。`
+    return `${where}但他什么都没选、也没打开场景。先从对话历史找目标；历史也无法确定时再问他。`
   }
   return `${where}他此刻：${parts.join('；')}。仅在用户指向编辑器现场时用这些对象解析「这个」，不要覆盖对话历史中已经明确的目标；动手前先把名字说出来跟他确认。`
 }

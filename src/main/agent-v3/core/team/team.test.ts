@@ -664,12 +664,34 @@ describe('提示词只写环境，不写方法论', () => {
   })
 
   /** 2026-09-26：自动曝光下调灯，截图发白却归给「截图偏差」收工；验收员没看画面 */
-  it('制作人和队员都知道先锁曝光；验收员要在游戏跑着时看画面', () => {
-    const brief = buildProducerBrief({ objective: 'x', workspaceDir: 'w' })
-    const member = buildMemberFraming({ name: 'a', persona: 'p', workspaceDir: 'w' }).join('\n')
-    for (const text of [brief, member]) expect(text).toMatch(/Metering Mode set to Manual/)
+  // 同一次事故里「先锁曝光」那半条是 Unreal 自动曝光的事，随 Unreal 一起删了 ——
+  // Godot 的自动曝光默认关着
+  it('验收员要在游戏跑着时看画面，并点名拍画面的工具', () => {
     const prompt = buildAcceptancePrompt({ objective: 'x', report: 'r', howToPlay: 'h' })
     expect(prompt).toMatch(/screenshots while the game is running/)
     expect(prompt).toMatch(/Basic art is part of the bar/)
+    expect(prompt).toContain('godot_screenshot')
+  })
+
+  it('制作人和队员的提示词里不再出现 Unreal', () => {
+    const brief = buildProducerBrief({ objective: 'x', workspaceDir: 'w' })
+    const member = buildMemberFraming({ name: 'a', persona: 'p', workspaceDir: 'w' }).join('\n')
+    expect(brief).toContain('The Godot editor is one seat')
+    for (const text of [brief, member]) expect(text).not.toMatch(/Unreal|PostProcessVolume/)
+  })
+
+  // 验收员手上的裁判是 Godot 那几个（见 createAgent 的 ACCEPTANCE_JUDGES），提示词得点对名字
+  it('验收员按 godot_check / godot_run 跑游戏，不点名不存在的工具', () => {
+    const prompt = buildAcceptancePrompt({
+      objective: 'x',
+      report: 'r',
+      howToPlay: 'h',
+      packageExe: 'D:/out/game.exe'
+    })
+    expect(prompt).toContain('godot_check')
+    expect(prompt).toContain('godot_run')
+    for (const name of ['ue_screenshot', 'project_smoke_test', 'inspect_uasset_file']) {
+      expect(prompt).not.toContain(name)
+    }
   })
 })

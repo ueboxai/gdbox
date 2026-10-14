@@ -22,7 +22,7 @@ import { RUNTIME_ENVELOPE_RULES } from './runtimeEnvelope'
 import { resolveSessionScope } from './sessionScope'
 import { EDITOR_SNAPSHOT_RULES } from './editorSnapshot'
 import type { UnrealAgentTool } from '../tools/defineTool'
-import { OFFLINE_UE_TOOLS } from '../tools/toolNames'
+import { needsEditor } from '../tools/toolNames'
 
 function fakeTool(
   name: string,
@@ -33,73 +33,47 @@ function fakeTool(
 }
 
 describe('resolveTools —— 动态工具过滤', () => {
-  it('未连接引擎时不注册 ue.* 工具，但保留盒子本地能力', () => {
+  it('编辑器没连时不给 godot.editor 工具，但保留无头 Godot 和盒子本地能力', () => {
     // V2 是把 16 个专家塞进 Router prompt 让模型选；V3 直接不给它看 ——
     // 模型看不到的工具不会被误调，也不占 token。
-    // 资产库 / 项目管理不依赖引擎，未连接时仍然可用。
+    // 资产库 / 项目管理不依赖编辑器，未连接时仍然可用。
     const tools = resolveTools({ sessionId: 's', ueConnected: false })
     const names = tools.map((t) => t.name)
 
-    // 名单要精确匹配：多漏一个进来就意味着模型手里多了一个必然调不通的工具，
-    // 而它会在上面浪费步数、最后拿一句「客户端不存在或已断开」
-    const ueTools = tools.filter((t) => t.unrealBox.namespace.startsWith('ue.'))
-    expect(ueTools.map((t) => t.name).sort()).toEqual(['ue_get_crash_logs', 'ue_session_health'])
+    // 一个都不许漏进来：多一个就意味着模型手里多了一个必然调不通的工具，
+    // 而它会在上面浪费步数、最后拿一句「编辑器未连接」
+    expect(tools.filter((t) => needsEditor(t.unrealBox.namespace))).toEqual([])
     expect(names).toContain('search_assets')
-    expect(tools.length).toBeGreaterThan(0)
+    expect(names).toContain('project_list')
   })
 
   /**
-   * 崩溃日志直接读 Saved/Crashes 和 Saved/Logs 里的文件，插件连接只是可选的补充。
-   *
-   * 它原本被 ue.* 的过滤规则一刀切掉了 —— 而**编辑器崩了的时候正是连接断开的
-   * 时候**：用户问「刚才为什么崩了」，模型手里恰好没有那个工具，只能回一句
-   * 「请先连接虚幻引擎」。
+   * 和 Unreal 不同，Godot 工程是文本，检查、试玩、截图都起无头 Godot 跑，不需要
+   * 用户的编辑器。它们被「没连上」一刀切掉的话，模型在最常见的场景里（用户只是
+   * 让它改个脚本）就没法自己验证，只能报一句「请先打开编辑器」。
    */
-  it('引擎没连上时崩溃日志工具仍然可用', () => {
-    const tools = resolveTools({ sessionId: 's', ueConnected: false })
+  it('编辑器没连上时无头 Godot 工具仍然可用', () => {
+    const names = resolveTools({ sessionId: 's', ueConnected: false }).map((t) => t.name)
 
-    expect(tools.map((t) => t.name)).toContain('ue_get_crash_logs')
+    expect(names).toEqual(expect.arrayContaining(['godot_check', 'godot_run', 'godot_screenshot']))
   })
 
-  /**
-   * 「这台机器上装了哪些引擎、插件在不在」是引擎**没连上**时的第一个问题。
-   * 它读的是盒子自己扫出来的安装记录，跟引擎连不连没关系 —— 被 ue.* 的过滤
-   * 规则捎带滤掉的话，模型就只能自己去 shell 里 reg query，翻出一份比用户
-   * 眼前那排卡片还少的清单。
-   */
-  it('引擎没连上时引擎清单工具仍然可用', () => {
-    const tools = resolveTools({ sessionId: 's', ueConnected: false })
+  // 它们标 safe，所以只读的 Ask 模式下也得在 —— 跑一遍看报错不是写操作
+  it('Ask 模式下没连编辑器也能检查和试玩', () => {
+    const names = resolveTools({ sessionId: 's', ueConnected: false, mode: 'ask' }).map(
+      (t) => t.name
+    )
 
-    expect(tools.map((t) => t.name)).toContain('list_engines')
+    expect(names).toEqual(expect.arrayContaining(['godot_check', 'godot_run']))
   })
 
-  /**
-   * 会话体检回答的就是「到底连没连上」，所以它必须在**没连上**时还在。
-   *
-   * 按 `ue.*` 一刀切掉的话，恰恰在唯一需要它的场景里它不在 —— 真机上模型
-   * 只能退回去 shell 里 tasklist 数进程，再拿别的引擎工具反复试探，
-   * 而那些试探本来就会因为没连接被拒。
-   */
-  it('引擎没连上时会话体检工具仍然可用', () => {
-    const tools = resolveTools({ sessionId: 's', ueConnected: false })
-
-    expect(tools.map((t) => t.name)).toContain('ue_session_health')
-  })
-
-  // 它标 safe，所以只读的 Ask 模式下也得在 —— 排查连接不是写操作
-  it('Ask 模式下会话体检工具仍然可用', () => {
-    const tools = resolveTools({ sessionId: 's', ueConnected: false, mode: 'ask' })
-
-    expect(tools.map((t) => t.name)).toContain('ue_session_health')
-  })
-
-  it('已连接引擎时注册全部工具', () => {
+  it('编辑器连上时补上编辑器工具', () => {
     const off = resolveTools({ sessionId: 's', ueConnected: false })
     const on = resolveTools({ sessionId: 's', ueConnected: true })
 
     expect(on.length).toBeGreaterThan(off.length)
     expect(on.map((t) => t.name)).toEqual(
-      expect.arrayContaining(['material_create', 'blueprint_create', 'ue_spawn_actor'])
+      expect.arrayContaining(['editor_scene_tree', 'editor_play', 'editor_save_all'])
     )
   })
 
@@ -115,13 +89,11 @@ describe('resolveTools —— 动态工具过滤', () => {
    * 而破了的表现是**中途连上引擎后工具清单是错的** —— 那种 bug 靠肉眼极难发现。
    * 这一条在那时当场失败。
    */
-  it('离线工具清单等于联机清单滤掉 ue.*（轮内换清单的地基）', () => {
+  it('离线工具清单等于联机清单滤掉编辑器工具（轮内换清单的地基）', () => {
     const online = resolveTools({ sessionId: 's', ueConnected: true })
     const offline = resolveTools({ sessionId: 's', ueConnected: false })
 
-    const derived = online.filter(
-      (tool) => !tool.unrealBox.namespace.startsWith('ue.') || OFFLINE_UE_TOOLS.has(tool.name)
-    )
+    const derived = online.filter((tool) => !needsEditor(tool.unrealBox.namespace))
 
     expect(derived.map((t) => t.name)).toEqual(offline.map((t) => t.name))
   })
@@ -130,27 +102,28 @@ describe('resolveTools —— 动态工具过滤', () => {
     const tools = resolveTools({
       sessionId: 's',
       ueConnected: true,
-      namespaces: ['ue.material']
+      namespaces: ['godot.asset']
     })
 
-    // 盯的是「白名单确实收窄了」，不是材质工具具体有几个 ——
-    // 写死数量的话，每次给材质加一个工具这里就红一次，而它并没有测出任何东西。
+    // 盯的是「白名单确实收窄了」，不是素材工具具体有几个 ——
+    // 写死数量的话，每次加一个生成工具这里就红一次，而它并没有测出任何东西。
     const unfiltered = resolveTools({ sessionId: 's', ueConnected: true })
     expect(tools.length).toBeGreaterThan(0)
     expect(tools.length).toBeLessThan(unfiltered.length)
-    expect(tools.every((t) => t.unrealBox.namespace === 'ue.material')).toBe(true)
+    expect(tools.every((t) => t.unrealBox.namespace === 'godot.asset')).toBe(true)
   })
 
   it('Ask 模式只留只读工具', () => {
     const tools = resolveTools({ sessionId: 's', ueConnected: true, mode: 'ask' })
 
     expect(tools.every((t) => t.unrealBox.risk === 'safe')).toBe(true)
-    // 只读工具应该覆盖多个领域，而不是只剩材质
+    // 只读工具应该覆盖多个领域，而不是只剩一摊
     expect(new Set(tools.map((t) => t.unrealBox.namespace)).size).toBeGreaterThan(3)
     expect(tools.map((t) => t.name)).toEqual(
-      expect.arrayContaining(['material_describe', 'blueprint_get_graph', 'ue_get_actor'])
+      expect.arrayContaining(['godot_check', 'editor_scene_tree', 'inspect_audio'])
     )
-    expect(tools.map((t) => t.name)).not.toContain('ue_destroy_actor')
+    expect(tools.map((t) => t.name)).not.toContain('editor_play')
+    expect(tools.map((t) => t.name)).not.toContain('gen_sprite')
   })
 
   it('危险工具标注正确 —— 删除类不可逆', () => {
@@ -158,9 +131,9 @@ describe('resolveTools —— 动态工具过滤', () => {
       resolveTools({ sessionId: 's', ueConnected: true }).map((t) => [t.name, t])
     )
 
-    // 删材质节点开在插件事务里，ue_undo 撤得回来，按可撤销的改动算
-    expect(byName.get('material_delete_node')?.unrealBox.risk).toBe('mutating')
-    expect(byName.get('ue_destroy_actor')?.unrealBox.risk).toBe('destructive')
+    // 删资产是软删除（进回收站，restore_assets 捞得回来），按可撤销的改动算
+    expect(byName.get('delete_assets')?.unrealBox.risk).toBe('mutating')
+    expect(byName.get('delete_tags')?.unrealBox.risk).toBe('destructive')
   })
 
   /**
@@ -344,7 +317,9 @@ describe('resolveTools —— 动态工具过滤', () => {
     })
   })
 
-  it('改同一份图表的工具声明为串行，避免并发覆盖', () => {
+  // 无头 Godot 几个共用同一个工程的 .godot 导入缓存，生成工具往同一个 res://assets/gen/
+  // 里写、读同一份画风预设 —— 并发跑会互相覆盖
+  it('共用工程导入缓存和生成目录的工具声明为串行，避免并发覆盖', () => {
     const sequential = new Set(
       resolveTools({ sessionId: 's', ueConnected: true })
         .filter((t) => (t as { executionMode?: string }).executionMode === 'sequential')
@@ -352,11 +327,12 @@ describe('resolveTools —— 动态工具过滤', () => {
     )
 
     for (const name of [
-      'material_compile',
-      'material_apply_graph',
-      'blueprint_apply_graph',
-      'blueprint_compile',
-      'widget_add_child'
+      'godot_check',
+      'godot_run',
+      'godot_screenshot',
+      'gen_sprite',
+      'gen_tileset',
+      'art_style'
     ]) {
       expect(sequential.has(name), `${name} 应声明为 sequential`).toBe(true)
     }
@@ -376,14 +352,14 @@ describe('resolveTools —— 动态工具过滤', () => {
         {
           sessionId: 's',
           ueConnected: true,
-          toolNames: ['material_describe'],
+          toolNames: ['godot_check'],
           mcp
         },
         skills,
         taskTool
       )
 
-      expect(tools.map((tool) => tool.name)).toEqual(['material_describe'])
+      expect(tools.map((tool) => tool.name)).toEqual(['godot_check'])
     })
 
     it('toolNames 点名后，动态工具仍可按授权加入', () => {
@@ -417,12 +393,12 @@ describe('resolveTools —— 动态工具过滤', () => {
     })
 
     /*
-     * 审计员按此刻的工具池筛，不按一张写死的名单。那张名单漏掉了序列、项目设置、
-     * C++、笔记 —— 这几类目标审计员一个工具都没有，只能判 BLOCKED。
+     * 审计员按此刻的工具池筛，不按一张写死的名单。那张名单漏掉过好几类领域 ——
+     * 那几类目标审计员一个工具都没有，只能判 BLOCKED。
      */
     describe('审计员', () => {
       const names = resolveAgentTools(
-        { sessionId: 's', ueConnected: true, auditorJudges: ['blueprint_compile'], mcp },
+        { sessionId: 's', ueConnected: true, auditorJudges: ['editor_play'], mcp },
         skills,
         taskTool
       ).map((tool) => tool.name)
@@ -430,11 +406,14 @@ describe('resolveTools —— 动态工具过滤', () => {
       it('后加领域的只读工具自动进来', () => {
         expect(names).toEqual(
           expect.arrayContaining([
-            'sequence_describe',
-            'ue_get_config',
-            'cpp_probe',
+            // 验收的裁判：本来就是 safe，不用点名（见 goalLoop 的 AUDITOR_HARD_JUDGES）
+            'godot_check',
+            'godot_run',
+            'godot_screenshot',
+            'editor_scene_tree',
+            'inspect_audio',
             'search_notes',
-            'blueprint_describe',
+            'project_list',
             // 交付验收的提示词点了这几个名字去核对交付目录（见 teamPrompt 的 buildAcceptancePrompt）
             'find_local_files',
             'list_local_dir',
@@ -444,9 +423,9 @@ describe('resolveTools —— 动态工具过滤', () => {
       })
 
       it('点名的裁判照给，没点名的写工具不给', () => {
-        expect(names).toContain('blueprint_compile')
-        expect(names).not.toContain('blueprint_apply_graph')
-        expect(names).not.toContain('cpp_compile')
+        expect(names).toContain('editor_play')
+        expect(names).not.toContain('editor_save_all')
+        expect(names).not.toContain('gen_sprite')
       })
 
       it('只读也不给：第三方 MCP、派子任务、技能、浏览器和联网', () => {
@@ -461,7 +440,7 @@ describe('resolveTools —— 动态工具过滤', () => {
    * 「允许编辑器截图」那一档。
    *
    * 这个开关以前是假的：渲染层有字段、界面有开关，主进程一次都没读过
-   * （`grep -rn editorScreenshotEnabled src/main` 零命中），而 `ue_screenshot`
+   * （`grep -rn editorScreenshotEnabled src/main` 零命中），而截图工具
    * 登记的风险是 `safe`，连审批门都不过。也就是说用户关掉之后 agent 照样在拍 ——
    * 一个什么都不做的隐私开关比没有开关更糟，用户以为自己关上了。
    */
@@ -469,12 +448,12 @@ describe('resolveTools —— 动态工具过滤', () => {
     const names = (ctx: Partial<SessionContext>): string[] =>
       resolveTools({ sessionId: 's', ueConnected: true, ...ctx }).map((tool) => tool.name)
 
-    it('关掉时 ue_screenshot 不进工具池', () => {
-      expect(names({ editorScreenshotEnabled: false })).not.toContain('ue_screenshot')
+    it('关掉时 godot_screenshot 不进工具池', () => {
+      expect(names({ editorScreenshotEnabled: false })).not.toContain('godot_screenshot')
     })
 
     it('开着时照常给', () => {
-      expect(names({ editorScreenshotEnabled: true })).toContain('ue_screenshot')
+      expect(names({ editorScreenshotEnabled: true })).toContain('godot_screenshot')
     })
 
     /**
@@ -482,18 +461,17 @@ describe('resolveTools —— 动态工具过滤', () => {
      * 这个字段 —— 兜底成禁止的话，它们会静默失去截图能力，而用户一个开关都没动过。
      */
     it('不传时按默认档（允许）走', () => {
-      expect(names({})).toContain('ue_screenshot')
+      expect(names({})).toContain('godot_screenshot')
     })
 
     /**
-     * 只摘拍视口的那一个。整片摘掉的话，一个隐私开关会顺手关掉「验证游戏
-     * 能不能跑」（试玩）和「看一眼这个 UI 对不对」（离屏渲染的 Widget 预览），
-     * 而后者一个像素的隐私都没泄。
+     * 只摘拍画面的那一个。连 `godot_run` 一起摘掉的话，一个隐私开关会顺手关掉
+     * 「验证游戏行为对不对」（按键、盯数值、读报错），而那件事一个像素都不用出。
      */
-    it('试玩和 Widget 预览不受影响', () => {
+    it('试玩（godot_run）不受影响', () => {
       const kept = names({ editorScreenshotEnabled: false })
-      expect(kept).toContain('ue_playtest')
-      expect(kept).toContain('widget_preview')
+      expect(kept).toContain('godot_run')
+      expect(kept).toContain('godot_check')
     })
 
     // 写在最终授权过滤里而不是内置工具那一段：这是用户明确关掉的能力，
@@ -502,10 +480,10 @@ describe('resolveTools —— 动态工具过滤', () => {
       const tools = resolveAgentTools(
         { sessionId: 's', ueConnected: true, editorScreenshotEnabled: false },
         [],
-        fakeTool('ue_screenshot', 'ue.editor')
+        fakeTool('godot_screenshot', 'godot')
       )
 
-      expect(tools.map((tool) => tool.name)).not.toContain('ue_screenshot')
+      expect(tools.map((tool) => tool.name)).not.toContain('godot_screenshot')
     })
   })
 
@@ -520,23 +498,23 @@ describe('resolveTools —— 动态工具过滤', () => {
       resolveTools({ sessionId: 's', ueConnected: true, ...ctx }).map((tool) => tool.name)
 
     it('关掉的不进工具池，没关的照常在', () => {
-      const kept = names({ disabledToolNames: ['ue_screenshot'] })
-      expect(kept).not.toContain('ue_screenshot')
-      expect(kept).toContain('ue_playtest')
+      const kept = names({ disabledToolNames: ['godot_screenshot'] })
+      expect(kept).not.toContain('godot_screenshot')
+      expect(kept).toContain('godot_run')
     })
 
     it('没传就是没人说过话，一个都不滤', () => {
-      expect(names({})).toContain('ue_screenshot')
+      expect(names({})).toContain('godot_screenshot')
     })
 
     /*
      * 工具搜索模式下这份名单**不生效**：同一页的开关在那个模式里记的是
-     * 「常驻还是搜索加载」，两份状态各管各的。一个人在全量模式下关掉整摊 PCG，
-     * 切到搜索模式不该发现 PCG 连搜都搜不到 —— 那是他没点过的第二件事。
+     * 「常驻还是搜索加载」，两份状态各管各的。一个人在全量模式下关掉整摊素材生成，
+     * 切到搜索模式不该发现它们连搜都搜不到 —— 那是他没点过的第二件事。
      */
     it('工具搜索模式下不按这份名单滤', () => {
-      expect(names({ disabledToolNames: ['ue_screenshot'], toolSearchEnabled: true })).toContain(
-        'ue_screenshot'
+      expect(names({ disabledToolNames: ['godot_screenshot'], toolSearchEnabled: true })).toContain(
+        'godot_screenshot'
       )
     })
 
@@ -546,13 +524,13 @@ describe('resolveTools —— 动态工具过滤', () => {
      */
     it('加载入口、反问通道和子任务关不掉', () => {
       const tools = resolveAgentTools(
-        { sessionId: 's', ueConnected: true, disabledToolNames: ['task', 'ue_screenshot'] },
+        { sessionId: 's', ueConnected: true, disabledToolNames: ['task', 'godot_screenshot'] },
         [],
         fakeTool('task', 'core')
       )
       const names = tools.map((tool) => tool.name)
       expect(names).toContain('task')
-      expect(names).not.toContain('ue_screenshot')
+      expect(names).not.toContain('godot_screenshot')
     })
 
     // 同截图开关：授权边界只有一处，技能/MCP/task 追加进来的一样要过
@@ -578,26 +556,24 @@ describe('buildSystemPrompt', () => {
   /**
    * 只取提示词末尾的 `<environment>` 块。
    *
-   * 「有没有劝人装插件」是环境块这三个分支之间的差别，而 UnrealAgentLink 这个词
-   * 在常驻的能力清单里也会出现（`list_engines` 就是查它装没装的）。拿整段提示词
-   * 做包含判断，会把能力清单里的一次提及误当成连接引导。
+   * 「有没有劝人装插件」是环境块这几个分支之间的差别，而插件、编辑器这些词
+   * 在常驻的能力清单和规则里也会出现。拿整段提示词做包含判断，会把那些提及
+   * 误当成连接引导。
    */
   const environmentOf = (prompt: string): string => prompt.slice(prompt.indexOf('<environment>'))
 
   /**
    * 技能里的「不要做 X」是默认做法，不是替用户做的否决。以前模型读到就拒，
-   * 用户明说「我知道风险，做吧」也照样拒。这里守住三处放宽，以及没放宽的那几条。
+   * 用户明说「我知道风险，做吧」也照样拒。这里守住两处放宽，以及没放宽的那几条。
    */
-  it('用户明确要求时可以越过技能的默认做法；切到已装引擎不算假升级；下载不再一律交给用户', () => {
+  it('用户明确要求时可以越过技能的默认做法；下载不再一律交给用户', () => {
     const prompt = buildSystemPrompt(base)
     expect(prompt).toContain(
       'Skills and tool descriptions describe defaults, not vetoes over the user'
     )
-    expect(prompt).toContain('Switching the project to an engine that is already installed is real')
-    // 假装升级到没装的引擎仍然不行
-    expect(prompt).toContain(
-      'never rewrite `.uproject`, `Target.cs` or `Build.cs` to claim a state'
-    )
+    // 改版本标记假装升级仍然不行
+    expect(prompt).toContain('Editing a version marker does not perform the upgrade it names')
+    expect(prompt).toContain('never rewrite `config/features` in project.godot to claim a state')
     expect(prompt).toContain('a login, a payment, a captcha or an upload, hand it to the user')
     expect(prompt).not.toMatch(/an upload or a download/)
   })
@@ -626,10 +602,11 @@ describe('buildSystemPrompt', () => {
     const readOnly = buildSystemPrompt({ ...base, isSubAgent: true, readOnly: true })
 
     expect(readOnly).toContain('This subtask is read-only')
-    // 真机上反复卡在这两个：一个能写所以被摘，一个动视口所以被摘，
-    // 不点名的话子任务会把「调不动」读成「工具没了」
-    expect(readOnly).toContain('ue_run_python_script')
-    expect(readOnly).toContain('ue_focus_viewport')
+    // 能读也能写的那几个按风险被摘掉，不点名的话子任务会把「调不动」读成「工具没了」
+    expect(readOnly).toContain('the shell')
+    expect(readOnly).toContain('editor_select')
+    // 回读的那几个还在，免得它以为连验证都做不了
+    expect(readOnly).toContain('godot_check')
     expect(buildSystemPrompt({ ...base, isSubAgent: true })).not.toContain(
       'This subtask is read-only'
     )
@@ -680,15 +657,15 @@ describe('buildSystemPrompt', () => {
   it('连上引擎时把工程写进去 —— 以前只有「没连」的分支，连上反而什么都不说', () => {
     const prompt = buildSystemPrompt({
       ...base,
-      project: { name: 'MyGame', engineVersion: '5.4', path: 'H:/Projects/MyGame' }
+      project: { name: 'MyGame', engineVersion: '4.3', path: 'H:/Projects/MyGame' }
     })
 
     expect(prompt).toContain('MyGame')
-    expect(prompt).toContain('UE 5.4')
+    expect(prompt).toContain('Godot 4.3')
     expect(prompt).toContain('H:/Projects/MyGame')
   })
 
-  // 工程字段是引擎那边报上来的，缺字段是常态，不能印出 "UE undefined"
+  // 工程字段是编辑器那边报上来的，缺字段是常态，不能印出 "Godot undefined"
   it('工程信息不全时跳过缺的字段，不印 undefined', () => {
     const prompt = buildSystemPrompt({ ...base, project: { name: 'MyGame' } })
 
@@ -704,17 +681,10 @@ describe('buildSystemPrompt', () => {
    * 都会静默退回默认，而界面上那个按钮还亮着。
    */
   it('自动档把「不用先问」写进提示词，默认档不写', () => {
-    const skills = [{ name: 'ue-skill-creator', description: '把经验沉淀成技能。', path: '/tmp/x' }]
+    const skills = [{ name: 'skill-creator', description: '把经验沉淀成技能。', path: '/tmp/x' }]
 
     expect(buildSystemPrompt({ ...base, skillLearning: 'auto' }, skills)).toContain('propose first')
     expect(buildSystemPrompt(base, skills)).not.toContain('propose first')
-  })
-
-  it('视觉收尾要求当轮数字与预览，不把无法测量当成通过', () => {
-    const prompt = buildSystemPrompt(base)
-    expect(prompt).toContain('anim_measure and anim_preview at matching frames')
-    expect(prompt).toContain('unmeasurable is not a pass')
-    expect(prompt).toContain('Never invent a measurement or bypass screenshot privacy settings')
   })
 
   /**
@@ -750,38 +720,39 @@ describe('buildSystemPrompt', () => {
   /**
    * 截图那一句必须跟着开关走，理由和浏览器那行完全一样。
    *
-   * 只把 `ue_screenshot` 摘掉、这句话原样留着的话，模型会照着「拍一张确认一下」
+   * 只把 `godot_screenshot` 摘掉、这句话原样留着的话，模型会照着「拍一张确认一下」
    * 去调一个手里根本没有的工具，然后把「我拍不了」答成「我没有这个能力」——
    * 而真正的原因（用户自己关的、在哪儿能打开）它一个字都说不出来。
    */
   it('关掉编辑器截图时换掉「拍一张确认」那句，并说清原因和替代做法', () => {
     const off = buildSystemPrompt({ ...base, editorScreenshotEnabled: false })
 
-    expect(off).not.toContain('capture one and confirm')
+    expect(off).not.toContain('capture a frame with `godot_screenshot`')
     expect(off).toContain('allow editor screenshots')
-    // 不给替代做法的话，模型只会原地绕或者去 Python 里自己截一张
-    expect(off).toContain('ue_get_actor')
+    // 不给替代做法的话，模型只会原地绕或者写个脚本自己截一张
+    expect(off).toContain('reading the scene files back')
+    expect(off).toContain('not through scripts')
     expect(off).toContain('Settings → AI → Privacy')
   })
 
   /**
    * 用户在「设置 → 工具」里关掉的那几个，提示词必须点名说出来。
    *
-   * 这份提示词硬写死了一堆工具名（`ue_save`、`blueprint_apply_graph`、
+   * 这份提示词硬写死了一堆工具名（`godot_check`、`godot_run`、
    * 「拍一张确认一下」……），技能正文里更多。只把工具摘掉、这些话原样留着，
    * 模型会照着去调一个手里没有的工具，再把「我没这个工具」答成「我没有这个
-   * 能力」，或者绕去写 Python —— 和截图那个开关是同一个坑，只是现在开关有
-   * 一百多个，逐条改文案不可能。
+   * 能力」，或者绕去写脚本 —— 和截图那个开关是同一个坑，只是开关有几十个，
+   * 逐条改文案不可能。
    */
   it('关掉的工具在提示词里点名，并堵死绕路', () => {
     const prompt = buildSystemPrompt({
       ...base,
-      disabledToolNames: ['ue_screenshot', 'blueprint_apply_graph']
+      disabledToolNames: ['godot_screenshot', 'editor_play']
     })
 
-    expect(prompt).toContain('ue_screenshot, blueprint_apply_graph'.split(', ').sort().join(', '))
+    expect(prompt).toContain('editor_play, godot_screenshot')
     expect(prompt).toContain('Settings → Tools')
-    expect(prompt).toContain('not through Python')
+    expect(prompt).toContain('not through scripts')
   })
 
   it('一个都没关就不写这句 —— 那是每轮都要付的 token', () => {
@@ -798,7 +769,7 @@ describe('buildSystemPrompt', () => {
     const prompt = buildSystemPrompt({
       ...base,
       toolSearchEnabled: true,
-      disabledToolNames: ['ue_screenshot']
+      disabledToolNames: ['godot_screenshot']
     })
     expect(prompt).not.toContain('Settings → Tools')
   })
@@ -808,16 +779,17 @@ describe('buildSystemPrompt', () => {
   it('关不掉的那几个不跟着报没了', () => {
     const prompt = buildSystemPrompt({
       ...base,
-      disabledToolNames: ['task', 'ue_screenshot']
+      disabledToolNames: ['task', 'editor_play']
     })
-    expect(prompt).toContain('ue_screenshot')
-    expect(prompt).not.toContain('task, ue_screenshot')
+    expect(prompt).toContain('editor_play')
+    expect(prompt).not.toContain('editor_play, task')
+    expect(prompt).not.toContain('task, editor_play')
   })
 
   it('开着（或没说）时照常写「拍一张确认」', () => {
-    expect(buildSystemPrompt(base)).toContain('capture one and confirm')
+    expect(buildSystemPrompt(base)).toContain('capture a frame with `godot_screenshot`')
     expect(buildSystemPrompt({ ...base, editorScreenshotEnabled: true })).toContain(
-      'capture one and confirm'
+      'capture a frame with `godot_screenshot`'
     )
   })
 
@@ -833,7 +805,8 @@ describe('buildSystemPrompt', () => {
     })
     expect(blind).not.toContain('you see them directly')
     expect(blind).toContain('cannot see images')
-    expect(blind).toContain('ue_get_actor')
+    // 给出不靠看图的确认办法
+    expect(blind).toContain('`godot_run` values')
 
     const sighted = buildSystemPrompt(base, [], {
       providerId: 'p',
@@ -856,11 +829,11 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('ignore previous instructions')
   })
 
-  it('没连引擎时给出连接引导，而不是留空', () => {
-    const prompt = buildSystemPrompt({ ...base, ueConnected: false })
+  it('没连编辑器时给出连接引导，而不是留空', () => {
+    const env = environmentOf(buildSystemPrompt({ ...base, ueConnected: false }))
 
-    expect(prompt).toContain('no UnrealAgentLink connection')
-    expect(environmentOf(prompt)).toContain('UnrealAgentLink')
+    expect(env).toContain('Godot editor: not connected')
+    expect(env).toContain('GDBox Link')
   })
 
   /*
@@ -956,7 +929,7 @@ describe('buildSystemPrompt', () => {
       }
     }
 
-    const OTHER = conn('UALinkDev55', 'D:/UE/UALinkDev55', '5.5')
+    const OTHER = conn('OtherGame', 'D:/Godot/OtherGame', '4.3')
 
     const situations: Situation[] = [
       situationOf('无归属 × 没连', null, []),
@@ -969,24 +942,24 @@ describe('buildSystemPrompt', () => {
         { projectName: 'test222', projectPath: 'D:/Games/test222' },
         [OTHER]
       ),
-      situationOf('有引擎版本 × 没连', { projectName: 'test222', engineVersion: '5.5' }, []),
-      situationOf('有引擎版本 × 连着别的', { projectName: 'test222', engineVersion: '5.5' }, [
+      situationOf('有引擎版本 × 没连', { projectName: 'test222', engineVersion: '4.3' }, []),
+      situationOf('有引擎版本 × 连着别的', { projectName: 'test222', engineVersion: '4.3' }, [
         OTHER
       ]),
       situationOf('归属工程自己连着', { projectName: 'MyGame' }, [
-        conn('MyGame', 'D:/UE/MyGame', '5.5')
+        conn('MyGame', 'D:/Godot/MyGame', '4.3')
       ]),
       situationOf('归属工程连着 + 还连着别的', { projectName: 'MyGame' }, [
-        conn('MyGame', 'D:/UE/MyGame', '5.5'),
+        conn('MyGame', 'D:/Godot/MyGame', '4.3'),
         OTHER
       ])
     ]
 
     const envOf = (s: Situation): string => environmentOf(buildSystemPrompt(s.ctx))
-    /** 这一轮模型手里有没有引擎工具 —— 有的话「路径/类型」都能直接问引擎 */
+    /** 这一轮模型手里有没有编辑器工具 —— 有的话「路径/类型」都能直接问编辑器 */
     const hasEngine = (s: Situation): boolean => Boolean(s.ctx.ueConnected)
-    /** 盒子记着引擎版本 —— 唯一能确认「这是 UE 工程」的时候 */
-    const knowsUnreal = (s: Situation): boolean =>
+    /** 盒子记着 Godot 版本 —— 唯一能确认「这是 Godot 工程」的时候 */
+    const knowsGodot = (s: Situation): boolean =>
       Boolean((s.ctx.sessionProject as { engineVersion?: string } | undefined)?.engineVersion)
     const pathless = (s: Situation): boolean =>
       Boolean(s.ctx.sessionProject) && !(s.ctx.sessionProject as { path?: string }).path
@@ -1012,30 +985,29 @@ describe('buildSystemPrompt', () => {
     )
 
     /*
-     * 不知道工程类型就不许**主动**劝人用 UE 打开。会话工程是用户在侧栏点
+     * 不知道工程类型就不许**主动**劝人去 Godot 里开插件。会话工程是用户在侧栏点
      * 「选文件夹」挑的任意目录（`AddProjectModal.pickFolder` 只开 `openDirectory`）。
      * 反过来不成立：没有引擎版本只等于「不知道」，不等于「不是」。
      *
-     * 断言查的是**肯定式的引导语**，不是「Unreal Engine」这几个字 —— 第一版正则
-     * 把禁令自己（「do not tell them to open it in Unreal Engine」）也匹配上了，
-     * 于是测试在为一句正确的话报错。
+     * 断言查的是**肯定式的引导语**，不是「Godot」这几个字 —— 「先问这是什么」
+     * 那一句本身就要提到 Godot 工程。
      */
-    it.each(situations.filter((s) => s.ctx.sessionProject && !knowsUnreal(s)))(
-      '工程类型未知时不主动劝人用 UE 打开：$label',
+    it.each(situations.filter((s) => s.ctx.sessionProject && !knowsGodot(s)))(
+      '工程类型未知时不主动劝人用 Godot 打开：$label',
       (s) => {
         const env = envOf(s)
-        expect(env).not.toContain('ask them to open it in Unreal Engine')
-        expect(env).not.toContain('start Unreal Engine with the project open')
+        expect(env).not.toContain('To connect the editor')
+        expect(env).not.toContain('GDBox Link')
       }
     )
 
     /*
-     * 用户明明连着引擎（只是连的不是这条会话的工程），这时候劝他装插件是答非所问。
+     * 用户明明连着编辑器（只是连的不是这条会话的工程），这时候劝他装插件是答非所问。
      */
     it.each(situations.filter((s) => s.ctx.outOfScopeProjects?.length))(
       '连着别的工程时不劝人装插件：$label',
       (s) => {
-        expect(envOf(s)).not.toContain('install the UnrealAgentLink plugin')
+        expect(envOf(s)).not.toContain('GDBox Link')
       }
     )
 
@@ -1046,27 +1018,28 @@ describe('buildSystemPrompt', () => {
     it.each(situations.filter((s) => !hasEngine(s)))(
       '没有引擎工具时要说清它推不出编辑器状态：$label',
       (s) => {
-        expect(envOf(s)).toContain('leaves open whether an editor is running')
+        expect(envOf(s)).toContain('leaves open whether Godot is running')
       }
     )
 
     /*
-     * 离线时模型只看得见手上那几个工具，会以为盒子不会做引擎的活，转头拿 UBT /
-     * commandlet 硬干。只要不排斥「这是 UE 工程」，就得说清工具只是藏着、先开工程。
+     * 离线时模型只看得见手上那几个工具，会以为盒子不会做编辑器的活，或者反过来
+     * 以为离了编辑器什么都干不了。只要不排斥「这是 Godot 工程」，就得说清编辑器
+     * 工具只是藏着、连上就来，而大部分活用无头的 `godot_*` 就能做。
      */
-    it.each(situations.filter((s) => !hasEngine(s) && (!s.ctx.sessionProject || knowsUnreal(s))))(
-      '没有引擎工具时说清「只是藏着」并劝先开工程：$label',
+    it.each(situations.filter((s) => !hasEngine(s) && (!s.ctx.sessionProject || knowsGodot(s))))(
+      '没有编辑器工具时说清「只是藏着」：$label',
       (s) => {
         const env = envOf(s)
-        expect(env).toContain('missing from your tool list only because nothing is connected')
-        expect(env).toContain('get the project open first rather than working around the editor')
+        expect(env).toContain('missing from your tool list only because no editor is connected')
+        expect(env).toContain('Most work does not need them')
       }
     )
 
-    it.each(situations.filter((s) => s.ctx.sessionProject && !knowsUnreal(s)))(
+    it.each(situations.filter((s) => s.ctx.sessionProject && !knowsGodot(s)))(
       '工程类型未知时不说「只是藏着」—— 让位给先问：$label',
       (s) => {
-        expect(envOf(s)).not.toContain('get the project open first')
+        expect(envOf(s)).not.toContain('missing from your tool list only because')
       }
     )
 
@@ -1085,11 +1058,11 @@ describe('buildSystemPrompt', () => {
   })
 
   /**
-   * 真机上的原始 bug：会话挂在 test222 下，编辑器开着 UALinkDev55，
+   * 真机上的原始 bug：会话挂在 test222 下，编辑器开着另一个工程，
    * 用户问「这是啥项目」，模型把连着的那个工程一五一十答了出来 ——
    * 答的不是用户问的那个，而且全程没说自己换了个工程。
    *
-   * 规则是项目对项目：这种情况下引擎工具整个不给（`ueConnected: false`），
+   * 规则是项目对项目：这种情况下编辑器工具整个不给（`ueConnected: false`），
    * 提示词要说清楚三件事 —— 这条会话是 test222 的、连着的是别人、
    * 想在这儿干活得先把 test222 打开。
    */
@@ -1098,14 +1071,14 @@ describe('buildSystemPrompt', () => {
       ...base,
       ueConnected: false,
       sessionProject: { name: 'test222', connected: false },
-      outOfScopeProjects: ['UALinkDev55']
+      outOfScopeProjects: ['OtherGame']
     })
 
     expect(prompt).toContain('test222')
-    expect(prompt).toContain('UALinkDev55')
+    expect(prompt).toContain('OtherGame')
     expect(prompt).toContain('out of scope')
-    // 用户明明连着引擎，这时候劝人装插件是答非所问
-    expect(environmentOf(prompt)).not.toContain('UnrealAgentLink')
+    // 用户明明连着编辑器，这时候劝人装插件是答非所问
+    expect(environmentOf(prompt)).not.toContain('GDBox Link')
   })
 
   /**
@@ -1118,18 +1091,18 @@ describe('buildSystemPrompt', () => {
       ...base,
       ueConnected: false,
       sessionProject: { name: 'test222', connected: false },
-      outOfScopeProjects: ['UALinkDev55']
+      outOfScopeProjects: ['OtherGame']
     })
 
-    expect(prompt).toContain('re-points this conversation at UALinkDev55')
+    expect(prompt).toContain('re-points this conversation at OtherGame')
     expect(prompt).toContain('changes nothing')
   })
 
   /**
    * 「没有映射到本会话工程的连接」**不等于**「那个工程没打开」。
    *
-   * `sessionScope.ts` 自己的注释里就记着一种：戳记着 `I:/Dev/Pond/Pond.uproject`、
-   * 插件报 `I:/Dev/Pond`，路径键对不上，于是工程开得好好的也走这个分支。原文写
+   * `sessionScope.ts` 自己的注释里就记着一种：戳记的路径和插件报的路径键对不上，
+   * 于是工程开得好好的也走这个分支。原文写
    * 「that project is not open」，模型就会照着一个它根本不知道的事实跟用户讲话。
    */
   it('归属工程没连时说的是「没有映射的连接」，不是「工程没打开」', () => {
@@ -1138,11 +1111,11 @@ describe('buildSystemPrompt', () => {
         ...base,
         ueConnected: false,
         sessionProject: { name: 'test222', connected: false },
-        outOfScopeProjects: ['UALinkDev55']
+        outOfScopeProjects: ['OtherGame']
       })
     )
 
-    expect(env).toContain('no engine connection is currently mapped to it')
+    expect(env).toContain('no editor connection is currently mapped to it')
     expect(env).not.toContain('not open')
   })
 
@@ -1165,16 +1138,17 @@ describe('buildSystemPrompt', () => {
   })
 
   // 谁都没连的时候没有「别的工程」可混淆，正常走连接引导
+  // 记着 Godot 版本才算确认是 Godot 工程；类型未知时让位给「先问」，见上面的矩阵
   it('一个工程都没连时仍然走连接引导，并带上会话归属', () => {
     const prompt = buildSystemPrompt({
       ...base,
       ueConnected: false,
-      sessionProject: { name: 'test222', connected: false },
+      sessionProject: { name: 'test222', engineVersion: '4.3', connected: false },
       outOfScopeProjects: []
     })
 
     expect(prompt).toContain('test222')
-    expect(prompt).toContain('UnrealAgentLink')
+    expect(environmentOf(prompt)).toContain('GDBox Link')
   })
 
   it('会话没有归属工程时提示词里不多一行', () => {
@@ -1201,7 +1175,7 @@ describe('buildSystemPrompt', () => {
         ...base,
         ueConnected: false,
         sessionProject: { name: 'test222', connected: false },
-        outOfScopeProjects: ['UALinkDev55']
+        outOfScopeProjects: ['OtherGame']
       }
     ]) {
       expect(buildSystemPrompt(ctx)).toContain(rules)
@@ -1266,14 +1240,15 @@ describe('buildSystemPrompt', () => {
   })
 
   /**
-   * 准则是针对**高频且沉默**的错误写的：node_id 猜错不会报「你猜错了」，
-   * 只会报一个看不出根因的连线失败。这条掉了，模型就会开始凭经验编 node_id。
+   * 准则是针对**高频且沉默**的错误写的：资源路径猜错、uid 手写，Godot 不会报
+   * 「你猜错了」，只会在导入或运行时报一个看不出根因的加载失败。这条掉了，
+   * 模型就会开始凭经验编路径和 uid。
    */
-  it('保留 node_id 必须先查的硬约束', () => {
+  it('保留路径和 uid 不许凭空编的硬约束', () => {
     const prompt = buildSystemPrompt(base)
 
-    expect(prompt).toContain('_get_graph')
-    expect(prompt).toContain('MUST')
+    expect(prompt).toContain('Never guess resource paths')
+    expect(prompt).toContain('never invent uids by hand')
   })
 
   /**
@@ -1352,7 +1327,7 @@ describe('buildSystemPrompt', () => {
    * 实际踩到过的一种表现：用户问「你是什么模型」，模型答「这个我不太方便细说」。
    *
    * 提示词里从来就没有一条「不许说」—— 它只是真不知道，于是从
-   * 「You are the AI assistant inside Unreal Box」这个人设倒推出一句演出来的
+   * 「You are the AI assistant inside GDBox」这个人设倒推出一句演出来的
    * 托词。社区版是开源的，模型还是用户自己在设置页绑的，这里没有任何要瞒的。
    */
   it('把当前模型身份写进提示词，并明说它不是秘密', () => {

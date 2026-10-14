@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * 「哪些工程算连着」的判据。
  *
  * 这一条修的是真机上一次实打实的假话：用户把编辑器关了，一个
- * `-nullrhi -unattended` 的验证进程跑完没退、还占着 17860 的连接，
+ * `-nullrhi -unattended` 的验证进程跑完没退、还占着 17870 的连接，
  * 盒子照着连接列表告诉用户「现在连着的工程是 MetaHumanDoubaoFullDuplex」——
  * 那个工程用户十分钟前就关了。
  *

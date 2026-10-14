@@ -385,11 +385,11 @@ export class TaskManager {
   /**
    * 发送任务事件。
    *
-   * 以前这里把 `task.*` 事件序列化后经网关发给 UE —— 而插件的
+   * 以前这里把 `task.*` 事件序列化后经网关发给编辑器插件 —— 而插件的
    * `ProcessMessage` 只处理 `type` 为 `req`/`res` 的消息，收到就打一行
    * "Ignore non-request message" 扔掉。也就是说这条链路从头到尾没有接收方。
    *
-   * 留一行日志就够了。真需要把任务进度送到 UE 时，得先在插件那侧
+   * 留一行日志就够了。真需要把任务进度送到编辑器时，得先在插件那侧
    * 有个接收端，那时再接回来。
    */
   private emitTaskEvent(taskId: string, event: string, data: unknown): void {

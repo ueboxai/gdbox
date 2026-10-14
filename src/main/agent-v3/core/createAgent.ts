@@ -44,7 +44,7 @@ import {
 } from '../tools/builtin/toolSearch'
 import { toolSearchPrefixKey } from './toolSearchCache'
 import { effectiveRisk, type UnrealAgentTool } from '../tools/defineTool'
-import { OFFLINE_UE_TOOLS } from '../tools/toolNames'
+import { needsEditor } from '../tools/toolNames'
 import { createApprovalGate, type ApprovalDeps, type ApprovalMode } from './approval'
 import { VIEWPORT_CAPTURE_TOOLS } from './editorScreenshotScope'
 import { createLoopBreaker } from './loopBreaker'
@@ -191,7 +191,7 @@ export interface SessionContext {
    *
    * 省略 = 没人说过话，按默认档（允许）走 —— 见
    * `core/editorScreenshotScope.ts` 的 `EDITOR_SCREENSHOT_DEFAULT`。
-   * 显式 `false` 才会把 `ue_screenshot` 从工具池里摘掉，并且换掉系统提示词里
+   * 显式 `false` 才会把 `godot_screenshot` 从工具池里摘掉，并且换掉系统提示词里
    * 那句「拍一张确认一下」：只摘工具不改提示词，模型会去调一个不存在的工具，
    * 再把「我拍不了」答成「我没有这个能力」。
    */
@@ -392,18 +392,12 @@ export function browserToolsAvailable(ctx: SessionContext): boolean {
 }
 
 function resolveCandidateTools(ctx: SessionContext): UnrealAgentTool<never>[] {
-  // 未连接引擎时不注册 ue.* 工具。让模型看到一堆调不通的工具，它会在上面
-  // 浪费步数，最后拿一堆「引擎未连接」的失败 —— 不如一开始就不给。
-  // 资产库 / 项目管理是盒子本地能力，不依赖引擎。
+  // 编辑器没连上时不给编辑器工具（见 toolNames.ts 的 needsEditor）。
+  // 文件读写、无头检查试玩、资产库都不依赖编辑器。
   let tools = buildAllTools({
     ...(ctx.sender ? { sender: ctx.sender } : {}),
     ...(ctx.notebook ? { notebook: ctx.notebook } : {})
-  }).filter(
-    (tool) =>
-      ctx.ueConnected ||
-      !tool.unrealBox.namespace.startsWith('ue.') ||
-      OFFLINE_UE_TOOLS.has(tool.name)
-  )
+  }).filter((tool) => ctx.ueConnected || !needsEditor(tool.unrealBox.namespace))
 
   if (ctx.namespaces?.length) {
     const allowed = new Set(ctx.namespaces)
@@ -762,9 +756,7 @@ export async function createUnrealAgent(ctx: SessionContext): Promise<CreatedAge
         )
       : undefined
   onlineTools.push(...teamToolsFor(ctx, onlineTools, teamModels))
-  const offlineTools = onlineTools.filter(
-    (tool) => !tool.unrealBox.namespace.startsWith('ue.') || OFFLINE_UE_TOOLS.has(tool.name)
-  )
+  const offlineTools = onlineTools.filter((tool) => !needsEditor(tool.unrealBox.namespace))
   const toolsFor = (ueConnected: boolean): UnrealAgentTool<never>[] =>
     ueConnected ? onlineTools : offlineTools
 
@@ -1286,18 +1278,10 @@ export async function runSubAgent(
 }
 
 /**
- * 验收员手上的工具：`/goal` 审计员那一套，再加真能「玩」的两个。
- *
- * 审计员只要能回读和跑一遍；交付验收要从开始玩到胜负再重来，
- * 光 `ue_playtest` 模拟不了玩家输入，所以带上自动试玩和注入输入；
- * 交了打包版的话，再拿 `project_smoke_test` 起一次打包版看会不会崩。
+ * 验收员手上的工具：`/goal` 审计员那一套。交付验收要从开始玩到胜负再重来，
+ * `godot_run` 能按时间表按键、盯数值，本来就在只读那一套里。
  */
-const ACCEPTANCE_JUDGES = [
-  ...AUDITOR_HARD_JUDGES,
-  'ue_autoplay',
-  'ue_inject_input',
-  'project_smoke_test'
-]
+const ACCEPTANCE_JUDGES = [...AUDITOR_HARD_JUDGES]
 
 /**
  * 工作室里「谁在跑」：制作人和每个队员开跑时登记、收工时注销，别人发来的话才能当场插进来；
@@ -1499,10 +1483,10 @@ export function buildSystemPrompt(
   // 不知道（没给模型）就按能看走，和原来一样；只有明确是纯文本模型才换说法
   const seesImages = model?.model?.input ? model.model.input.includes('image') : true
   const lines = [
-    'You are the AI assistant inside Unreal Box, helping users work on Unreal Engine projects and their local asset library.',
+    'You are the AI assistant inside GDBox, helping users make games with the Godot Engine and manage their local asset library.',
     '',
     'Capabilities:',
-    '- Unreal Engine: blueprints, materials, actors, levels, UMG widgets, content browser, Python execution',
+    "- Godot projects: scenes (.tscn), resources (.tres), scripts (.gd) and project.godot are plain text you read and edit directly; `godot_check` imports and runs the project headless to catch errors, `godot_run` plays it with scripted input and watches values, `godot_screenshot` shows you a frame; with the user's editor connected, the `editor_*` tools see and drive it",
     // shell 有没有是每台机器不一样的（见 `localShell.ts` 的 isShellAvailable）。
     // 原先这里写「run shell commands where a shell exists」—— 一句既没给能力
     // 也没给约束的废话：没 shell 的机器上工具根本没注册，模型照样会开口提议
@@ -1510,7 +1494,8 @@ export function buildSystemPrompt(
     ctx.shellAvailable
       ? "- The user's own disk: list, search and read files; write and edit them; run bash commands"
       : "- The user's own disk: list, search and read files; write and edit them",
-    "- Unreal Box: asset library search and tagging, notebooks, project management, in-app navigation; the box itself — its assistant's past conversations, import tasks, skills, backups",
+    '- Game assets: generate sprites, tilesets, sound effects, looping music, voice lines, images and 3D models straight into the project as ready-to-use Godot resources',
+    "- GDBox: asset library search and tagging, notebooks, project library, in-app navigation; the box itself — its assistant's past conversations, import tasks, skills, backups",
     // 检索是无头只读的，任何会话都有 —— 包括 Ask 模式和子 agent
     '- The web, read-only: `web_search` finds pages (add `site:` to narrow it), `web_read` returns a page as filtered Markdown. Neither opens a window nor needs approval.',
     // 浏览器那一行只有真的注册了才写。没注册却说「你能上网」，
@@ -1520,11 +1505,6 @@ export function buildSystemPrompt(
           '- The web: `browser_open` shows a page in a real browser window the user can watch and take over, `browser_read` returns its filtered text or its clickable elements, `browser_navigate` follows links and scrolls, `browser_interact` clicks and types, `browser_screenshot` shows you what it looks like'
         ]
       : []),
-    // 没有这一行，模型不知道盒子手里有引擎清单，会自己去 shell 里 reg query ——
-    // 注册表只登记一部分版本，它拿到的清单比用户眼前那排卡片还少（真机上就这么答错过）。
-    // 「装了哪些引擎」而不是「插件装在哪」：写成后者会让它把开工程也当成引擎决策，
-    // 开工程前先盘点一遍引擎 —— 而引擎是系统按 EngineAssociation 自己选的
-    '- `list_engines`: which Unreal Engine versions are installed on this machine and where, and which editor is running right now',
     /*
      * 子 agent 手里**没有** `task`（见 `resolveAgentTools`），所以这一行对它是错的。
      *
@@ -1545,32 +1525,15 @@ export function buildSystemPrompt(
       : []),
     '',
     'Guidelines:',
-    '- You MUST look up node ids, function names and pin names before using them — they cannot be inferred, and wiring to a pin that does not exist fails without telling you that guessing was the problem. For blueprints use `blueprint_search_nodes` (functions and their pin signatures) or `blueprint_get_graph` (an existing graph); for materials use `material_search_nodes` (node types and their pin signatures) or `material_get_graph` (an existing graph). Material pin names follow no pattern — `TextureSample` takes `Coordinates`, not `UVs` — so never build a scratch node just to read its pins back.',
-    // 蓝图和材质现在是同一种形状：整图写入。这条以前写着「材质仍然逐节点编辑」，
-    // 而 material_add_node / material_connect_pins 早就下线了 —— 照着那句话，
-    // 模型要么去找一个不存在的工具，要么一个节点发一次 apply_graph，
-    // 每次都重排版重编译一整张图。
-    '- Blueprints are written whole: describe every node and connection in one `blueprint_apply_graph` call. It is all-or-nothing, so on failure fix the errors and resend the complete set rather than patching the parts that failed. Do not look for a way to add a single node; there is not one.',
-    // 「材质也没有逐节点工具」这句话说过头了 —— 加节点/连线确实只有 apply_graph 一条路，
-    // 但改一个值、删一个节点、断一根线是有专门工具的。照那句话，用户说「把那个常量改成
-    // 0.3」模型会去整图重发，而整图重发恰恰是这条里说的「失败即停不回滚」。
-    '- Material graphs are written whole too, through `material_apply_graph`: that is the only way to add nodes or wires. Unlike blueprints it stops at the first failure without rolling back, so read the report and continue from where it stopped instead of resending the whole graph. Editing in place is different — `material_set_node_value`, `material_delete_node` and `material_disconnect_pins` each do one thing to an existing graph.',
-    // 这套工具做的所有事默认都不落盘。不写这条，agent 干完一整轮，
-    // 用户关编辑器时撞上一堆「是否保存」，或者直接丢掉。
-    "- Everything you change in the engine lives in memory until it is saved. Call `ue_save` when you finish a piece of work, and `ue_save_level` after changing the level. `ue_save` only saves what you changed, never the user's own unsaved edits.",
-    // 你的步骤和用户的步骤在两条独立的撤销栈上（插件端换掉了 GEditor->Trans）。
-    // 不写这条，模型被要求「撤销」时会让用户去按 Ctrl+Z —— 那条路撤不到它做的任何事。
-    "- Your own steps go on a separate undo stack from the user's. If they ask you to undo something you did, use `ue_undo` (check `ue_undo_history` first to see what each step touched) — telling them to press Ctrl+Z will not reach your work. Undo only changes memory, so call `ue_save` afterwards to make the revert reach disk.",
-    // 「编译通过」和「跑起来不炸」是两件事，而模型默认会把前者当成后者。
-    // 后半句同样重要：试玩碰不到按键触发的逻辑，一份干净的报告不等于游戏能玩。
-    '- Compiling proves the syntax is valid, not that the game runs. After building gameplay, save and then run `ue_playtest` to actually execute it, and read the `print_strings` and `errors` it returns. It cannot simulate player input, so it only exercises what runs on its own (BeginPlay, Tick, physics, timers) — never tell the user an input-driven feature works on the strength of a clean playtest. For input-driven or multi-step gameplay you can try `ue_autoplay` — it is experimental: reliable on flat ground and navmesh-reachable targets, often fails where the route needs jumping up steps, climbing or crossing gaps, so treat "did not reach it" as a likely terrain limit rather than a game bug, and tell the user the result came from an experimental tool. Its objective mode: give one natural-language `objective` ("find the key, then open the door") and a bot plays it step by step, walking around obstacles and reading the whole scene; add `goal.until_log` with a PrintString you placed in the Blueprint, because that is the only assertion (the bot saying the objective is done is a judgment, not proof). Objective mode needs a judge model configured; without one, use goal mode (fixed steps: reach_actor / press / until_log). Explore mode is a smoke test for stuck spots, falls and inputs that throw errors, and a clean explore run only means nothing crashed. Each call is a fresh play session.',
-    '- Never guess asset paths. Search first when unsure.',
-    // 实际踩到过的一种表现：用户问「我在场景中选择的这个是啥」，模型不知道有
-    // targets.selection 这条路，先写了 19.7 秒的 Python 去读 EditorActorSubsystem，
-    // 又照 class 名猜了个错路径，再 content_search 找回来 —— 四轮才答出一句话。
-    // 这条路一直存在（插件端认这个字段），模型只是不知道，所以要明写。
-    '- When the user points at something with a demonstrative — "this", "the one I selected", "这个", "我选中的" — that is the editor selection. Pass `targets: { selection: true }` to `ue_get_actor`, `ue_set_property`, `ue_set_transform` or `ue_destroy_actor`. Never write Python to read the selection, and never guess which actor they meant from its name. If nothing is selected the tool says so; ask the user to select it rather than falling back to guessing.',
-    "- A blueprint actor's `class` (e.g. `BP_Door_C`) is not an asset path. `ue_get_actor` returns `blueprint_path` for blueprint instances — feed that straight to `blueprint_describe` instead of searching the content browser for a similar name.",
+    // 这几条来自旧 GDBox 原型里真实模型跑出来的教训：.godot/ 被改坏、uid 被手写、
+    // 改完不验就报「好了」、为了验证往工程里塞临时测试场景
+    "- Never edit anything under .godot/ — it is the editor's cache and is regenerated. Keep uid:// references intact when editing .tscn/.tres; never invent uids by hand.",
+    '- After changing scripts or scenes, run `godot_check` and fix every error it reports before saying you are done.',
+    '- To verify behaviour (jumping, movement, timing), use `godot_run`: press input actions on a schedule and watch values over time. Do not write throwaway test scenes into the project.',
+    '- For art, music, sound effects and voice, use the generation tools: they write ready-to-use Godot resources into res://assets/gen/ (SpriteFrames, TileSet, looping audio). Do not hand-process generated files with scripts. You cannot hear audio: check sounds with `inspect_audio`, then tell the user to listen.',
+    '- Never guess resource paths. List or search the project first when unsure.',
+    // 闪存（发送那一刻的选中）随消息进来，见 EDITOR_SNAPSHOT_RULES
+    '- When the user points at something with a demonstrative — "this", "the one I selected", "这个", "我选中的" — that is the editor selection captured when they sent the message. Use it rather than guessing from names; if nothing was selected, ask them to select it.',
     /*
      * 用户在「设置 → 工具」里关掉的那几个，必须**点名说出来**。
      *
@@ -1590,12 +1553,12 @@ export function buildSystemPrompt(
     ...(ctx.disabledToolNames?.some((name) => !ALWAYS_RESIDENT_TOOL_NAMES.has(name)) &&
     !ctx.toolSearchEnabled
       ? [
-          `- The user turned these tools off in Unreal Box's Settings → Tools, so they are not in your list and will not come back during this run: ${ctx.disabledToolNames
+          `- The user turned these tools off in GDBox's Settings → Tools, so they are not in your list and will not come back during this run: ${ctx.disabledToolNames
             .filter((name) => !ALWAYS_RESIDENT_TOOL_NAMES.has(name))
             .sort()
             .join(
               ', '
-            )}. Instructions elsewhere in this prompt, and in skills, still name some of them — ignore those mentions. Do not look for a way around it, not through Python and not through the shell. If a task genuinely cannot be done without one of them, name that tool and ask the user to turn it back on rather than reporting that you lack the capability.`
+            )}. Instructions elsewhere in this prompt, and in skills, still name some of them — ignore those mentions. Do not look for a way around it, not through scripts and not through the shell. If a task genuinely cannot be done without one of them, name that tool and ask the user to turn it back on rather than reporting that you lack the capability.`
         ]
       : []),
     // 截图这一句跟着用户那个隐私开关走。
@@ -1605,18 +1568,15 @@ export function buildSystemPrompt(
     // 那一行是同一个坑（见 `browserToolsAvailable`）。关掉时不但要撤回这句话，
     // 还得说清楚**为什么没有**和**该改用什么**，否则模型只会原地绕。
     ctx.editorScreenshotEnabled === false
-      ? '- You cannot capture the editor viewport: the user turned off "allow editor screenshots" in Unreal Box\'s privacy settings, so no such tool is in your list. Do not look for a way around it — not through Python, not through the shell. Confirm visible changes by reading the scene back instead (`ue_get_actor`, `ue_get_selection`, `ue_content_describe`, `blueprint_get_graph`, `material_get_graph`), and when seeing the picture is genuinely the only way, say so and ask the user to look or to send you a screenshot. They can re-enable it under Settings → AI → Privacy. Offscreen asset previews such as `widget_preview` are unaffected and still work.'
-      : // 纯文本模型：工具照样回图，但 pi 发请求前会把它换成「(image omitted …)」。
-        // 这里还说「你直接看得到」，模型就只能对着工具那段文字去编画面。
-        // 工具不摘：图照样显示在用户的对话里，那是人能核对的凭据
+      ? '- You cannot capture game frames: the user turned off "allow editor screenshots" in GDBox\'s privacy settings, so `godot_screenshot` and screenshots from `godot_run` are not available. Do not look for a way around it — not through scripts, not through the shell. Confirm visible changes by reading the scene files back, and when seeing the picture is genuinely the only way, say so and ask the user to look or to send you a screenshot. They can re-enable it under Settings → AI → Privacy.'
+      : // 纯文本模型：工具照样回图，但 pi 发请求前会把它换成「(image omitted …)」
         !seesImages
-        ? '- The model you are running on cannot see images. Screenshot and preview tools still work and the user sees their images in the conversation, but to you each image arrives only as "(image omitted)". Never describe what an image shows or call a visual result correct on the strength of one. Confirm visible changes by reading the scene back (`ue_get_actor`, `ue_get_selection`, `ue_content_describe`, `blueprint_get_graph`, `material_get_graph`), and for anything only the picture can settle, say plainly that you could not see it and ask the user to look. They can pick a vision-capable model in Unreal Box\'s settings.'
-        : '- Tools can hand back screenshots and preview images, and you see them directly. After changing anything with a visible result, capture one and confirm before you report.',
-    '- After modifying the visual asset under discussion, include one permitted screenshot or offscreen preview and current numeric evidence in your closing reply. For body animation use anim_measure and anim_preview at matching frames; unmeasurable is not a pass. Never invent a measurement or bypass screenshot privacy settings. For explicit cross-project aesthetic preferences, use the existing skill-learning workflow rather than creating another preference store.',
+        ? '- The model you are running on cannot see images. Screenshot tools still work and the user sees their images in the conversation, but to you each image arrives only as "(image omitted)". Never describe what an image shows or call a visual result correct on the strength of one. Confirm visible changes by reading the scene files and `godot_run` values, and for anything only the picture can settle, say plainly that you could not see it and ask the user to look. They can pick a vision-capable model in GDBox\'s settings.'
+        : '- Tools can hand back screenshots and preview images, and you see them directly. After changing anything with a visible result, capture a frame with `godot_screenshot` and look at it before you report.',
     ...(ctx.isSubAgent
       ? []
       : [
-          '- Send exploratory subtasks that take many intermediate steps (sweeping large asset sets, iterating until a graph compiles) to `task`, so the noise stays out of this conversation.',
+          '- Send exploratory subtasks that take many intermediate steps (sweeping large asset sets, iterating until a scene passes godot_check) to `task`, so the noise stays out of this conversation.',
           // 只读子任务是 prompt 拦不住的那件事的唯一解法，所以必须在这里说清
           '- Any subtask whose output is a report rather than a change — reviewing, auditing, inventorying, hunting for problems — must be sent with `read_only: true`. Writing "do not modify anything" into the prompt does not stop a sub-agent from "fixing" what it finds; `read_only` takes the write tools out of its hands.'
         ]),
@@ -1635,7 +1595,7 @@ export function buildSystemPrompt(
     // 界面下方的「本轮改动」已经按资产列清了动过什么，那是台账。
     // 模型再把施工步骤复述一遍，用户读完两份都还是不知道那个材质长什么样 ——
     // 台账答不了「它现在会做什么」，而那恰恰是只有模型答得出的一半。
-    '- When you finish, say plainly what you did, what came of it, and anything the user has to decide. The UI already lists which assets you touched, so do not re-narrate the steps. Explain the outcome instead: what the thing now does, and which parameter or node the user would change to adjust it. "Created M_GlowBreath with 10 nodes" tells them nothing; "M_GlowBreath pulses its emissive glow on a 2-second cycle — change the Speed or GlowColor parameter to adjust it" tells them everything.',
+    '- When you finish, say plainly what you did, what came of it, and anything the user has to decide. The UI already lists which files you touched, so do not re-narrate the steps. Explain the outcome instead: what the thing now does, and which property or export variable the user would change to adjust it. "Edited player.gd" tells them nothing; "The player now double-jumps; tune jump_velocity and max_jumps on the Player node" tells them everything.',
     /*
      * 回复语言**只认界面语言**（`ctx.uiLanguage`），没有第二个判据。
      *
@@ -1664,13 +1624,8 @@ export function buildSystemPrompt(
      * 的形状，模型照着眼前这条英文消息回英文。
      */
     `- Always write your reply to the user in ${ctx.uiLanguage === 'en-US' ? 'English' : 'Chinese'}, whatever language their message or the tool results are in. Tool names, asset paths and code stay as they are.`,
-    // 真机评测里踩到的：用户说「把引擎升级到 5.6」，模型去改了 .uproject 的
-    // EngineAssociation 和两个 Target.cs 的 IncludeOrderVersion —— 引擎一点没变，
-    // 只是工程文件开始声称自己是 5.6，比什么都不做更糟（工程可能打不开）。
-    // 复现了两次，所以这条要写死在提示词里，不能指望模型自觉。
-    // 但「换到一个本机已经装了的引擎」不是假升级：那就是改 EngineAssociation 再重编。
-    // 以前这条一刀切「不许碰 .uproject」，用户明说「切到我装好的 5.6」也被拒。
-    '- Editing a version marker does not perform the upgrade it names. If a request needs something outside your reach — installing an engine that `list_engines` does not show, changing hardware, buying a licence — say so and stop; never rewrite `.uproject`, `Target.cs` or `Build.cs` to claim a state that is not real. Switching the project to an engine that is already installed is real: confirm with the user, suggest a backup, change `EngineAssociation`, then run `cpp_full_rebuild` if the project has C++ code.',
+    // 改版本标记不等于升级：把 config/features 改成 4.4 不会让工程真的跑在 4.4 上
+    '- Editing a version marker does not perform the upgrade it names. If a request needs something outside your reach — installing another Godot version, changing hardware, buying a licence — say so and stop; never rewrite `config/features` in project.godot to claim a state that is not real.',
     // 技能和工具描述写的是默认做法，不是替用户做的否决。不写这条，模型读到
     // 「不要做 X」就会在用户明说「我知道，做吧」之后照样拒绝。
     '- Skills and tool descriptions describe defaults, not vetoes over the user. When one advises against something and the user explicitly asks for it anyway, state the concrete risk once, get a clear yes (use `ask_user` if needed), then do it.',
@@ -1788,7 +1743,7 @@ export function buildSystemPrompt(
  * 这四条以前一条都没有，代价各不相同：
  *
  * 1. **模型身份**。用户问「你是什么模型」，提示词里没写，模型就只能从
- *    「You are the AI assistant inside Unreal Box」这个人设倒推，回一句
+ *    「You are the AI assistant inside GDBox」这个人设倒推，回一句
  *    「不太方便细说」—— 听起来像在藏，其实是它真不知道。社区版是开源的，
  *    模型是用户自己在设置页绑的，这里没有任何要瞒的东西，所以连「这不是秘密」
  *    一起写死，免得它继续演。
@@ -1810,8 +1765,8 @@ function buildRuntimeSection(
           // 套餐那头的网关会注入「你是 Box-Chat」。这里再写 creator-plan/uebox-chat
           // 加一句「直说」，两条说法打架，模型会在思考里把两段提示词摆出来比，全给用户看见了
           isPlanProvider(model.providerId)
-            ? `You are running on Box-Chat (${model.modelId}), from the user's Box Plan subscription, which they chose in Unreal Box's settings and can change there.`
-            : `You are running on ${model.providerId}/${model.modelId}, which the user chose in Unreal Box's settings and can change there. Unreal Box is open source and this is not a secret: if they ask what model you are, say so plainly instead of deflecting.`
+            ? `You are running on Box-Chat (${model.modelId}), from the user's Box Plan subscription, which they chose in GDBox's settings and can change there.`
+            : `You are running on ${model.providerId}/${model.modelId}, which the user chose in GDBox's settings and can change there. GDBox is open source and this is not a secret: if they ask what model you are, say so plainly instead of deflecting.`
         ]
       : []),
     // 本地日期，和运行时信封的 `now` 同一个口径。原来是 UTC：东八区凌晨这里写的是昨天，
@@ -1827,11 +1782,11 @@ function buildRuntimeSection(
     // 把本该用来查东西的轮次全烧在试探上
     ...(ctx.readOnly && ctx.mode !== 'ask'
       ? [
-          "This subtask is read-only: only authorized read-only tools can be used, by explicit choice of the caller. That filter goes by risk, not by intent, so a few tools you might expect are gone: `ue_run_python_script` (it can write as easily as read) and `ue_focus_viewport` (it moves the user's viewport and selection). Read-back tools remain eligible subject to the other permissions; `ue_screenshot` also requires screenshot permission. " +
+          'This subtask is read-only: only authorized read-only tools can be used, by explicit choice of the caller. That filter goes by risk, not by intent, so tools that can write as easily as read (the shell, `editor_play`, `editor_select`) are gone. Read-back tools such as `godot_check`, `godot_run` and `godot_screenshot` remain eligible subject to the other permissions. ' +
             (ctx.toolSearchEnabled
               ? 'A read-back tool may still need loading through the matching skill or search_tools before calling it. '
               : '') +
-            'Report what you find — including what you would change and why — but do not look for a way to change anything, not through Python, not through the shell. If the work genuinely cannot be done without writing, say so and stop.'
+            'Report what you find — including what you would change and why — but do not look for a way to change anything, not through scripts, not through the shell. If the work genuinely cannot be done without writing, say so and stop.'
         ]
       : [])
   ]
@@ -1859,7 +1814,7 @@ function buildNotebookSection(ctx: SessionContext): string[] {
   if (!ctx.notebook) return []
   if (ctx.notebook === 'all') {
     return [
-      "Notebooks: the user's knowledge bases in Unreal Box hold material they collected themselves — you have never seen it. When a question could be covered there, search with `search_notebook_sources` (all notebooks by default, or name one) before answering from memory."
+      "Notebooks: the user's knowledge bases in GDBox hold material they collected themselves — you have never seen it. When a question could be covered there, search with `search_notebook_sources` (all notebooks by default, or name one) before answering from memory."
     ]
   }
   const name = ctx.notebook.title ? `"${ctx.notebook.title}"` : 'the current notebook'
@@ -1899,34 +1854,23 @@ function buildNotebookSection(ctx: SessionContext): string[] {
 const ENV_NOTES = {
   /** 「没有连接」只说明连接。它推不出编辑器状态，也推不出这是什么工程 */
   connectionOnly:
-    'That is a fact about the connection and nothing more: it leaves open whether an editor is running, and leaves open what kind of project anything here is. Work on local files is unaffected.',
+    'That is a fact about the editor connection and nothing more: it leaves open whether Godot is running. Reading and editing the project files, `godot_check`, `godot_run` and `godot_screenshot` all work without it.',
 
-  /** 盒子不知道这个文件夹里装着什么 —— 先问，别替用户假设他在用什么引擎*/
+  /** 盒子不知道这个文件夹里装着什么 —— 先问，别替用户假设 */
   unknownKind: (name: string): string =>
-    `${name} is a folder the user picked, and Unreal Box has no record of what kind of project it holds. Ask them what it is before bringing up any engine, and carry on working with its files meanwhile.`,
+    `${name} is a folder the user picked, and GDBox has no record of it being a Godot project. Ask them what it is before treating it as one, and carry on working with its files meanwhile.`,
 
   /** 路径没记下来 = 未知，不是否定。给出该做什么，以及搜索的边界在哪 */
   noPath: (name: string): string =>
-    `Unreal Box has no path on record for ${name}: none was ever recorded, which is separate from whether the folder is still there. Ask the user where it is, and search their disks only when finding it is the task they gave you — starting from whatever clue they give rather than from the drive root.`,
+    `GDBox has no path on record for ${name}: none was ever recorded, which is separate from whether the folder is still there. Ask the user where it is, and search their disks only when finding it is the task they gave you — starting from whatever clue they give rather than from the drive root.`,
 
-  /**
-   * 工具清单里没有 ≠ 盒子没有。
-   *
-   * 离线时 ue.* 整个不注册，模型只看得见手上那几个工具，就以为盒子不会做引擎的活，
-   * 转头拿 UBT、commandlet、手改工程文件硬干（真机：一整局游戏全走无头流水线，
-   * 从头到尾没提过「把工程打开」）。所以要说清这些工具在哪、怎么拿到、别绕开。
-   * 只在不排斥「这是 UE 工程」时给 —— 类型未知时 `unknownKind` 要求先问。
-   */
+  /** 编辑器工具只是藏着：说清在哪、怎么拿到 */
   hiddenNotMissing:
-    'Engine tools (blueprints, materials, levels and actors, UMG, editor Python, screenshots, play-in-editor) are missing from your tool list only because nothing is connected, and they appear on their own as soon as the project connects, mid-turn included. When a task needs them, get the project open first rather than working around the editor: headless builds, commandlets and hand-edited project files are a different job, so propose one only with your reason and go ahead once the user agrees.',
+    'The `editor_*` tools (scene tree, selection, run in the editor, open scenes) are missing from your tool list only because no editor is connected; they appear on their own as soon as one connects, mid-turn included. Most work does not need them — the project is plain text and the `godot_*` tools run Godot headless.',
 
-  /** 怎么才能有引擎工具。**只在确认是 UE 工程、且此刻一个连接都没有时**才给 */
+  /** 怎么连上编辑器。只在确认是 Godot 工程、且此刻一个连接都没有时才给 */
   howToConnect:
-    'To get engine tools here, open the project: `project_manage` with action open_project does it when you have that tool, and installs the UnrealAgentLink plugin into the project on the way. Otherwise the user starts Unreal Engine with the project open, and installs the UnrealAgentLink plugin if it is missing. The plugin connects to Unreal Box on its own and retries every 5 seconds — there is no "connect" button, so point them at the engine itself rather than at a control in the box. Once the project is open, `ue_session_health` reports whether the plugin has handshaked.',
-
-  /** 装了哪些引擎，盒子自己扫过，直接问它 */
-  engineList:
-    'If they ask about engines — which versions are installed, where, whether one is missing — `list_engines` answers from what Unreal Box already scanned; reach for it rather than the registry or a disk scan. Opening a project does not need it.'
+    'To connect the editor, the user opens the project from GDBox (double-click it in the project library), which installs and enables the GDBox Link plugin on the way; or they enable GDBox Link under Project → Project Settings → Plugins themselves. The plugin connects on its own and retries every 3 seconds — there is no "connect" button in GDBox, so point them at Godot rather than at a control in the box.'
 } as const
 
 /**
@@ -1941,74 +1885,45 @@ function buildEnvironmentSection(ctx: SessionContext): string[] {
   const session = ctx.sessionProject
   const outOfScope = ctx.outOfScopeProjects?.filter(Boolean) ?? []
 
-  /*
-   * 这是个 UE 工程吗 —— 盒子**只在记着引擎版本时**才知道。
-   *
-   * 对话工程是用户在侧栏点「选文件夹」挑的任意目录（`AddProjectModal` 的
-   * `pickFolder` 只开 `openDirectory`，不校验 `.uproject`）。引擎版本只可能来自
-   * UE 工程库里那条记录，或者曾经真的连上过。
-   *
-   * 反过来不成立：没有引擎版本不等于「不是 UE 工程」，只等于「不知道」。
-   * 所以它只用来决定**给不给引擎引导**，从不用来断言这个工程是什么。
-   */
-  const knownUnreal = Boolean(session?.engineVersion)
+  // 记着 Godot 版本的才算确认是 Godot 工程；没有只是「不知道」，不是「不是」
+  const knownGodot = Boolean(session?.engineVersion)
 
-  // 归属的工程自己连着：引擎在手，路径、类型、内容全都直接问它，一条提醒都不需要
+  // 归属的工程自己连着：编辑器在手，一条提醒都不需要
   if (ctx.ueConnected) {
     return [
-      `Unreal Engine: connected${ctx.project ? ` — ${describeProject(ctx.project)}` : ''}.`,
+      `Godot editor: connected${ctx.project ? ` — ${describeProject(ctx.project)}` : ''}.`,
       ...(session
         ? [
             `This conversation belongs to project ${describeProject(session)} — the connected project above.`
           ]
-        : []),
-      'Ask the engine for anything else about the project (level, settings, enabled plugins) rather than assuming.'
+        : [])
     ]
   }
 
   return [
-    /*
-     * 「没有映射到本对话工程的连接」**不等于**「那个工程没打开」：路径键对不上
-     * （`sessionScope.ts` 里记着的那种）时工程开得好好的，这里照样是这个分支。
-     * 写成「not open」模型就会照着一个它其实不知道的事实去答话。
-     */
     session && outOfScope.length > 0
-      ? `Unreal Engine: no engine tools in this conversation. It belongs to project ${describeProject(session)}, and no engine connection is currently mapped to it.`
-      : `Unreal Engine: no UnrealAgentLink connection, so every engine tool is unavailable for this session.${session ? ` This conversation belongs to project ${describeProject(session)}.` : ''}`,
+      ? `Godot editor: no editor tools in this conversation. It belongs to project ${describeProject(session)}, and no editor connection is currently mapped to it.`
+      : `Godot editor: not connected.${session ? ` This conversation belongs to project ${describeProject(session)}.` : ''}`,
     ENV_NOTES.connectionOnly,
 
     // 别的工程连着：说清它是谁、边界在哪、逃生口是什么
     ...(session && outOfScope.length > 0
       ? [
           `Connected right now: ${outOfScope.join(', ')} — a different project, out of scope here. You may say it is what is connected, and that is the whole of what it tells you; leave its contents and its name out of anything you say about ${session.name}.`,
-          `For engine work here, ${session.name} needs a connection of its own: offer to open it for them if you have a project tool that can. The other way out is the folder chip at the top right, which re-points this conversation at ${outOfScope[0]} or drops the project link entirely — that means working in ${outOfScope[0]} instead of ${session.name}, so say so plainly. Pointing it at ${session.name} changes nothing; it is already there.`
+          `For editor work here, ${session.name} needs its own editor open. The other way out is the folder chip at the top right, which re-points this conversation at ${outOfScope[0]} or drops the project link entirely — that means working in ${outOfScope[0]} instead of ${session.name}, so say so plainly. Pointing it at ${session.name} changes nothing; it is already there.`
         ]
       : []),
 
-    // 盒子不知道这是什么工程：先问，别替他决定
-    ...(session && !knownUnreal ? [ENV_NOTES.unknownKind(session.name)] : []),
-
-    // 路径没记下来：说清那是未知，并给出该做什么
+    ...(session && !knownGodot ? [ENV_NOTES.unknownKind(session.name)] : []),
     ...(session && !session.path ? [ENV_NOTES.noPath(session.name)] : []),
-
-    ENV_NOTES.engineList,
-
-    // 引擎工具只是藏着：说清在哪、怎么拿到。类型未知时让位给 `unknownKind` 的「先问」
-    ...(!session || knownUnreal ? [ENV_NOTES.hiddenNotMissing] : []),
-
-    /*
-     * 连接引导只在两个条件都成立时给：
-     * 1. 确认是 UE 工程 —— 否则那是在替用户假设他在用什么引擎；
-     * 2. 此刻一个连接都没有 —— 已经连着别的工程的人显然装好了插件，
-     *    再劝他装一遍是答非所问。
-     */
-    ...(outOfScope.length === 0 && (!session || knownUnreal) ? [ENV_NOTES.howToConnect] : [])
+    ...(!session || knownGodot ? [ENV_NOTES.hiddenNotMissing] : []),
+    ...(outOfScope.length === 0 && (!session || knownGodot) ? [ENV_NOTES.howToConnect] : [])
   ]
 }
 
 /** 工程的一行摘要。字段都是可选的，缺了就跳过而不是印出 undefined */
 function describeProject(project: NonNullable<SessionContext['project']>): string {
-  const engine = project.engineVersion ? ` (UE ${project.engineVersion})` : ''
+  const engine = project.engineVersion ? ` (Godot ${project.engineVersion})` : ''
   const path = project.path ? `, at ${project.path}` : ''
   return `${project.name}${engine}${path}`
 }

@@ -6,9 +6,9 @@
 
 ```json
 {
-  "projectDir": "C:/Users/Me/Videos/UnrealBox/TaskVideos/task-video-example",
+  "projectDir": "C:/Users/Me/Videos/GDBox/TaskVideos/task-video-example",
   "storyboard": {
-    "title": "火焰材质制作教程",
+    "title": "平台跳跃手感调校教程",
     "mode": "tutorial",
     "ratio": "16:9",
     "voice": "auto",
@@ -17,11 +17,11 @@
       {
         "id": "result",
         "kind": "image",
-        "source": "C:/Users/Me/Videos/UnrealBox/TaskVideos/task-video-example/assets/result.png",
-        "sourceNote": "当前任务最终材质预览截图",
+        "source": "C:/Users/Me/Videos/GDBox/TaskVideos/task-video-example/assets/result.png",
+        "sourceNote": "当前任务最终游戏画面截图",
         "title": "先看最终效果",
-        "caption": "噪声纹理叠加渐变，形成火焰轮廓。",
-        "narration": "这次我们用噪声纹理与渐变，做出了这个火焰材质。",
+        "caption": "土狼时间加跳跃缓冲，起跳不再吞键。",
+        "narration": "这次我们给角色加上土狼时间和跳跃缓冲，跳起来终于跟手了。",
         "duration": 6,
         "zoom": 1.03
       }

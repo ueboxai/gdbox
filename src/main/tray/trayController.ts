@@ -44,6 +44,7 @@ import {
 } from '../../shared/trayActions'
 import { findMainWindow, sendToWindow } from '../appWindows'
 import { mt, onLanguageChanged } from '../i18n'
+import { basename } from 'path'
 import { readGodotRecentProjects } from '../godot/recentProjects'
 import { isGodotProjectRunning } from '../godot/processes'
 import { openProject, projectDirOf } from '../services/project/openProject'
@@ -108,7 +109,7 @@ const REBUILD_DEBOUNCE_MS = 200
 /**
  * 「等连接」标记多久没兑现，建菜单时才去对一次进程表。
  *
- * `openPath` 落定到 `UnrealEditor.exe` 出现在进程表里有一小段空窗 ——
+ * 打开落定到 Godot 进程出现在进程表里有一小段空窗 ——
  * 宽限设短了会把刚点出去的启动误摘（摘了就能再点出第二份编辑器）；
  * 设长了只是把对账点往后推，代价是多标一会儿「启动中」，两头不对称。
  */
@@ -161,7 +162,8 @@ export function startTrayMenuController(tray: Tray, deps: TrayControllerDeps): v
           listRecent: async () =>
             (await readGodotRecentProjects()).map((entry) => ({
               projectPath: entry.projectPath,
-              projectName: '',
+              // 名单里没有名字；库里那条记录有名字时用那条的，这里只是兜底
+              projectName: basename(entry.projectPath.replace(/[\\/]project\.godot$/i, '')),
               lastOpenTime: entry.lastOpenTime,
               isImported: true
             })),

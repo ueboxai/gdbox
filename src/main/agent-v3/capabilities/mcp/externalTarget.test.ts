@@ -121,15 +121,15 @@ describe('resolveExternalTarget', () => {
   })
 
   /**
-   * 协议说好了传工程根目录，但第三方客户端很容易把用户手上那个 `.uproject`
+   * 协议说好了传工程根目录，但第三方客户端很容易把用户手上那个 `project.godot`
    * 原样发过来。砍掉文件名不可能砍错，而报一个「找不到工程」让人自己去查
    * 差在哪，没有任何价值。
    */
-  it('传 .uproject 文件路径也认，自动落到它所在的目录', () => {
+  it('传 project.godot 文件路径也认，自动落到它所在的目录', () => {
     connect('conn-a', 'D:/Games/Demo')
 
     expect(
-      resolveExternalTarget({ projectPath: 'D:/Games/Demo/Demo.uproject' })?.connectionId
+      resolveExternalTarget({ projectPath: 'D:/Games/Demo/project.godot' })?.connectionId
     ).toBe('conn-a')
   })
 

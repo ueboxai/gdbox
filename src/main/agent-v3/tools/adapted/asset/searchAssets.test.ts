@@ -426,7 +426,7 @@ describe('AIGC 导入提示只在这一页真有 AIGC 资产时出现', () => {
 
     const r = await run({ query: 'chair' })
 
-    expect(String(r.message)).not.toContain('ue_content_import')
+    expect(String(r.message)).not.toContain('复制进工程文件夹')
   })
 
   it('页里有就说', async () => {
@@ -437,7 +437,7 @@ describe('AIGC 导入提示只在这一页真有 AIGC 资产时出现', () => {
 
     const r = await run({ query: 'chair' })
 
-    expect(String(r.message)).toContain('ue_content_import')
+    expect(String(r.message)).toContain('复制进工程文件夹')
   })
 })
 

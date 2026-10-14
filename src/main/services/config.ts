@@ -44,7 +44,7 @@ const DEFAULT_CONFIG: ServiceConfig = {
     maxFileSize: 50 * 1024 * 1024, // 50MB
     corsOrigins: ['http://localhost:3000', 'http://localhost:5173'],
     // 默认关闭：这个本地服务器现在只剩一组 debug 路由（跑工具、跑 Agent、导数据库），
-    // 而它们没有任何鉴权。UE 插件用的是 WebSocket(17860)，渲染进程也不访问 8766。
+    // 而它们没有任何鉴权。Godot 插件用的是 WebSocket(17870)，渲染进程也不访问 8766。
     // 需要时用 HTTP_ENABLED=true 打开（pnpm dev:smoke 已经这么做了）。
     enabled: false,
     cors: {
@@ -54,12 +54,12 @@ const DEFAULT_CONFIG: ServiceConfig = {
     authToken: undefined
   },
   websocket: {
-    port: 17860,
+    port: 17870,
     heartbeatInterval: 15000, // 15秒
     heartbeatTimeout: 45000 // 45秒
   },
   ws: {
-    port: 17860,
+    port: 17870,
     heartbeatInterval: 15000, // 15秒
     heartbeatTimeout: 45000 // 45秒
   },

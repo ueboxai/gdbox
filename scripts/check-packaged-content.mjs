@@ -52,11 +52,8 @@ export function unexpectedPackagedFiles(entries) {
     const name = entry.replace(/\\/g, '/').replace(/^\//, '')
     return !(
       /^(?:out|node_modules|licenses)(?:\/|$)/.test(name) ||
-      /^(?:package\.json|LICENSE|THIRD-PARTY-NOTICES\.md|resources|resources\/plugins)$/.test(
-        name
-      ) ||
-      /^resources\/icon[^/]*\.(?:png|ico)$/.test(name) ||
-      /^resources\/plugins\/(?:UnrealAgentLink\d+(?:-Mac)?\.zip|ualink-config\.json)$/.test(name)
+      /^(?:package\.json|LICENSE|THIRD-PARTY-NOTICES\.md|resources)$/.test(name) ||
+      /^resources\/icon[^/]*\.(?:png|ico)$/.test(name)
     )
   })
 }

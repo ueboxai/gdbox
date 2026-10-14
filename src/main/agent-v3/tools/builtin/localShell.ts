@@ -3,24 +3,23 @@
  *
  * ## 为什么之前没接
  *
- * 我先前判断「用户是虚幻美术，用不上写代码和跑命令」—— 这个前提是错的。
- * 虚幻盒子的用户是**所有虚幻引擎用户**，包括引擎和游戏开发者：他们的机器上
- * 有 Visual Studio、有 Git、每天都在改 C++ 和 Build.cs。按错的用户画像
- * 砍掉的能力，正好是这部分人最需要的。
+ * 虚幻盒子时期先判断过「用户是美术，用不上写代码和跑命令」—— 这个前提是错的。
+ * GDBox 更是如此：Godot 工程里的场景、资源、脚本全是文本，写文件就是改工程；
+ * 用户每天都在写 GDScript、用 Git。
  *
  * ## 但不能假设人人都有
  *
- * 纯蓝图工程不需要 Visual Studio，也不一定装 Git。所以：
+ * 美术和策划的机器上不一定装 Git（Windows 上 bash 随 Git 一起装）。所以：
  *
  *   - **写 / 改文件**：无条件提供，只依赖文件系统。
- *   - **跑命令**：只在真的找得到 shell 时才注册。沿用 `ue.*` 那套做法 ——
- *     没连引擎就不给引擎工具，没有 shell 就不给 shell 工具。让模型看见
+ *   - **跑命令**：只在真的找得到 shell 时才注册。和编辑器工具一个做法 ——
+ *     没连编辑器就不给编辑器工具，没有 shell 就不给 shell 工具。让模型看见
  *     一个必定失败的工具，它会反复去试，然后拿一串看不懂的报错糊到用户脸上。
  *
  * ## 风险等级
  *
  * 写 / 改文件标 `mutating`：每次写都抓了改前改后的快照（`fileChangeCapture.ts`），
- * 改了什么在「本轮改动」里逐行看得到，和改虚幻资产是一个量级 —— 默认的
+ * 改了什么在「本轮改动」里逐行看得到 —— 默认的
  * `auto-edit` 下不再每次都问。第一版标的是 `destructive`，那时还没有快照。
  *
  * 跑命令仍标 `destructive`（每次都问）：一条命令能做的事没有快照兜得住。
@@ -41,7 +40,6 @@ import { getExecutionEnv } from './localFiles'
 import { captureFile, withFileChangeLock } from './fileChangeCapture'
 import { assertNotWritingExperience } from '../../experience/writeGuard'
 import { assertCommandAllowed, assertPathAllowed } from './pathBoundary'
-import { engineTemplateAdvice, uprojectWriteAdvice } from './projectCreationGuard'
 
 /**
  * 把 pi 的 harness 工具（pi 1.0 删了，搬在 `vendor/pi-harness`）包成我们的工具。
@@ -81,11 +79,6 @@ function wrap(
      * 那一次恰恰是它以为已经写完的那一次。
      */
     afterWrite?: (params: Record<string, unknown>) => Promise<string>
-    /**
-     * 不拦、照常执行，但在结果后面追加一句提醒（成功失败都加）。
-     * 用于「这样做能成，但有更好的路」的情况，见 `projectCreationGuard.ts`。
-     */
-    advise?: (params: Record<string, unknown>) => string | undefined
   }
 ): UnrealAgentTool<never> {
   return {
@@ -106,7 +99,7 @@ function wrap(
             )
           : undefined
       const filePath = resolved?.ok ? resolved.value : undefined
-      const done = await withFileChangeLock(filePath, async () => {
+      return withFileChangeLock(filePath, async () => {
         const before = filePath ? await captureFile(filePath) : undefined
         const result = (await inner.execute(toolCallId, params, signal, onUpdate, {
           env: getExecutionEnv()
@@ -149,10 +142,6 @@ function wrap(
 
         return { ...result, content: [...(result.content ?? []), { type: 'text', text: note }] }
       })
-
-      const advice = meta.advise?.((params ?? {}) as Record<string, unknown>)
-      if (!advice) return done
-      return { ...done, content: [...(done?.content ?? []), { type: 'text', text: advice }] }
     }
   } as unknown as UnrealAgentTool<never>
 }
@@ -167,34 +156,21 @@ const guardPath = async (params: Record<string, unknown>): Promise<string | unde
   )
 }
 
-/**
- * 写文件和改文件挡的是同一套（敏感位置 + 访问范围）。写 .uproject 不拦，
- * 只在结果后面提醒建工程该走 project_manage（`adviseWrite`）。
- *
- * 提醒只加在 write 上，edit 不加 —— 改一个已有工程的 .uproject（启用插件、
- * 改引擎版本）是正当需求，而那只可能用 edit 做。见 `projectCreationGuard.ts`。
- */
+/** 写文件和改文件挡的是同一套（敏感位置 + 访问范围） */
 const guardWritePath = guardPath
 
-const adviseWrite = (params: Record<string, unknown>): string | undefined =>
-  uprojectWriteAdvice(typeof params.path === 'string' ? params.path : '')
-
 /**
- * 跑命令：挡敏感位置（见 `pathBoundary.ts` 头部）。动引擎模板目录的命令不拦，
- * 结果后面提醒建工程该走 project_manage（`adviseCommand`）。
+ * 跑命令：挡敏感位置（见 `pathBoundary.ts` 头部）。
  *
  * **访问范围这一层不管命令。** 一条命令里可以出现任意多个路径，还能拼接、
  * 能编码，在字符串里做白名单只会得到一个到处漏的假边界 —— 而假边界比没有
  * 边界更糟，用户会以为自己收紧了。这条限制写在 `accessScope.ts` 头部，
- * 也写进了「仅虚幻相关」那一档的界面说明里。命令这条路兜底的是审批门。
+ * 也写进了「仅游戏开发相关」那一档的界面说明里。命令这条路兜底的是审批门。
  */
 const guardCommand = (params: Record<string, unknown>): string | undefined => {
   const command = typeof params.command === 'string' ? params.command : ''
   return assertCommandAllowed(command)
 }
-
-const adviseCommand = (params: Record<string, unknown>): string | undefined =>
-  engineTemplateAdvice(typeof params.command === 'string' ? params.command : '')
 
 export interface LocalWriteOptions {
   /**
@@ -218,14 +194,13 @@ export function createLocalWriteTools(options: LocalWriteOptions = {}): UnrealAg
       // 写前写后抓了快照，改动看得到（见文件头）
       risk: 'mutating',
       guard: guardWritePath,
-      advise: adviseWrite,
       ...afterWrite,
       description:
         '在用户电脑上创建一个新文件，或**整个覆盖**一个已有文件。\n\n' +
-        '【什么时候用】新建脚本、生成清单/报告、创建配置文件。\n' +
-        '【建 UE 工程不用这个】新建虚幻工程一律走 project_manage 的 create_project，' +
-        '不要自己写 .uproject、也不要拷引擎的 Templates 目录 —— ' +
-        '那样建出来的工程不会进用户的「我的项目」，用户在盒子里看不到它。\n' +
+        '【什么时候用】新建 GDScript 脚本、场景（.tscn）、资源（.tres）、着色器（.gdshader），' +
+        '生成清单/报告、创建配置文件。不要写 .godot/ 目录（编辑器缓存）和 *.import 旁挂文件。\n' +
+        '【建 Godot 工程】一个文件夹里放一个 project.godot 就是一个工程。建完告诉用户在' +
+        '「我的项目」里导入它，否则盒子里看不到。\n' +
         '【什么时候不用】只改文件里的几行 —— 那要用 edit_local_file。' +
         '用 write 会把这个文件的其余内容**全部丢掉**，包括你没读过的部分。\n' +
         '【动手之前】覆盖已有文件前先 read_local_file 看一眼，' +
@@ -259,7 +234,7 @@ let shellProbe: Promise<boolean> | undefined
  *
  * pi 在 Windows 上找 `Program Files\Git\bin\bash.exe` 或 PATH 上的 bash.exe
  * （明确排除 `System32\bash.exe` 那个 WSL 入口）。装了 Git for Windows 就有，
- * 引擎开发者机器上通常都有，纯蓝图工程的用户则未必。
+ * 程序员机器上通常都有，美术和策划的机器上则未必。
  */
 export function isShellAvailable(): Promise<boolean> {
   if (!shellProbe) {
@@ -294,26 +269,18 @@ export function createShellTool(): UnrealAgentTool<never> {
     // 命令能做的事没有快照兜得住，每次都问
     risk: 'destructive',
     guard: guardCommand,
-    advise: adviseCommand,
     description:
       '在用户电脑上执行一条 shell 命令（bash 语法）。\n\n' +
-      '【什么时候用】git 操作、跑构建或测试、批量文件处理 —— ' +
-      '那些没有专用工具、又确实需要命令行的事。\n' +
+      '【什么时候用】git 操作、批量文件处理、把素材复制进 Godot 工程文件夹 —— ' +
+      '那些没有专用工具、又确实需要命令行的事。复制 Godot 工程里已有的资源时，' +
+      '旁边的 .import / .uid 文件要一起复制。\n' +
       '【先用专用工具】列目录用 list_local_dir，找文件用 find_local_files，' +
       '搜内容用 grep_local_files，读文件用 read_local_file。' +
       '它们更快，没有 shell 的机器上也能用。\n' +
-      '【建工程不用这个】新建虚幻工程一律走 project_manage 的 create_project，' +
-      '不要自己拷引擎的 Templates 目录 —— 拷出来的工程不会进用户的「我的项目」，' +
-      '依赖共享内容包的模板还会一打开就是丢失引用。\n' +
-      '【编译 UE 工程不用这个】改完 C++ 用 cpp_compile —— 它编进正在跑的编辑器，' +
-      '**不需要用户关编辑器**，编不过还能给出带文件名和行号的报错。\n' +
-      '【要关编辑器完整重编也不用这个】用 cpp_full_rebuild：它替用户关编辑器（有未保存的会先拦下）、' +
-      '跑 UnrealBuildTool、再打开工程并重连。编辑器开着时自己跑 Build 脚本编不干净 —— ' +
-      (process.platform === 'darwin'
-        ? '编辑器运行时的 Hot Reload 可能产出带后缀的动态库。'
-        : 'Live Coding 开着时 UBT 会直接拒绝，关着时它转而产出带后缀的热重载 DLL。') +
+      '【检查和试玩不用这个】查脚本和场景报错用 godot_check，试玩用 godot_run，截图用 godot_screenshot —— ' +
+      '它们自己找 Godot、先导入素材、把日志整理成带文件名和行号的报错。\n' +
       // 杀进程会丢未保存的内容，所以默认不做；但编辑器卡死时用户同意了，就没有理由让他自己去开任务管理器
-      '编辑器卡死且用户同意丢未保存内容时才 taskkill。\n' +
+      '【编辑器卡死】用户同意丢未保存内容时才结束 Godot 进程。\n' +
       // 2026-09-26 真机反馈：`powershell -Command "… $_.IsReadOnly …"` 连试三次，$_ 每次都被
       // bash 先展开成 `/usr/bin/bash.`，报错也看不出是引号的锅
       (process.platform === 'win32'

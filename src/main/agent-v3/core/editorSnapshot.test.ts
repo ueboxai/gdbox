@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   captureEditorSnapshot,
+  EDITOR_SNAPSHOT_RULES,
   formatEditorSnapshotBlock,
   snapshotMatchesScope,
   stripEditorSnapshotBlock,
@@ -417,5 +418,24 @@ describe('stripEditorSnapshotBlock', () => {
     const text = '<editor-snapshot captured_at="x">\n没写完'
 
     expect(stripEditorSnapshotBlock(text)).toBe(text)
+  })
+})
+
+/**
+ * 规则常驻在系统提示词里，每一轮都在。点名一个不存在的工具，模型就会照着去调、
+ * 拿一句「工具不存在」—— Unreal 时代的 `ue_get_selection` / `ue_bp_*` 就是这么留下的。
+ */
+describe('EDITOR_SNAPSHOT_RULES', () => {
+  const rules = EDITOR_SNAPSHOT_RULES.join('\n')
+
+  it('只点名 Godot 这边真有的工具', () => {
+    expect(rules).toContain('editor_scene_tree')
+    expect(rules).not.toMatch(/\bue_|Unreal/)
+  })
+
+  // 键名沿用旧的，不说清对应关系的话模型会把 selected_actors 当成没意义的字段
+  it('说清通用键名在 Godot 里各指什么', () => {
+    expect(rules).toContain('`selected_actors` are the nodes selected in that scene')
+    expect(rules).toContain('FileSystem dock')
   })
 })

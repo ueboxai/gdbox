@@ -132,6 +132,7 @@
     "marked": "^18.0.14",
     "mermaid": "^11.17.2",
     "morphdom": "^2.7.8",
+    "mpg123-decoder": "^1.0.3",
     "multer": "^2.4.0",
     "photoswipe": "^5.4.4",
     "pinia": "^3.0.4",

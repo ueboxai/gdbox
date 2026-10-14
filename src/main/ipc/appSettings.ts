@@ -188,7 +188,7 @@ export function registerAppSettingsIPC(setAppIconTheme: SetAppIconTheme): void {
   })
 
   /**
-   * 设置启动项目时自动启用 UnrealAgentLink 插件
+   * 设置打开项目时自动启用 GDBox Link 插件（键名沿用虚幻盒子的）
    */
   ipcMain.handle('app-settings:setAutoEnableUnrealAgentLink', (_event, enabled: boolean) => {
     appSettingsManager.setAutoEnableUnrealAgentLink(enabled)
@@ -196,7 +196,7 @@ export function registerAppSettingsIPC(setAppIconTheme: SetAppIconTheme): void {
   })
 
   /**
-   * 获取启动项目时自动启用 UnrealAgentLink 插件设置
+   * 获取打开项目时自动启用 GDBox Link 插件设置
    */
   ipcMain.handle('app-settings:getAutoEnableUnrealAgentLink', () => {
     return appSettingsManager.getAutoEnableUnrealAgentLink()

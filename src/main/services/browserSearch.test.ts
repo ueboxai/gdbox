@@ -82,8 +82,8 @@ class FakeBrowserWindow {
 vi.mock('electron', () => ({
   app: {
     userAgentFallback:
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0 UnrealBox/1.0 Electron/44.0.0 Safari/537.36',
-    getName: () => 'UnrealBox'
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0 GDBox/1.0 Electron/44.0.0 Safari/537.36',
+    getName: () => 'GDBox'
   },
   BrowserWindow: FakeBrowserWindow,
   session: { fromPartition: (name: string) => ({ partition: name }) }
@@ -155,7 +155,7 @@ describe('窗口性质', () => {
     await searchViaBrowser('事件分发器', 5, FAST)
 
     expect(created[0].userAgent).not.toContain('Electron/')
-    expect(created[0].userAgent).not.toContain('UnrealBox/')
+    expect(created[0].userAgent).not.toContain('GDBox/')
     expect(created[0].userAgent).toContain('Chrome/152.0')
   })
 

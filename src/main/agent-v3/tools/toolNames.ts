@@ -1,92 +1,17 @@
 /**
- * V2 点号工具名 → V3 下划线工具名。
+ * 工具名相关的常量。
  *
  * **这个模块刻意零依赖。** 工具注册表和 skill 层都要用它，而 skill 层不该为了
  * 一个字符串替换把整棵工具树（electron / @aws-sdk / sharp）拉进自己的依赖图。
- *
- * ## 为什么要改名
- *
- * V2 里蓝图/材质/粒子/Widget 用点号命名（`blueprint.add_node`），但 OpenAI 等
- * 厂商要求工具名匹配 `^[a-zA-Z0-9_-]+$`，点号会被直接拒。
- *
- * ## 为什么光改名不够
- *
- * 旧名字出现在三个地方，都得跟着改，否则模型会照着看到的指示去调一个
- * 不存在的工具：
- *
- *   1. 工具自己的 description（「用 material.get_graph 先拿 node_id」）
- *   2. skill 的 description（常驻 system prompt）
- *   3. skill 的正文与 references/（53 个内置 skill 里有 13 个引用）
  */
 
 /**
- * V2 点号名 → V3 下划线名。
+ * 旧工具名 → 现在的工具名。
  *
- * 用于把工具描述里的交叉引用一起改掉。手写而不是从 REGISTRATIONS 推导 ——
- * 描述里引用的是 V2 的名字，两者不是一一对应（有些 V2 名字没被 V3 沿用）。
+ * 用于把工具描述和技能正文里的交叉引用一起改掉：模型照着看到的名字去调用，
+ * 名字对不上就是「工具不存在」。改名时在这里留一条旧名映射。
  */
-const CROSS_REFERENCE_RENAMES: Readonly<Record<string, string>> = Object.freeze({
-  'blueprint.describe': 'blueprint_describe',
-  'blueprint.get_graph': 'blueprint_get_graph',
-  'blueprint.list_graphs': 'blueprint_describe',
-  'blueprint.create': 'blueprint_create',
-  'blueprint.create_graph': 'blueprint_apply_graph',
-  'blueprint.search_nodes': 'blueprint_search_nodes',
-  'blueprint.add_component': 'blueprint_add_component',
-  'blueprint.set_property': 'blueprint_set_property',
-  'blueprint.compile': 'blueprint_compile',
-  'blueprint.compile_all': 'blueprint_compile_all',
-  'blueprint.set_node_positions': 'blueprint_tidy_graph',
-  'editor.save': 'ue_save',
-  'pie.run': 'ue_playtest',
-  'editor.get_dirty': 'ue_list_unsaved',
-  'level.get_current': 'ue_get_current_level',
-  'level.save': 'ue_save_level',
-  'level.open': 'ue_open_level',
-  'level.new': 'ue_new_level',
-  'blueprint.create_function': 'blueprint_create_function',
-  'blueprint.add_variable': 'blueprint_add_variable',
-  // 已下线的节点级写图工具 —— 指向 blueprint_apply_graph。
-  //
-  // 它们的名字还散落在 skill 正文和历史工具描述里。删掉映射的话，模型会照着
-  // 那些文字去调一个不存在的工具，然后在「工具不存在」和「换个名字再试」
-  // 之间空转 —— 而正确答案（整图写入）它本来就有。指过去，读到旧写法也能落到对的工具上。
-  'blueprint.add_node': 'blueprint_apply_graph',
-  'blueprint.connect_pins': 'blueprint_apply_graph',
-  'blueprint.set_pin_value': 'blueprint_apply_graph',
-  'blueprint.add_timeline': 'blueprint_apply_graph',
-  // 删节点回来了（整图重写代价太大），所以它指向自己而不是 apply_graph
-  'blueprint.delete_node': 'blueprint_delete_node',
-  'blueprint.disconnect_pins': 'blueprint_disconnect_pins',
-  'blueprint.set_comment': 'blueprint_comment',
-  'material.create': 'material_create',
-  'material.create_instance': 'material_create_instance',
-  'material.apply': 'material_apply',
-  'material.describe': 'material_describe',
-  'material.set_property': 'material_set_property',
-  'material.set_param': 'material_set_param',
-  'material.get_graph': 'material_get_graph',
-  'material.search_nodes': 'material_search_nodes',
-  // 和上面蓝图那六个同样的下场：逐节点写图不排版，已下线，指向整图写入。
-  // 名字还留在 skill 正文和历史工具描述里，指过去才不会让模型去调一个不存在的工具
-  'material.add_node': 'material_apply_graph',
-  'material.connect_pins': 'material_apply_graph',
-  'material.compile': 'material_compile',
-  'material.set_node_value': 'material_set_node_value',
-  'material.delete_node': 'material_delete_node',
-  'material.set_node_positions': 'material_tidy_graph',
-  'widget.get_hierarchy': 'widget_get_hierarchy',
-  'widget.create': 'widget_create',
-  'widget.add_child': 'widget_add_child',
-  'widget.preview': 'widget_preview',
-  'widget.make_variable': 'widget_make_variable',
-  'widget.set_property': 'widget_set_property',
-  // 2026-09-11 两合一（见 registry.ts 的 ue_insights_trace）。旧名还会出现在
-  // 历史会话和第三方 skill 里，指过去才不会让模型去调一个不存在的工具。
-  // 注意这两个键**没有点号**：rewriteCrossReferences 对键做整词替换，不依赖点号。
-  ue_capture_insights_trace: 'ue_insights_trace',
-  ue_analyze_insights_trace: 'ue_insights_trace'
-})
+const CROSS_REFERENCE_RENAMES: Readonly<Record<string, string>> = Object.freeze({})
 
 /**
  * Agent 浏览器的六个工具名。
@@ -129,27 +54,21 @@ export const SET_SESSION_PROJECT_TOOL_NAME = 'set_session_project'
 export const SET_SESSION_PROJECT_RISK = 'mutating' as const
 
 /**
- * 引擎没连上也要留着的 ue.* 工具。
+ * 要 Godot 编辑器连着才能用的工具命名空间。
  *
- * `ue_get_crash_logs` 直接读 `Saved/Crashes` 和 `Saved/Logs` 里的文件，插件连接
- * 只是可选的补充。而它被 ue.* 的过滤规则一刀切掉了 —— **编辑器崩了的时候正是
- * 连接断开的时候**，用户问「刚才为什么崩了」，模型手里恰好没有那个工具，
- * 只能回一句「请先连接虚幻引擎」。
+ * 编辑器没连上时这一组整个不给：让模型看到一堆调不通的工具，它会在上面浪费步数。
+ * 和 Unreal 不同，Godot 的场景、资源、脚本都是文本，没有编辑器也能读写、能
+ * 起无头 Godot 检查和试玩 —— 所以只有「用户正开着的那个编辑器」这一组依赖连接。
  *
- * `ue_session_health` 同理，而且更直接：它回答的就是「到底连没连上」。
- * 把它按 `ue.*` 一刀切掉的话，恰恰在唯一需要它的场景里它不在 ——
- * 模型只能退回去 shell 里 `tasklist` 数进程，再拿别的引擎工具反复试探。
- *
- * 这条豁免名单只放「不依赖 RPC 就能完成主要工作」的工具。
- *
- * 和上面两个常量同样的理由放在这个零依赖模块里：`core/createAgent.ts` 按它
- * 挑工具，对外 MCP 服务按它标 `projectScoped`（外部调用方据此判断这次要不要
- * 带工程路径）。抄成两份的话，加一个离线工具时必然只改一处。
+ * 放在这个零依赖模块里：`core/createAgent.ts` 按它挑工具，对外 MCP 服务按它标
+ * `projectScoped`。抄成两份的话，加一组时必然只改一处。
  */
-export const OFFLINE_UE_TOOLS: ReadonlySet<string> = new Set([
-  'ue_get_crash_logs',
-  'ue_session_health'
-])
+export const EDITOR_NAMESPACE = 'godot.editor'
+
+/** 这个命名空间下的工具要不要编辑器连着 */
+export function needsEditor(namespace: string): boolean {
+  return namespace === EDITOR_NAMESPACE || namespace.startsWith(`${EDITOR_NAMESPACE}.`)
+}
 
 /** 这个名字是不是浏览器工具 */
 export function isBrowserToolName(name: string): boolean {

@@ -3,7 +3,7 @@
 标题写缺口，不写情绪。
 「改控件类型时枚举里没有滚动框」是标题，「控件工具很难用」不是。
 
-- **环境**：Unreal 5.5.4 · 插件 651ef506e38bebbb · Windows · 2026-09-10
+- **环境**：Godot 4.4.1 · GDBox Link 0.3.0 · Windows · 2026-09-10
 - **模型**：写系统提示词里报的那个，开发者要靠它判断这是模型还是工具的问题
 - **当时的任务**：用户原话，一句话
 - **结果**：做成了 / 绕路做成了（多花 N 次往返）/ 没做成
@@ -13,8 +13,8 @@
 按实际发生的顺序写，一步一行。工具名、关键参数、返回原话，原话要抄，不要转述。
 
 ```
-ue_widget_add_child(control_type: "ScrollBox") → success: false
-"control_type 必须是以下之一：Button, TextBlock, Image, ..."（12 个取值，没有 ScrollBox）
+godot_run(watch: ["Player:is_on_floor"]) → 运行成功，但那一列全是空
+"GDBOX_WARN cannot read Player:is_on_floor"（watch 只认属性，is_on_floor 是方法）
 ```
 
 ## 我最后怎么绕过去的
@@ -32,8 +32,8 @@ ue_widget_add_child(control_type: "ScrollBox") → success: false
 
 一句话需求，说清输入和输出，不要设计接口细节：
 
-> `ue_widget_add_child` 的 `control_type` 能接受插件实际支持的全部控件，
-> 或者报错时把它支持的完整列表带回来。
+> `godot_run` 的 `watch` 能读无参方法的返回值（如 `Player:is_on_floor()`），
+> 或者读不到时直接说「这是方法，不是属性」。
 
 再写一句：有了它，这次这件事会变成几步。
 

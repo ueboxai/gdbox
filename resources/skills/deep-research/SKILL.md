@@ -1,6 +1,6 @@
 ---
 name: deep-research
-description: Researches a topic against public web sources and the user's knowledge base, then writes a cited report — breaks the question into sub-questions, searches, reads the actual pages, resolves conflicts between sources, and says plainly what it could not verify. Use whenever answering needs more than one web page: research, surveys, comparisons, "how does X behave under Y", limits and caveats of a technology, or anything the user wants saved into a knowledge base. Chinese phrasings that mean this: "查一下…的限制"、"深入研究一下"、"帮我调研"、"这方面现在什么情况"、"…能解决什么、不能解决什么"、"有用的存进来". A knowledge-base session asking about an external technology is almost always this. Do not use when one search answers it outright (a version number, today's date), when the user already named the single page to read, or for questions about the user's own Unreal project.
+description: Researches a topic against public web sources and the user's knowledge base, then writes a cited report — breaks the question into sub-questions, searches, reads the actual pages, resolves conflicts between sources, and says plainly what it could not verify. Use whenever answering needs more than one web page: research, surveys, comparisons, "how does X behave under Y", limits and caveats of a technology, or anything the user wants saved into a knowledge base. Chinese phrasings that mean this: "查一下…的限制"、"深入研究一下"、"帮我调研"、"这方面现在什么情况"、"…能解决什么、不能解决什么"、"有用的存进来". A knowledge-base session asking about an external technology is almost always this. Do not use when one search answers it outright (a version number, today's date), when the user already named the single page to read, or for questions about the user's own Godot project (read its files instead).
 ---
 
 # Deep research
@@ -14,8 +14,8 @@ find out.
 ### 1. Break the topic into sub-questions
 
 Write 2–6 sub-questions before searching. They have to be specific enough that you can tell when
-one is answered — "了解一下 Nanite" is not a sub-question, "Nanite 在哪些几何体上会退化成
-传统渲染" is.
+one is answered — "了解一下 TileMapLayer" is not a sub-question, "TileMapLayer 从哪个版本起取代
+TileMap、旧场景升级时数据怎么迁移" is.
 
 State them to the user before you start. If the topic turns out to be shaped differently than you
 assumed, say so and revise them — changing the plan mid-way is normal, hiding that you changed
@@ -63,7 +63,10 @@ dumping every result in.
 
 When sources conflict, say so and give both, with dates. The newer one is not automatically
 right — a 2019 spec is still the spec if nothing replaced it. Version-dependent answers need the
-version attached ("从 UE 5.4 起…"), because "对" and "过时了" look identical without it.
+version attached ("从 Godot 4.3 起…"), because "对" and "过时了" look identical without it. Godot
+changed a lot between 3.x and 4.x (`KinematicBody2D` became `CharacterBody2D`, `yield` became
+`await`), and most forum answers do not say which one they are about — check the API names in the
+answer against the user's version before passing it on.
 
 ### 5. Write the report
 

@@ -1,4 +1,4 @@
-# Unreal Agent Skill Standard
+# GDBox Skill Standard
 
 本规范用于统一 `resources/skills/` 下所有 skill 的结构、触发语义、按需加载方式和校验门槛。
 

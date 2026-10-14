@@ -82,7 +82,7 @@ describe('外部客户端看到的是真实工具', () => {
     expect(names.length).toBeGreaterThan(10)
     // 只读工具里最典型的两个
     expect(names).toContain('search_assets')
-    expect(names).toContain('ue_content_search')
+    expect(names).toContain('godot_check')
   }, 60_000)
 
   it('默认不暴露任何写操作工具', async () => {
@@ -99,7 +99,7 @@ describe('外部客户端看到的是真实工具', () => {
     const readOnly = await listRealTools()
     const all = await listRealTools({ includeMutating: true })
     expect(all.length).toBeGreaterThan(readOnly.length)
-    expect(all).toContain('project_manage')
+    expect(all).toContain('gen_sprite')
   }, 60_000)
 
   /**
@@ -114,7 +114,6 @@ describe('外部客户端看到的是真实工具', () => {
       'write_local_file',
       'edit_local_file',
       'read_local_file',
-      'inspect_uasset_file',
       'connect_mcp_server'
     ]) {
       expect(names).toContain(name)
@@ -148,6 +147,6 @@ describe('外部客户端看到的是真实工具', () => {
     expect(names).toContain('add_notebook_source')
     // 没声明 elicitation 的客户端不给 ask_user —— 给了只会挂在那儿等
     expect(names).not.toContain('ask_user')
-    expect(client.getInstructions()).toContain('You are the AI assistant inside Unreal Box')
+    expect(client.getInstructions()).toContain('You are the AI assistant inside GDBox')
   }, 60_000)
 })

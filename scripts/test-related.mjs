@@ -14,7 +14,7 @@
  *   node scripts/test-related.mjs            # 对比默认 base
  *   VERIFY_BASE=origin/main node scripts/test-related.mjs
  *
- * 改动范围走 verify-change-scope.mjs，和 verify:plugin 是同一份实现。
+ * 改动范围走 verify-change-scope.mjs。
  */
 import { spawnSync } from 'node:child_process'
 import { resolve } from 'node:path'
@@ -28,14 +28,7 @@ const RELEVANT = /\.(ts|mts|cts|tsx|js|mjs|cjs|jsx|vue)$/
  * 只能在这里登记 —— 新写这类测试、或给它多复制一个脚本时，要同步这张表。
  * 测试文件直接 import 的脚本不用登记，vitest 自己算得出来。
  */
-const SPAWNED_SCRIPT_TESTS = new Map([
-  [
-    'scripts/plugin-check.mjs',
-    ['tests/unit/plugin-commands.test.ts', 'tests/unit/verify-plugin.test.ts']
-  ],
-  ['scripts/verify.mjs', ['tests/unit/plugin-commands.test.ts']],
-  ['tests/support/plugin-release-operations.mts', ['tests/unit/plugin-commands.test.ts']]
-])
+const SPAWNED_SCRIPT_TESTS = new Map([])
 
 let scope
 try {

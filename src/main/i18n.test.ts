@@ -2,7 +2,7 @@
  * 主进程那几句也得跟着界面语言走。
  *
  * 红灯用例：把界面切成 English，托盘右键还是「显示窗口 / 最小化 / 退出」；
- * 启动失败时弹出来的错误框标题是「虚幻盒子启动失败」；点「导入资产」弹出来的
+ * 启动失败时弹出来的错误框标题是「GDBox 启动失败」；点「导入资产」弹出来的
  * 系统文件对话框标题是「选择文件或文件夹」。这些都是 Electron 直接交给操作系统
  * 画的控件，渲染进程碰不到 —— 只能在主进程翻。
  */
@@ -42,17 +42,17 @@ describe('主进程文案表', () => {
   })
 
   it('跟着推进来的语言走', () => {
-    expect(mt('tray.open')).toBe('打开虚幻盒子')
-    expect(mt('tray.tooltip')).toBe('虚幻盒子')
+    expect(mt('tray.open')).toBe('打开 GDBox')
+    expect(mt('tray.tooltip')).toBe('GDBox')
     setMainLanguage('en-US')
-    expect(mt('tray.open')).toBe('Open Unreal Box')
-    expect(mt('tray.tooltip')).toBe('Unreal Box')
+    expect(mt('tray.open')).toBe('Open GDBox')
+    expect(mt('tray.tooltip')).toBe('GDBox')
     expect(mt('dialog.save')).toBe('Save file')
   })
 
   it('没人推过就是中文 —— 启动失败那条路上设置可能根本读不出来', () => {
     expect(currentMainLanguage()).toBe('zh-CN')
-    expect(mt('startup.failedTitle')).toBe('虚幻盒子启动失败')
+    expect(mt('startup.failedTitle')).toBe('GDBox 启动失败')
   })
 
   it('认不出的语言当中文 —— 设置文件是可以被手改坏的', () => {
@@ -82,7 +82,7 @@ describe('主进程文案表', () => {
     // 同一个语言再推一次不该再重建一次
     setMainLanguage('en-US')
 
-    expect(seen).toEqual(['Open Unreal Box'])
+    expect(seen).toEqual(['Open GDBox'])
   })
 
   it('一个订阅者抛错不拖累别的', () => {

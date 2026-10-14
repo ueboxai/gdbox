@@ -3,11 +3,11 @@
  * (packages/agent/src/harness/compaction/{compaction,utils}.ts and harness/messages.ts).
  * Copyright (c) 2025 Mario Zechner. MIT License, see ./LICENSE.
  *
- * pi 1.0 removed the harness, compaction included. Only the parts Unreal Box calls are kept,
+ * pi 1.0 removed the harness, compaction included. Only the parts GDBox calls are kept,
  * and their behavior is unchanged:
  * - Session-entry helpers, file-operation tracking, and branch summaries are dropped.
  * - The harness-only message roles (bashExecution, custom, branchSummary, compactionSummary)
- *   are dropped from the estimator and converter; Unreal Box never produces them.
+ *   are dropped from the estimator and converter; GDBox never produces them.
  * - System messages (new in pi 1.0) estimate as 0 and are not summarized, which is what the
  *   0.84.3 code did for any role it did not know.
  */

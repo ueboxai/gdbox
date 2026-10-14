@@ -71,7 +71,7 @@ function harness(verdicts: string[], overrides: Partial<GoalLoopDeps> = {}): Har
 
   const loop = createGoalLoop({
     objective: '做一扇会自动开的门',
-    mutatingTools: new Set(['blueprint_apply_graph', 'ue_spawn_actor']),
+    mutatingTools: new Set(['edit_local_file', 'gen_sprite']),
     runAudit: async (input) => {
       audits.push(input)
       const verdict = verdicts[Math.min(round, verdicts.length - 1)]
@@ -259,18 +259,25 @@ describe('isAuditorTool', () => {
   })
 
   it('只读的给，写的不给', () => {
-    expect(isAuditorTool(tool('sequence_describe', 'ue.sequencer'), [])).toBe(true)
-    expect(isAuditorTool(tool('blueprint_apply_graph', 'ue.blueprint', 'mutating'), [])).toBe(false)
+    expect(isAuditorTool(tool('editor_scene_tree', 'godot.editor'), [])).toBe(true)
+    expect(isAuditorTool(tool('editor_save_all', 'godot.editor', 'mutating'), [])).toBe(false)
   })
 
-  it('点名的裁判是写工具也给 —— 编译和试玩才是真正算数的那几个', () => {
-    expect(isAuditorTool(tool('ue_playtest', 'ue.editor', 'mutating'), AUDITOR_HARD_JUDGES)).toBe(
+  // Godot 的裁判（检查、试玩、截图）本来就是 safe，按只读就进来了，不用点名
+  it('Godot 的裁判按只读筛就进来', () => {
+    for (const name of ['godot_check', 'godot_run', 'godot_screenshot']) {
+      expect(isAuditorTool(tool(name, 'godot'), AUDITOR_HARD_JUDGES), name).toBe(true)
+    }
+  })
+
+  it('点名的裁判是写工具也给 —— 按只读筛不出来的真裁判只能按名字点', () => {
+    expect(isAuditorTool(tool('editor_play', 'godot.editor', 'mutating'), ['editor_play'])).toBe(
       true
     )
   })
 
   it('主对话里每次都要问的，审计员不过审批门，所以不给', () => {
-    expect(isAuditorTool(tool('x', 'ue.editor', 'safe', true), [])).toBe(false)
+    expect(isAuditorTool(tool('x', 'godot.editor', 'safe', true), [])).toBe(false)
   })
 
   it('伸到盒子外面、第三方、会再派 agent 的几片，只读也不给', () => {
@@ -279,9 +286,8 @@ describe('isAuditorTool', () => {
     }
   })
 
-  it('标着只读但要花钱或很重的不给：审计员每轮都跑，不过审批', () => {
+  it('标着只读但要花钱的不给：审计员每轮都跑，不过审批', () => {
     expect(isAuditorTool(tool('analyze_video', 'aigc'), [])).toBe(false)
-    expect(isAuditorTool(tool('ue_insights_trace', 'ue.system'), [])).toBe(false)
   })
 })
 
@@ -415,13 +421,13 @@ describe('createGoalLoop', () => {
             failStreak: 1
           }
         ],
-        mutations: ['blueprint_apply_graph'],
+        mutations: ['edit_local_file'],
         settled: false
       },
       onStateChange: save
     })
     await h.loop(finishTurn())
-    expect(h.audits[0]?.mutations).toEqual(['blueprint_apply_graph'])
+    expect(h.audits[0]?.mutations).toEqual(['edit_local_file'])
     expect(h.followUp).not.toHaveBeenCalled()
     expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ rounds: 8, settled: true }))
     expect(h.reported('warning').join()).toContain('#1 第1条 连续两轮未通过')
@@ -442,13 +448,13 @@ describe('createGoalLoop', () => {
       throw new Error('audit offline')
     })
     const h = harness([], { onStateChange: save, runAudit: audit })
-    await h.loop(toolEnd('blueprint_apply_graph'))
+    await h.loop(toolEnd('edit_local_file'))
     await expect(h.loop(finishTurn())).rejects.toThrow('audit offline')
     await h.loop(agentEnd)
     expect(save).toHaveBeenLastCalledWith({
       rounds: 1,
       checklist: [],
-      mutations: ['blueprint_apply_graph'],
+      mutations: ['edit_local_file'],
       settled: false
     })
     expect(save.mock.invocationCallOrder.at(-1)).toBeLessThan(audit.mock.invocationCallOrder[0])
@@ -660,18 +666,18 @@ describe('createGoalLoop', () => {
 
   it('把本轮动过东西的工具告诉审计员，只读的不算', async () => {
     const h = harness([reply([1, 'PASS'])])
-    await h.loop(toolEnd('blueprint_get_graph'))
-    await h.loop(toolEnd('blueprint_apply_graph'))
-    await h.loop(toolEnd('blueprint_apply_graph'))
+    await h.loop(toolEnd('read_local_file'))
+    await h.loop(toolEnd('edit_local_file'))
+    await h.loop(toolEnd('edit_local_file'))
     await h.loop(finishTurn('门做好了'))
 
-    expect(h.audits[0]?.mutations).toEqual(['blueprint_apply_graph'])
+    expect(h.audits[0]?.mutations).toEqual(['edit_local_file'])
     expect(h.audits[0]?.closing).toBe('门做好了')
   })
 
   it('按参数只读的那次调用（dry_run 预演）不算动过东西，真正那次照算', async () => {
     const deps = {
-      mutatingTools: new Set(['ue_fixup_redirectors']),
+      mutatingTools: new Set(['project_organize']),
       isReadOnlyCall: (_name: string, args: unknown): boolean =>
         (args as { dry_run?: unknown } | undefined)?.dry_run === true
     }
@@ -679,14 +685,14 @@ describe('createGoalLoop', () => {
       ({
         type: 'tool_execution_start',
         toolCallId: id,
-        toolName: 'ue_fixup_redirectors',
+        toolName: 'project_organize',
         args
       }) as unknown as AgentEvent
     const end = (id: string): AgentEvent =>
       ({
         type: 'tool_execution_end',
         toolCallId: id,
-        toolName: 'ue_fixup_redirectors',
+        toolName: 'project_organize',
         result: {},
         isError: false
       }) as unknown as AgentEvent
@@ -701,6 +707,6 @@ describe('createGoalLoop', () => {
     await real.loop(start('b', {}))
     await real.loop(end('b'))
     await real.loop(finishTurn('清完了'))
-    expect(real.audits[0]?.mutations).toEqual(['ue_fixup_redirectors'])
+    expect(real.audits[0]?.mutations).toEqual(['project_organize'])
   })
 })

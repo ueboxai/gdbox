@@ -176,8 +176,8 @@ describe('搜索模式真正进入 Agent 循环', () => {
   it('常驻写工具不用搜索就可请求，但拒绝审批后仍然不能执行', async () => {
     buildTools.mockReturnValue([
       defineTool({
-        name: 'ue_save',
-        namespace: 'ue.editor',
+        name: 'editor_save_all',
+        namespace: 'godot.editor',
         risk: 'mutating',
         description: '保存',
         input: z.object({}),
@@ -191,9 +191,9 @@ describe('搜索模式真正进入 Agent 循环', () => {
       approvalMode: 'ask',
       requestApproval
     })
-    expect(tools.map((tool) => tool.name)).toEqual(['search_tools', 'ue_save'])
+    expect(tools.map((tool) => tool.name)).toEqual(['search_tools', 'editor_save_all'])
     faux.setResponses([
-      fauxAssistantMessage([fauxToolCall('ue_save', {}, { id: 'save' })]),
+      fauxAssistantMessage([fauxToolCall('editor_save_all', {}, { id: 'save' })]),
       fauxAssistantMessage('denied')
     ])
     await agent.prompt('保存')
@@ -273,25 +273,26 @@ describe('搜索模式真正进入 Agent 循环', () => {
     expect(requests[0].system).toContain('<tool_search_beta>')
   })
 
-  it('真实材质技能带组，下一响应直接执行；恢复聊天首轮就保留整组并重过只读权限', async () => {
+  // 技能正文点了 gen_sprite，于是整个 godot.asset 组（含没点名的 inspect_audio）一起加载
+  it('真实角色技能带组，下一响应直接执行；恢复聊天首轮就保留整组并重过只读权限', async () => {
     const skills = (await discoverSkills(['resources/skills'])).filter(
-      (skill) => skill.name === 'ue-material-authoring'
+      (skill) => skill.name === 'godot-2d-character'
     )
     expect(skills).toHaveLength(1)
     buildTools.mockReturnValue([
       defineTool({
-        name: 'material_get_graph',
-        namespace: 'ue.material',
+        name: 'inspect_audio',
+        namespace: 'godot.asset',
         risk: 'safe',
-        description: '读图',
+        description: '听音频',
         input: z.object({}),
         execute: read
       }),
       defineTool({
-        name: 'material_create',
-        namespace: 'ue.material',
+        name: 'gen_sprite',
+        namespace: 'godot.asset',
         risk: 'mutating',
-        description: '建图',
+        description: '生成精灵',
         input: z.object({}),
         execute: write
       })
@@ -299,12 +300,12 @@ describe('搜索模式真正进入 Agent 循环', () => {
     const first = await createUnrealAgent({ ...base, skills, toolSearchEnabled: true })
     faux.setResponses([
       fauxAssistantMessage([
-        fauxToolCall('load_skill', { name: 'ue-material-authoring' }, { id: 'skill' })
+        fauxToolCall('load_skill', { name: 'godot-2d-character' }, { id: 'skill' })
       ]),
-      fauxAssistantMessage([fauxToolCall('material_get_graph', {}, { id: 'graph' })]),
+      fauxAssistantMessage([fauxToolCall('inspect_audio', {}, { id: 'graph' })]),
       fauxAssistantMessage('done')
     ])
-    await first.agent.prompt('读取材质节点')
+    await first.agent.prompt('做个主角')
     expect(read).toHaveBeenCalledOnce()
     expect(first.agent.state.messages).toContainEqual(
       expect.objectContaining({
@@ -312,7 +313,7 @@ describe('搜索模式真正进入 Agent 循环', () => {
         toolName: 'load_skill',
         details: expect.objectContaining({
           toolSearch: expect.objectContaining({
-            loadedToolNames: ['material_create', 'material_get_graph']
+            loadedToolNames: ['gen_sprite', 'inspect_audio']
           })
         })
       })
@@ -330,15 +331,15 @@ describe('搜索模式真正进入 Agent 循环', () => {
     })
     restoreTranscript(next.agent, first.agent.state.messages)
     faux.setResponses([
-      fauxAssistantMessage([fauxToolCall('material_get_graph', {}, { id: 'again' })]),
+      fauxAssistantMessage([fauxToolCall('inspect_audio', {}, { id: 'again' })]),
       fauxAssistantMessage('read again')
     ])
     await next.agent.prompt('继续读取')
     expect(read).toHaveBeenCalledTimes(2)
-    expect(next.agent.state.tools.map((tool) => tool.name)).not.toContain('material_create')
+    expect(next.agent.state.tools.map((tool) => tool.name)).not.toContain('gen_sprite')
     expect(next.agent.state.errorMessage).toBeUndefined()
     const truncated = await createUnrealAgent({ ...base, skills, toolSearchEnabled: true })
-    expect(truncated.tools.map((tool) => tool.name)).not.toContain('material_get_graph')
+    expect(truncated.tools.map((tool) => tool.name)).not.toContain('inspect_audio')
   })
 
   /*

@@ -153,7 +153,7 @@ describe('createAutoCompact', () => {
     const later = { name: 'write_state', description: '写', parameters: { type: 'object' } }
     const history = longHistory()
     const messages = [
-      { role: 'system', content: '你是虚幻盒子', toolsAdded: [tool], timestamp: 0 },
+      { role: 'system', content: '你是 GDBox', toolsAdded: [tool], timestamp: 0 },
       ...history.slice(0, 2),
       // 这一轮中途加载的工具：落在会被摘要的那段里
       { role: 'system', content: '', toolsAdded: [later], timestamp: 1 },
@@ -164,7 +164,7 @@ describe('createAutoCompact', () => {
 
     expect(result[0]).toMatchObject({
       role: 'system',
-      content: '你是虚幻盒子',
+      content: '你是 GDBox',
       toolsAdded: [tool, later]
     })
     expect(result.filter((message) => message.role === 'system')).toHaveLength(1)
@@ -177,7 +177,7 @@ describe('createAutoCompact', () => {
   it('没压时带 system 消息的原数组原样交回', async () => {
     const compact = createAutoCompact(deps(200_000))
     const messages = [
-      { role: 'system', content: '你是虚幻盒子', timestamp: 0 },
+      { role: 'system', content: '你是 GDBox', timestamp: 0 },
       msg('user', '你好')
     ] as unknown as AgentMessage[]
     expect(await compact(messages)).toBe(messages)

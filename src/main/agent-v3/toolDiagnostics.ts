@@ -53,7 +53,7 @@ export async function collectToolDiagnostics(): Promise<ToolDiagnostics> {
     return {
       ok: true,
       toolCount: tools.length,
-      toolCountWithoutUe: tools.filter((t) => !t.unrealBox.namespace.startsWith('ue.')).length,
+      toolCountWithoutUe: tools.filter((t) => !t.unrealBox.namespace.startsWith('godot.')).length,
       toolsByNamespace,
       toolsByRisk,
       skillCount,

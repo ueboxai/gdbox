@@ -77,7 +77,7 @@ describe('rig_3d_model', () => {
       rig_type: 'biped',
       cost: 30
     })
-    expect(textOf(result)).toMatch(/fbx_import_as 填 skeletal_mesh/)
+    expect(textOf(result)).toMatch(/复制进工程文件夹/)
   })
 
   it('指定类型与推荐不同时说出来', async () => {

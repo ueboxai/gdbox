@@ -112,7 +112,7 @@ describe('挡下来的输入', () => {
   })
 
   it('文件不存在时说清去哪拿一张', async () => {
-    await expect(loadReferenceImage('H:\\不存在的目录\\a.png')).rejects.toThrow(/ue_screenshot/)
+    await expect(loadReferenceImage('H:\\不存在的目录\\a.png')).rejects.toThrow(/godot_screenshot/)
   })
 })
 

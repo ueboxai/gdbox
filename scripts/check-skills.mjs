@@ -29,9 +29,9 @@ import { join } from 'node:path'
  *
  * 两个根目录服务两批完全不同的读者：
  *   - `resources/skills`  —— 盒子自己的 agent 加载的，它手上直接有那些工具；
- *   - `packages/cli/skills` —— 随 uebox CLI 发出去的，教**外部** agent 怎么用命令行。
+ *   - `packages/cli/skills` —— 随 gdbox CLI 发出去的，教**外部** agent 怎么用命令行。
  *
- * 后者不能放进前者：盒子的 agent 已经能直接调工具，再教它去 shell 里敲 `uebox`
+ * 后者不能放进前者：盒子的 agent 已经能直接调工具，再教它去 shell 里敲 `gdbox`
  * 是绕远路，还会占它的上下文。但规范是同一份 —— skill 坏掉的方式（悄悄不触发、
  * 只被读到一半）与它服务谁无关，所以两边一起守。
  */
@@ -144,7 +144,8 @@ function extractLinks(text) {
 
 /** 正文里以裸路径提到的资源文件，例如 `references/wiring.md` */
 function extractMentions(text) {
-  return [...text.matchAll(/(?:references|scripts|assets)\/[A-Za-z0-9._-]+/g)].map((m) => m[0])
+  // 前面是字母、冒号或斜杠的不算：`res://assets/gen/...` 是工程里的目录，不是技能自带的文件
+  return [...text.matchAll(/(?<![\w:/])(?:references|scripts|assets)\/[A-Za-z0-9._-]+/g)].map((m) => m[0])
 }
 
 function checkSkill(dir, skill) {

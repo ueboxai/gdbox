@@ -1,8 +1,8 @@
 /**
- * 把虚幻盒子的 UE 工具反向暴露成一个 MCP server。
+ * 把 GDBox 的工具反向暴露成一个 MCP server。
  *
- * 外部的 Claude Code / Cursor / Cline 连上之后，就能直接操作虚幻引擎 ——
- * 市面上没有别的 MCP server 有这个能力。
+ * 外部的 Claude Code / Cursor / Cline 连上之后，就能检查、试玩 Godot 工程，
+ * 操作用户开着的 Godot 编辑器，用盒子的素材库和生成工具。
  *
  * ## 实现选择
  *
@@ -12,7 +12,7 @@
  *
  * ## 安全
  *
- * 这个 server 能删资产、跑任意 Python 和 shell 命令、读写本机文件。所以：
+ * 这个 server 能删资产、跑 shell 命令、读写本机文件。所以：
  *
  *   - **只监听 127.0.0.1** —— 绑 0.0.0.0 等于把引擎控制权开放给局域网
  *   - **强制 token**，随机生成，握手时校验
@@ -46,7 +46,7 @@ import type { AgentToolResult } from '@earendil-works/pi-agent-core'
 
 import { runWithTargetConnectionId } from '../../core/projectTargetContext'
 import type { UnrealAgentTool } from '../../tools/defineTool'
-import { OFFLINE_UE_TOOLS } from '../../tools/toolNames'
+import { needsEditor } from '../../tools/toolNames'
 import {
   EngineNotFoundError,
   EngineTimeoutError,
@@ -687,8 +687,8 @@ function describeToolMeta(tool: UnrealAgentTool<never>): Record<string, unknown>
     // uebox CLI 只看这一项决定要不要 --allow-write，所以这里也要按对外的最坏情况报
     risk: delegatesToSubAgent(tool) ? 'destructive' : tool.unrealBox.risk,
     // 要不要带工程路径。ue.* 里有两个例外，它们不依赖引擎连接
-    // （见 tools/toolNames.ts 的 OFFLINE_UE_TOOLS）
-    projectScoped: namespace.startsWith('ue.') && !OFFLINE_UE_TOOLS.has(tool.name),
+    // （见 tools/toolNames.ts 的 needsEditor）
+    projectScoped: needsEditor(namespace),
     requiresExplicitApproval: tool.unrealBox.requiresExplicitApproval === true
   }
 }
@@ -768,13 +768,13 @@ function jsonRpcError(res: ServerResponse, status: number, code: number, message
  * 把 Node 的 listen 错误翻译成用户能照着做的一句话。
  *
  * 端口固定之后 EADDRINUSE 从「几乎不可能」变成「常见」—— 开着两个盒子、
- * 或者别的程序先占了 17861。原样把 `listen EADDRINUSE: address already in
- * use 127.0.0.1:17861` 抛给界面，用户不知道该干什么。
+ * 或者别的程序先占了 17871。原样把 `listen EADDRINUSE: address already in
+ * use 127.0.0.1:17871` 抛给界面，用户不知道该干什么。
  */
 function describeListenError(error: Error, port: number): string {
   const code = (error as NodeJS.ErrnoException).code
   if (code === 'EADDRINUSE') {
-    return `端口 ${port} 已被占用（可能已有虚幻盒子实例在运行，或被其他程序占用）。请更换端口后重试。`
+    return `端口 ${port} 已被占用（可能已有 GDBox 实例在运行，或被其他程序占用）。请更换端口后重试。`
   }
   if (code === 'EACCES') {
     return `没有权限使用端口 ${port}，请更换为大于 1024 的端口。`

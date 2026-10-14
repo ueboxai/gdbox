@@ -4,7 +4,7 @@
  * 分两段记在一张 Map 里：点了到 `openUprojectFile` 落定是一段 —— 里面装着
  * 「装插件」这种可能拖很久的 await，这段不吃 TTL；若仍按两分钟超时，会把
  * 还在进行的打开当成没这回事，再点就是第二个编辑器进程。落定成功到插件连上是另一段，
- * `shell.openPath` 到 UnrealAgentLink 握手要几十秒，这期间 `projectManager`
+ * 启动 Godot 到 GDBox Link 插件握手要好几秒（大工程首次导入更久），这期间 `projectManager`
  * 还报不出它在跑 —— 这段才有 TTL 兜底：真连上了由调用方 `clearIfRunning`
  * 摘掉（running 优先），两分钟都没起来（崩溃、UAC 被按掉）就当作没这回事，
  * 恢复成可点。

@@ -1,6 +1,6 @@
 /**
  * 工程管理器
- * 维护已连接的 Unreal Engine 工程全局列表
+ * 维护已连接的 Godot 工程全局列表
  */
 import { sendToAppWindows } from '../../appWindows'
 import { ProjectInfo, ProjectInfoResponse } from './types'
@@ -8,7 +8,7 @@ import { logger } from '../logger'
 
 /**
  * 工程管理器类
- * 负责管理通过 WebSocket 连接的所有 UE 工程项目
+ * 负责管理通过 WebSocket（GDBox Link 插件）连接的所有工程
  */
 export class ProjectManager {
   /** 工程列表：connectionId -> ProjectInfo */

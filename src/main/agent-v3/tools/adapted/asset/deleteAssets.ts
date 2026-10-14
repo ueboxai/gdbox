@@ -88,8 +88,7 @@ export function createDeleteAssetsTool(): V2Tool {
 【共用文件的提醒】返回里的 shared_file_warnings 说明被删的记录和库里另一条
   记录指向同一个文件（重复导入的典型样子）。这种情况下要告诉用户：留在回收站
   就行，**别去清空回收站**，否则那个文件会被真删掉，另一条记录就指空了。
-【删的是盒子素材库的登记】虚幻工程里的资产用 ue_content_delete，磁盘上的
-  散装文件这里删不了。`,
+【删的是盒子素材库的登记】Godot 工程里的文件和磁盘上的散装文件这里都删不了。`,
 
     inputSchema: z.object({
       assetKeys: z

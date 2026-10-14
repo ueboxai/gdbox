@@ -13,13 +13,13 @@
  *
  * ## 它是为哪条工作流存在的
  *
- * 在关卡里搭白盒 → `ue_focus_viewport` 对准 → `ue_screenshot` 拍一张 →
- * 把那张图当参考图丢给这个工具 → 出渲染成品图。所以 `reference_images`
+ * 在场景里搭好白盒 → `godot_screenshot` 拍一张 →
+ * 把那张图当参考图丢给这个工具 → 出概念成品图。所以 `reference_images`
  * **收本地绝对路径**（截图工具返回值里的 `path` 可以直接用），而不是逼模型
  * 先把图读成 base64 再贴进参数里。
  *
- * 出的图存进素材库的 AIGC/图片，返回绝对路径 —— 下一步 `ue_content_import`
- * 就能把它导进工程当贴图/参考板。
+ * 出的图存进素材库的 AIGC/图片，返回绝对路径 —— 复制进 Godot 工程文件夹，
+ * 编辑器就会自动导入，当贴图/参考板用。
  */
 
 import { z } from 'zod'
@@ -58,7 +58,7 @@ const GenerateImageInput = z.object({
     .array(z.string())
     .optional()
     .describe(
-      '参考图（图生图 / 照着改）。收**本地绝对路径**（ue_screenshot 返回值里的 path 直接可用）、' +
+      '参考图（图生图 / 照着改）。收**本地绝对路径**（godot_screenshot 存下的截图路径直接可用）、' +
         'http(s) 直链、data URI 三种。在 prompt 中按图一、图二标明编辑目标、风格参考或待加入的物件。' +
         '本地图片没看过时先用看图工具检查，不要仅凭文件名猜内容；不要静默丢掉参考图。' +
         '搭完白盒出渲染图就靠这个：先截一张，再把截图路径放这里。'
@@ -148,21 +148,21 @@ export function createGenerateImageTool(): UnrealAgentTool<GeneratedImageDetails
 不能合成、不能换分辨率重出、不能拆通道，下一张也不会和这张完全一致。
 
 用户说「渲染」时**先分清他要哪一种**：说概念图、效果图、氛围图、给客户看的图，
-是这个工具；说出片、出序列、Movie Render Queue、MRQ、出视频、带 Alpha、EXR，
-要的是引擎渲染，用 \`sequence_render\`，不要拿 AI 图顶上。
+是这个工具；要看游戏实际跑起来的样子，用 \`godot_screenshot\` / \`godot_run\` 截真机画面，
+不要拿 AI 图顶上。
 话说得两边都通（「把这个场景渲染成成品」）就先问一句再动手。
 
 【什么时候用】：
 - 用户要概念图、参考图、贴图素材、氛围图、UI 草图
 - **场景里搭好白盒，要出概念成品图** —— 这是最常见的用法，做法见下
-- 通用生成和改图按 \`image-generation\` 技能执行；白盒取景按 \`ue-ai-render-from-blockout\` 技能执行。
+- 通用生成和改图按 \`image-generation\` 技能执行。
+- 2D 游戏要的精灵动画、瓦片集优先用 \`gen_sprite\` / \`gen_tileset\`，它们出的图切好了、能直接进工程。
 
 【白盒出图的固定流程】：
-1. \`ue_focus_viewport\` 把镜头对准要出图的部分
-2. \`ue_screenshot\` 拍一张，记住返回值里的 \`path\`
-3. 调本工具：\`reference_images\` 填那个 path，\`prompt\` 写你要的成品效果
+1. \`godot_screenshot\` 拍一张要出图的场景（\`scene\` 填那个 res:// 场景），记住截图路径
+2. 调本工具：\`reference_images\` 填那个 path，\`prompt\` 写你要的成品效果
    （材质、光照、时间、天气、风格），同时写清要保留的镜头与布局
-4. 看返回的图，核对布局与要求。获准修改时带上认可的图并重申保留项，不靠 seed 保证构图。
+3. 看返回的图，核对布局与要求。获准修改时带上认可的图并重申保留项，不靠 seed 保证构图。
 
 【提示词怎么写】：按用途 → 场景与主体 → 构图与细节 → 约束整理，保持简短。
 用户要求具体时只整理，不擅自增加人物、物件、配色、品牌或故事；要求笼统时才补充必要的构图和光线。
@@ -189,7 +189,7 @@ export function createGenerateImageTool(): UnrealAgentTool<GeneratedImageDetails
 只评价实际看到的图；其余图片先看再评价。成功返回只代表出图成功，不代表符合要求。
 指出偏差并遵守上面的重出授权规则；获准迭代时每次只做针对性修改。
 交付时给出图片路径、实际模型和最终提示词；需要项目素材时按用户指定位置交付，保留原图。
-要放进虚幻工程就把那个路径交给 \`ue_content_import\`。`,
+要用进 Godot 工程，把文件交给 import_to_project（如放到 \`res://art/\`）；游戏内的精灵和瓦片优先用 gen_sprite / gen_tileset。`,
     input: GenerateImageInput,
     execute: async (args, ctx) => {
       // 参考图先读 —— 路径写错、文件不在，早一步报出来比等厂商那边超时强
@@ -275,7 +275,7 @@ export function createGenerateImageTool(): UnrealAgentTool<GeneratedImageDetails
         )
       }
       if (paths.length > 0) {
-        lines.push('要放进虚幻工程：把上面的路径交给 ue_content_import。')
+        lines.push('要用进 Godot 工程：把文件交给 import_to_project。')
       }
 
       return {

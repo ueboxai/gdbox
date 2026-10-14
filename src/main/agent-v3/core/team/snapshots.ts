@@ -114,7 +114,7 @@ export function createSnapshotStore(projectDir: string, git: GitRunner): Snapsho
     `--git-dir=${gitDir}`,
     `--work-tree=${projectDir}`,
     '-c',
-    'user.name=Unreal Box',
+    'user.name=GDBox',
     '-c',
     'user.email=team@unrealbox.local',
     '-c',

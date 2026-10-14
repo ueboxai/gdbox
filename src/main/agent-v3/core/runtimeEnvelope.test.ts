@@ -123,7 +123,7 @@ describe('formatRuntimeEnvelope', () => {
       ...base,
       targetProject: {
         name: 'UALinkDev55',
-        engineVersion: '5.5',
+        engineVersion: '4.3',
         pathOnRecord: 'I:/UnrealAgent/UALinkDev55'
       }
     })
@@ -131,7 +131,7 @@ describe('formatRuntimeEnvelope', () => {
     // 键名叫 path_on_record 而不是 at/path：这是登记值，不是「刚确认过目录还在」。
     // 名字自己带着限定词，提示词里就不必再花一句话解释这件事。
     expect(text).toContain(
-      'target_project: UALinkDev55 (UE 5.5), path_on_record I:/UnrealAgent/UALinkDev55'
+      'target_project: UALinkDev55 (Godot 4.3), path_on_record I:/UnrealAgent/UALinkDev55'
     )
   })
 
@@ -460,22 +460,17 @@ describe('RUNTIME_ENVELOPE_RULES', () => {
     expect(rules).toContain('legacy historical observation')
   })
 
-  /**
-   * 故障的另一半：引擎明明连着，模型却退回去扫磁盘。
-   * 磁盘上的 `.uasset` 文件名说不出那个资产是什么，所以这条必须写死。
+  /*
+   * 这里原来还有一条「禁止拿磁盘工具冒充内容浏览器」：Unreal 的 `.uasset` 文件名
+   * 说不出资产是什么，只能问引擎。Godot 正相反，场景、资源、脚本都是文本，读文件
+   * 就是正路 —— 那条规则和它的测试一起删了。
    */
-  it('禁止拿磁盘工具冒充内容浏览器', () => {
-    expect(rules).toContain('list_local_dir')
-    expect(rules).toContain('carries only the name')
-  })
 
   /**
    * 这条断言原先反过来写：「工具清单一轮之内定死，中途连上也不补发」。
    *
    * 那句话曾经是真的，但它带来的行为是错的 —— 模型照着它对用户说「我这轮拿不到
-   * 引擎工具了，请你再发一条消息」。真机上更难看的一幕是模型自己把新工程建好、
-   * 打开、连上了，然后请用户去界面上把当前工程切过去。用户什么信息都不用补，
-   * 那一步纯粹是盒子偷懒。
+   * 编辑器工具了，请你再发一条消息」。用户什么信息都不用补，那一步纯粹是盒子偷懒。
    *
    * 现在工具清单每步都重算（`createAgent.ts` 的 `prepareNextTurnWithContext`），
    * 所以规则也要跟着改口。**两处必须同时改**：只改代码不改这段话，模型仍然会
@@ -483,10 +478,10 @@ describe('RUNTIME_ENVELOPE_RULES', () => {
    */
   it('说清工具清单中途会补发，不许请用户再发一条消息', () => {
     expect(rules).toContain('re-checked before every step')
-    expect(rules).toContain('defaults to waitSeconds=0')
-    expect(rules).toContain('connected=false is not a launch failure')
-    expect(rules).toContain('verify readiness and retarget this turn')
-    expect(rules).toContain('connected=true and switched_target=true')
+    expect(rules).toContain('mid-turn included')
+    expect(rules).toContain('Carry on in this turn')
+    // 退场的 Unreal 工具不许留在规则里
+    expect(rules).not.toMatch(/project_manage|ue_session_health|\.uproject/)
   })
 
   // 用户明明连着引擎，这时候劝他装插件是答非所问

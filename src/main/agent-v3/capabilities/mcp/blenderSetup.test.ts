@@ -34,7 +34,7 @@ describe('安装目录', () => {
       'C:\\Users\\a'
     )
     expect(win).toContain(BLENDER_MCP_REVISION.slice(0, 8))
-    expect(win).toContain('UnrealBox')
+    expect(win).toContain('GDBox')
   })
 
   it('LOCALAPPDATA 取不到时退回 home 下的同一段路径', () => {
@@ -46,7 +46,7 @@ describe('安装目录', () => {
   it('macOS 落在 Application Support 下，和 setup_mcp.py 的默认值一致', () => {
     const mac = blenderInstallRoot('darwin', {}, '/Users/a')
     expect(mac).toBe(
-      `/Users/a/Library/Application Support/UnrealBox/BlenderMcp/${BLENDER_MCP_REVISION.slice(0, 8)}`
+      `/Users/a/Library/Application Support/GDBox/BlenderMcp/${BLENDER_MCP_REVISION.slice(0, 8)}`
     )
   })
 })

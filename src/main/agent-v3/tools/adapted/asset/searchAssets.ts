@@ -47,7 +47,7 @@ import { runAcrossVaults, VAULT_SCOPE_DESCRIPTION, type VaultRun } from './vault
 /**
  * 中文关键词落空时，**工具自己把库里有什么捞出来**，而不是只丢一句提示。
  *
- * 真机上量到的问题：虚幻资产名基本都是英文（SM_Chair_Wood、T_Wood_Diffuse），
+ * 真机上量到的问题：游戏素材的文件名基本都是英文（player_idle.png、wood_floor.tres），
  * 而用户用中文提问。实测「椅子」0 条 /「chair」2 条，「木头」0 条 /「wood」4 条，
  * 「贴图」0 条 /「texture」2 条。
  *
@@ -112,12 +112,11 @@ interface SearchOutcome {
 }
 
 /**
- * 这一页里有哪些引擎版本 —— 只在真有 .uasset 版本记录时才说一句。
+ * 这一页里有哪些引擎版本 —— 只在真有版本记录时才说一句（目前只有 Godot 工程带）。
  *
- * `.uasset` 只能导进**同版本或更高版本**的工程，所以这一栏是「能不能进我这个工程」
- * 的唯一判据。它一度既不在结果里、也没人提过，而 `engineVersion` 过滤参数早就存在：
- * 实测批量导入时，失败里绝大多数都是同一句
- * 「资产引擎版本 (UE 5.7) 高于目标项目版本 (UE 5.5)」，事后重搜替代件又花了 7 次往返。
+ * Godot 3 和 Godot 4 的场景、资源格式互不兼容；4.x 之内，新版本存的场景放进旧版本
+ * 也可能用到旧版本没有的节点或属性。给某个工程挑素材时这是先要看的一栏。
+ * 沿用自虚幻盒子：那边实测批量导入失败绝大多数是版本不合，事后重搜替代件又花了 7 次往返。
  *
  * 放在返回里而不是工具描述里：描述是每一轮、每个用户都要付的前缀，
  * 而这件事只有真的搜到东西时才用得上。
@@ -139,8 +138,8 @@ function describeEngineVersionSpread(assets: Array<Record<string, unknown>>): st
 
   return (
     `这一页的引擎版本：${spread}。` +
-    '.uasset **只能导进同版本或更高版本的工程**（5.7 的资产进不了 5.5 的工程），' +
-    '给某个工程挑素材时用 engineVersion 参数先筛一遍，别等导入失败了才发现。'
+    'Godot 3 和 Godot 4 的场景、资源**互不兼容**，4.x 新版本存的场景在旧版本里也可能打不开，' +
+    '给某个工程挑素材时用 engineVersion 参数先筛一遍，别等放进工程报错了才发现。'
   )
 }
 
@@ -229,11 +228,11 @@ interface Pass {
  */
 export function createSearchAssetsTool(): V2Tool {
   return defineV2Tool({
-    description: `搜索或浏览**盒子素材库**里的资产（跨工程的素材仓库，不是某个 UE 工程）。
+    description: `搜索或浏览**盒子素材库**里的资产（跨工程的素材仓库，不是某个 Godot 工程）。
 
 【使用场景】用户要找素材、问「库里有什么」、要整理资产时使用。
-【搜的是素材库，不是工程】要找**当前打开的工程里已有的**资产（/Game/... 那些），
-  用 ue_content_search；要找关卡里摆着的实例，用 ue_get_actor。
+【搜的是素材库，不是工程】要找**工程里已有的**文件（res://... 那些），在工程文件夹里用
+  find_local_files / grep_local_files；要看场景里摆着的节点，用 editor_scene_tree。
 【「我库里有什么」不要用这个工具】那个问题用 library_overview —— 它回的是全量精确分布，
   几百字就说完。这里一页最多 500 个，几十万个资产的库靠翻页是数不完的，
   拿前一页去总结全库会得出错误结论，而且看不出错。
@@ -260,9 +259,9 @@ export function createSearchAssetsTool(): V2Tool {
   开关关着没搜的；每条的 vault 是它所在的库。只在用户点名某个库时才填 vault。
 【AI 生成的素材也在里面】AI 出的图/视频/模型/音乐在「AIGC 资产库」。
   用户说「刚才生成的那张图」「之前 AI 出的模型」就用这个工具找。
-  **它们要导进虚幻工程，用 ue_content_import，把 real_path 填进 files** ——
-  是 png / mp4 / glb 这类外部文件，不是 .uasset，走不了 project_manage。
-【名字是英文】虚幻资产名几乎都是英文（SM_Chair_Wood、T_Wood_Diffuse）。
+  **要用进 Godot 工程，把 real_path 交给 import_to_project**（连同 .import / .uid 一起拷，
+  同名不覆盖）—— 文件放进工程就算导入，编辑器会自动导入。
+【名字是英文】素材文件名几乎都是英文（player_idle.png、wood_floor.tres）。
   中文关键词搜不到时**不用自己猜英文词**：这个工具会自动去掉关键词再查一次，
   在 library_sample 里把库里真实存在的资产回给你，照着挑就行。
   中文**标签**是搜得到的 —— 只有名字是英文。
@@ -271,7 +270,7 @@ export function createSearchAssetsTool(): V2Tool {
 【index_pending】某个库刚导入了一大批、还没建完索引时会出现：那些资产这次没搜到，过一会儿再搜。
 【与其他搜索的区别】
 - 这个搜的是**盒子的素材库**（用户自己收集整理的，带标签和备注）
-- 虚幻工程里的资产用 ue_content_search
+- Godot 工程里的文件用 find_local_files / grep_local_files
 - 磁盘上的散装文件用 find_local_files`,
     inputSchema: z.object({
       query: z.string().optional().describe('搜索关键词（英文资产名效果最好）。留空则浏览全库。'),
@@ -283,7 +282,7 @@ export function createSearchAssetsTool(): V2Tool {
       assetType: z
         .union([z.string(), z.array(z.string())])
         .optional()
-        .describe('虚幻引擎资产类型，如 StaticMesh、SkeletalMesh、Texture2D 等。'),
+        .describe('Godot 资源类型，如 PackedScene、Texture2D、GDScript、Shader、AudioStreamWAV、Model3D。'),
       fileSize: z
         .object({
           min: z.number().optional().describe('最小文件大小（字节）'),
@@ -294,7 +293,7 @@ export function createSearchAssetsTool(): V2Tool {
       engineVersion: z
         .union([z.string(), z.array(z.string())])
         .optional()
-        .describe('引擎版本，如 5.3.0、5.4'),
+        .describe('Godot 版本，如 4.3、4.4'),
       folder: z
         .string()
         .optional()
@@ -795,12 +794,11 @@ export function createSearchAssetsTool(): V2Tool {
               : '') +
             pendingNote +
             (pageHasAigc
-              ? '「AIGC 资产库」里的是 AI 生成的图/视频/模型，要导进虚幻工程走 ue_content_import（把 real_path 填进 files），不是 project_manage。'
+              ? '「AIGC 资产库」里的是 AI 生成的图/视频/模型，要用进 Godot 工程就把 real_path 交给 import_to_project。'
               : '') +
             // 版本这一句放在**返回里**而不是工具描述里：描述是每一轮都要付的前缀，
-            // 而这件事只有真的搜到 .uasset 时才用得上。
-            // 不说的话，挑素材那一步完全是盲的 —— 真机上 51 个导进 5.5 工程，
-            // 16 个因为是 5.7 存的被整条挡回来，而事前没有任何入口看得见
+            // 而这件事只有真的搜到带版本记录的资产时才用得上。
+            // 不说的话，挑素材那一步完全是盲的（虚幻盒子那边真机上 51 个里 16 个因为版本不合被挡回来）
             describeEngineVersionSpread(assets)
         }
       }

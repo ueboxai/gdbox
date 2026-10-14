@@ -1,6 +1,6 @@
 ---
 name: asset-library
-description: Search and curate the box's own asset library — find assets the user has collected, read and write their notes and tags, move assets between library folders, create rename and delete those folders, and delete or restore library entries such as duplicate registrations. Use when the user asks what is in their library, wants to find a model or texture they own, wants assets organised, or says things like "帮我把重复的清理了"、"把这几个素材归到一个文件夹"、"删错了恢复一下". Do not use for assets inside an Unreal project or loose files on disk.
+description: Search and curate the box's own asset library — find assets the user has collected, read and write their notes and tags, move assets between library folders, create rename and delete those folders, and delete or restore library entries such as duplicate registrations. Use when the user asks what is in their library, wants to find a model or texture they own, wants assets organised, or says things like "帮我把重复的清理了"、"把这几个素材归到一个文件夹"、"删错了恢复一下". Do not use for files already inside a Godot project or loose files on disk, and not for generating new art or audio.
 ---
 
 # The box's asset library
@@ -11,7 +11,7 @@ tagged and annotated. It is a different thing from the two other places assets l
 | Where | Tool |
 |---|---|
 | The box's library (tagged, annotated) | `search_assets` — this skill |
-| Inside the open Unreal project | `ue_content_search` |
+| Inside the Godot project (`res://...`) | `find_local_files` / `grep_local_files` on the project folder |
 | Loose files on disk | `find_local_files` |
 
 Picking the wrong one is the most common failure here. "我素材库里有没有…" is this library.
@@ -19,7 +19,7 @@ Picking the wrong one is the most common failure here. "我素材库里有没有
 
 ## Asset names are English
 
-Unreal assets are named `SM_Chair_Wood`, `T_Wood_Diffuse`, `SK_Hero`, and the user asks in
+Asset files are named `chair_wood.glb`, `wood_floor.png`, `hero_idle.png`, and the user asks in
 Chinese. Searching 椅子 finds nothing that `chair` would have found.
 
 You do not have to translate up front and you should not guess. When a Chinese keyword returns
@@ -58,32 +58,42 @@ Two failure modes worth knowing:
 `changedAfter` / `changedBefore` read the **last-modified** time, which annotating an asset also
 refreshes. It is not an "imported on" date — do not present it as one.
 
-## Picking assets to import into a project
+## Picking assets to bring into a Godot project
 
-Two things decide whether a library asset can actually land in the project the user has open,
-and both are visible **before** you import — check them while you are still choosing, not after
-half the batch has failed.
+Bringing a library asset into a Godot project means **copying its file into the project folder**;
+Godot imports whatever lands there. There is no import tool to call.
 
-**Engine version.** A `.uasset` only opens in a project of the same or a newer engine version.
-Every result carries `engineVersion` when the library recorded one, and `search_assets` takes
-it as a filter: picking for a 5.5 project, pass `engineVersion: ["5.5", "5.4", "5.3"]` and the
-5.7 assets never enter your shortlist. (A real run skipped this and got 34 of 51 imported;
-16 of the 17 failures were one line repeated: 资产引擎版本 (UE 5.7) 高于目标项目版本 (UE 5.5).)
-Loose files — `png`, `fbx`, `glb` — have no such limit; they go through `ue_content_import`.
+```
+search_assets(query: "chair", fileFormat: "模型")   → real_path of each hit
+run_shell_command: cp "<real_path>" "D:/Games/MyGame/models/"
+```
 
-**Which vault they live in.** Search reads across *all* vaults; importing only works out of the
-**active** one. When the keys you picked live somewhere else, `project_manage`'s `import_assets`
-now says so in one message before copying anything — "这批 N 个在「FPS」里，当前活跃的是
-「AIGC 资产库」" — and the way out is `switch_vault`, which asks the user for confirmation.
-Read that message as "wrong vault", never as "the user does not have these assets".
+Check three things while you are still choosing, not after half the batch is copied:
+
+- **Is it usable in Godot at all?** Godot takes `png` / `jpg` / `webp` / `svg`, `wav` / `ogg` /
+  `mp3`, `glb` / `gltf` (preferred for 3D), `obj`, and `fbx`. Libraries collected for other engines
+  also hold `.uasset` and similar engine-private files — those cannot be used, so filter them out
+  with `fileFormat` instead of offering them.
+- **Godot version, for Godot resources.** A `.tscn` / `.tres` saved by a newer Godot may not open
+  in an older one. Results carry `engineVersion` when the library recorded it, and
+  `search_assets` takes it as a filter (`engineVersion: ["4.3", "4.4"]`). Plain media files have no
+  version limit.
+- **Which vault they live in.** Search reads across vaults; `real_path` is readable either way, but
+  writes to the library (tags, notes, moves) only work in the **active** vault. If you need to
+  write and the asset lives elsewhere, `switch_vault` asks the user to confirm the switch.
+
+A Godot resource copied from the library may come with a `.import` or `.uid` sidecar next to it —
+copy those along. After copying, check that the file shows up where you put it and, if a scene uses
+it, run `godot_check` once.
 
 ## Filtering by kind
 
-- `assetType` takes Unreal type names: `StaticMesh`, `Texture2D`, `Material`, `SkeletalMesh`.
-- `fileFormat` takes extensions (`fbx`, `png`) or Chinese aliases (`模型`, `贴图`, `材质`, `蓝图`).
+- `assetType` takes Godot resource type names: `PackedScene`, `Texture2D`, `GDScript`, `Shader`,
+  `AudioStreamWAV`, `Model3D`.
+- `fileFormat` takes extensions (`glb`, `png`, `wav`) or Chinese aliases (`模型`, `贴图`, `材质`).
 
 An alias matches on **either** the file extension or the asset type, because the same kind of
-thing can arrive as an imported `.fbx` or as an engine `.uasset`.
+thing can be stored as a raw file or as a saved Godot resource.
 
 **Check `relaxed` in the result.** When nothing matches the type you asked for, the search widens
 and returns other assets instead. `relaxed: true` means *what came back is not the type you asked
@@ -129,20 +139,6 @@ each tag's asset count from `list_tags` and get agreement before deleting or mer
 `assetKey` is how every write identifies its target, and it only comes from a search result. There
 is no way to guess it.
 
-## Saved snippets are a different library
-
-The asset library holds files. The **snippet** library holds pieces of Unreal work the user saved
-to reuse — blueprint graphs and materials:
-
-- `library_search` — find saved blueprint / material snippets. This is the entrance for "I saved
-  something like this before", which `search_assets` cannot answer: it searches files, not graphs.
-- `blueprint_library_save` — store a graph the user wants to reuse later.
-- `blueprint_library_apply` — drop a saved graph into a blueprint.
-
-Keep the two apart when reporting: a mesh lives in the asset library, a door-opening graph lives
-in the snippet library, and telling the user you "found it in the library" without saying which
-one sends them to the wrong panel.
-
 ## Organising: folders and moving
 
 `create_folders` makes the folder, `move_assets` puts things in it. Neither touches the disk —
@@ -174,7 +170,7 @@ but the record was still there on read-back, which is not a success and must be 
 
 Names repeat in a library. Before deleting more than one thing, list what you are about to remove
 (name, path, `assetKey`) and get agreement — `assetKey` is the only thing that distinguishes two
-assets called `SM_Tree`.
+assets called `tree.glb`.
 
 ### Undoing a delete
 

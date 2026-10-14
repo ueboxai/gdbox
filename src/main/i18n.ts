@@ -39,8 +39,8 @@ type Lang = 'zh-CN' | 'en-US'
 /** 主进程自己拥有的那些字符串。键名按归属分组，别往里塞渲染层能显示的东西 */
 const STRINGS: Record<Lang, Record<string, string>> = {
   'zh-CN': {
-    'tray.tooltip': '虚幻盒子',
-    'tray.open': '打开虚幻盒子',
+    'tray.tooltip': 'GDBox',
+    'tray.open': '打开 GDBox',
     // 和侧边栏按钮同一个叫法（渲染层 `menu.newChat`）
     'tray.newChat': '新对话',
     'tray.recentChats': '最近对话',
@@ -61,11 +61,11 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'tray.openFailedBody': '{name}：{error}',
     'tray.openFailedMissing': '「{name}」的工程文件不存在',
     'tray.alreadyRunningTitle': '项目已打开',
-    'tray.alreadyRunningBody': '「{name}」已在虚幻编辑器中打开',
+    'tray.alreadyRunningBody': '「{name}」已在 Godot 编辑器中打开',
     'tray.pluginFailedTitle': '项目已打开，AI 连接失败',
-    'tray.pluginFailedBody': 'UnrealAgentLink 插件安装失败，点击查看原因',
+    'tray.pluginFailedBody': 'GDBox Link 插件安装失败，点击查看原因',
 
-    'startup.failedTitle': '虚幻盒子启动失败',
+    'startup.failedTitle': 'GDBox 启动失败',
     // {reason} 是原始异常，{logDir} 是日志目录 —— 这两样是用户唯一能拿去求助的东西
     'startup.failedBody':
       '启动时发生错误，应用无法继续运行。\n\n原因：{reason}\n\n日志目录：{logDir}',
@@ -97,8 +97,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'spotlight.askAiDesc': '发送此消息给 AI 助手'
   },
   'en-US': {
-    'tray.tooltip': 'Unreal Box',
-    'tray.open': 'Open Unreal Box',
+    'tray.tooltip': 'GDBox',
+    'tray.open': 'Open GDBox',
     'tray.newChat': 'New chat',
     'tray.recentChats': 'Recent chats',
     'tray.untitledChat': 'Untitled chat',
@@ -115,11 +115,11 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'tray.openFailedBody': '{name}: {error}',
     'tray.openFailedMissing': 'The project file for "{name}" no longer exists',
     'tray.alreadyRunningTitle': 'Project already open',
-    'tray.alreadyRunningBody': '"{name}" is already open in Unreal Editor',
+    'tray.alreadyRunningBody': '"{name}" is already open in the Godot editor',
     'tray.pluginFailedTitle': 'Project opened, but the AI could not connect',
-    'tray.pluginFailedBody': 'UnrealAgentLink failed to install. Click to view details.',
+    'tray.pluginFailedBody': 'The GDBox Link plugin failed to install. Click to view details.',
 
-    'startup.failedTitle': 'Unreal Box failed to start',
+    'startup.failedTitle': 'GDBox failed to start',
     'startup.failedBody':
       'An error occurred during startup and the app cannot continue.\n\nReason: {reason}\n\nLog directory: {logDir}',
 
@@ -130,7 +130,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'dialog.exportRecording': 'Export recording',
     'dialog.pickLegacyDb': 'Choose the legacy database file',
 
-    'vault.defaultDesc': 'Vault created by Unreal Box',
+    'vault.defaultDesc': 'Vault created by GDBox',
     'vault.aigcDesc': 'System vault for AI-generated assets',
 
     'spotlight.askAi': 'Ask the AI: {query}',

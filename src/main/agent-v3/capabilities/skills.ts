@@ -47,7 +47,7 @@ import { defineTool, type ToolOutcome, type UnrealAgentTool } from '../tools/def
 /**
  * skill 搜索路径。**顺序即优先级** —— 同名时先发现的胜出：
  *
- *   0. 当前工程自带的（`<工程根>/.uebox/skills`，见 `projectSkillsDir`）
+ *   0. 当前工程自带的（`<工程根>/.gdbox/skills`，见 `projectSkillsDir`）
  *   1. 用户自己写的（可以覆盖内置和插件的同名 skill）
  *   2. 插件带来的
  *   3. 随包内置的
@@ -66,7 +66,7 @@ export function skillDirectories(pluginSkillDirs: string[] = [], projectRoot?: s
 }
 
 /**
- * 工程自带的 skill 目录：`<工程根>/.uebox/skills`。
+ * 工程自带的 skill 目录：`<工程根>/.gdbox/skills`。
  *
  * ## 为什么要有这一层
  *
@@ -83,16 +83,16 @@ export function skillDirectories(pluginSkillDirs: string[] = [], projectRoot?: s
 export function projectSkillsDir(projectRoot?: string): string | undefined {
   if (!projectRoot) return undefined
   const root = projectRoot.toLowerCase().endsWith('.uproject') ? dirname(projectRoot) : projectRoot
-  // 防一手：路径说不清就不认，免得在盘根下找 .uebox
+  // 防一手：路径说不清就不认，免得在盘根下找 .gdbox
   if (!root || basename(root) === '') return undefined
-  return join(root, '.uebox', 'skills')
+  return join(root, '.gdbox', 'skills')
 }
 
 /**
  * 用户自己的 skill 目录。
  *
  * 单独导出是因为它有第二个用途：写进 system prompt，让模型知道新 skill 该落在
- * 哪里。原先没有这一条，`ue-skill-creator` 只能让用户去「设置 → AI → 打开
+ * 哪里。原先没有这一条，`skill-creator` 只能让用户去「设置 → AI → 打开
  * Skills 目录」把绝对路径贴回来 —— 一次沉淀要用户手动搬一趟路径，
  * 自动档下更是无人可问。
  *
@@ -508,7 +508,7 @@ ${list}
 /**
  * 技能沉淀的三档开关。
  *
- * | 档位 | 模型看得到 `ue-skill-creator` 吗 | 沉淀时的行为 |
+ * | 档位 | 模型看得到 `skill-creator` 吗 | 沉淀时的行为 |
  * |---|---|---|
  * | `off` | 看不到（整条从清单里删掉） | 不会自己写 skill |
  * | `ask` | 看得到 | 干完活给一条提案，用户点头才写 |
@@ -545,7 +545,7 @@ export function applySkillLearningMode(
  * 沉淀相关的提示词补充。关档、或者这台机器上根本没有那个 skill 时是空串。
  *
  * 两档都要给目录：模型不知道用户 skill 存在哪，写出来的文件不会被加载。
- * 自动档还要额外一句 —— `ue-skill-creator` 正文里写死了「先提案，后写入」，
+ * 自动档还要额外一句 —— `skill-creator` 正文里写死了「先提案，后写入」，
  * 不明说这里覆盖了它，模型会照着正文继续问，用户选的自动档就等于没选。
  */
 export function buildSkillLearningSection(
@@ -562,7 +562,7 @@ export function buildSkillLearningSection(
 
   if (mode === 'auto') {
     lines.push(
-      'The user has turned skill distillation to automatic. When finished, verified work leaves behind a genuinely reusable procedure, follow `ue-skill-creator` and write it out yourself — this replaces that skill\'s "propose first, write after" step. Writing files still goes through the usual approval, and everything that skill refuses to record still applies. Name what you saved in your final answer.'
+      'The user has turned skill distillation to automatic. When finished, verified work leaves behind a genuinely reusable procedure, follow `skill-creator` and write it out yourself — this replaces that skill\'s "propose first, write after" step. Writing files still goes through the usual approval, and everything that skill refuses to record still applies. Name what you saved in your final answer.'
     )
   }
 
@@ -588,7 +588,7 @@ const readResourceInput = z.object({
  *
  * ## 为什么挂在 `load_skill` 的返回值上
  *
- * `ue-skill-creator` 早就写了「更新」该怎么做，缺的是**有人叫它去做**。
+ * `skill-creator` 早就写了「更新」该怎么做，缺的是**有人叫它去做**。
  * skill 的 description 通篇是创建口径（「把这次经验沉淀成技能」），
  * 于是「这条 skill 说的和实际不符」这件事没有任何路由信号 —— agent 照着一条
  * 过时的 skill 干活，撞了墙，绕过去，然后那条 skill 继续错着等下一个人。
@@ -613,7 +613,7 @@ const ITERATION_NUDGE =
  * 造出 load_skill / read_skill_resource 两个工具。
  *
  * `mode` 决定要不要在正文后面追那句「发现不对就回头改」—— 关档时
- * `ue-skill-creator` 根本不在清单里，叫模型去改它只会让它去手搓一个改法。
+ * `skill-creator` 根本不在清单里，叫模型去改它只会让它去手搓一个改法。
  */
 export function createSkillTools(
   skills: SkillMetadata[],

@@ -12,7 +12,7 @@ import { ProjectInfoResponse } from '../../project/types'
 
 /**
  * 工程处理器类
- * 负责处理来自 UE 插件的工程相关消息
+ * 负责处理来自编辑器插件的工程相关消息
  */
 export class ProjectHandler {
   private send?: ReplySender
@@ -26,12 +26,12 @@ export class ProjectHandler {
    * @param router 消息路由器
    */
   registerRoutes(router: MessageRouter): void {
-    // 处理来自 UE 的 project.info 响应/事件
-    // 当 UE 插件主动发送项目信息时（作为事件）或响应我们的请求时
+    // 处理来自编辑器插件的 project.info 响应/事件
+    // 当编辑器插件主动发送项目信息时（作为事件）或响应我们的请求时
     router.register('project.info', this.handleProjectInfo.bind(this))
 
-    // 处理来自 UE 的 project.closed 事件
-    // 当 UE 插件关闭时主动发送项目关闭消息
+    // 处理来自编辑器插件的 project.closed 事件
+    // 当编辑器插件关闭时主动发送项目关闭消息
     router.register('project.closed', this.handleProjectClosed.bind(this))
 
     logger.info('[ProjectHandler] 已注册 project.info 和 project.closed 路由')
@@ -39,7 +39,7 @@ export class ProjectHandler {
 
   /**
    * 处理 project.info 消息
-   * 当 UE 插件发送项目信息时调用
+   * 当编辑器插件发送项目信息时调用
    * @param envelope 消息信封
    * @param connectionId WebSocket 连接 ID
    */
@@ -59,8 +59,8 @@ export class ProjectHandler {
       // 将项目添加到管理器
       projectManager.addProject(connectionId, payload)
 
-      // 补登记进「我的项目」。这是三道网里的最后一道：不管这个工程当初是
-      // 怎么来的（用户在 Epic 启动器建的、git clone 的、盒子装之前就有的），
+      // 补登记进「我的项目」。这是最后一道网：不管这个工程当初是
+      // 怎么来的（用户在 Godot 项目管理器里建的、git clone 的、盒子装之前就有的），
       // 只要它连上来过，用户就该在首页看得见它。
       // 不 await —— 登记要读盘、写库、可能还要装插件，不该卡住连接建立
       void autoRegisterConnectedProject(payload.projectPath || '')
@@ -100,7 +100,7 @@ export class ProjectHandler {
 
   /**
    * 处理 project.closed 消息
-   * 当 UE 插件关闭时调用，真正删除项目
+   * 当编辑器插件关闭时调用，真正删除项目
    * @param envelope 消息信封
    * @param connectionId WebSocket 连接 ID
    */

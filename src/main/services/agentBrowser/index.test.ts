@@ -518,16 +518,16 @@ describe('窗口与 Session 安全', () => {
    * 标题里永远有我们的名字。
    *
    * 默认行为是页面想叫什么就叫什么 —— 那意味着一个网页可以把标题写成
-   * 「虚幻盒子 · 请输入授权码」，而用户看到的窗口长得像盒子自己的。
+   * 「GDBox · 请输入授权码」，而用户看到的窗口长得像盒子自己的。
    */
   it('页面标题被钉上前缀，页面改不掉', () => {
     const updated = lastContents().handlers.get('page-title-updated')?.[0]
     const event = { preventDefault: vi.fn() }
 
-    updated?.(event, '虚幻盒子 · 请输入授权码')
+    updated?.(event, 'GDBox · 请输入授权码')
 
     expect(event.preventDefault).toHaveBeenCalled()
-    expect(hosts[0].options.title).toBe('Unreal Box · Agent 浏览器')
+    expect(hosts[0].options.title).toBe('GDBox · Agent 浏览器')
     expect(titles).toEqual([])
   })
 })

@@ -10,7 +10,7 @@
  * ## 边界
  *
  * - 只接了 Tripo，所以只有 Tripo 生成的任务号能绑。别家的网格在这里明确报错。
- * - 一期只出**带骨架的网格**，不套动画。要动起来走引擎那边的重定向（`anim_retarget`）。
+ * - 一期只出**带骨架的网格**，不套动画。要动起来在 Godot 导入设置里做骨骼重定向。
  */
 
 import { z } from 'zod'
@@ -50,13 +50,13 @@ const Rig3dModelInput = z.object({
     .enum(['mixamo', 'tripo'])
     .optional()
     .describe(
-      '骨骼命名规范，默认 mixamo（进虚幻做重定向最省事）。只有用户明确要 Tripo 原生命名时才填 tripo。'
+      '骨骼命名规范，默认 mixamo（Godot 导入时的人形骨骼映射能自动认出这套命名）。只有用户明确要 Tripo 原生命名时才填 tripo。'
     ),
   format: z
     .enum(['fbx', 'glb'])
     .optional()
-    .describe('输出格式，默认 fbx —— 虚幻按骨骼网格导入走 FBX 最稳。'),
-  name: z.string().optional().describe('存进素材库时的文件名。建议 SK_ 开头'),
+    .describe('输出格式，默认 glb（Godot 的首选格式）。只有用户要拿去别的软件用 FBX 时才填 fbx。'),
+  name: z.string().optional().describe('存进素材库时的文件名，如 hero_rigged'),
   resume_job_id: z
     .string()
     .optional()
@@ -68,7 +68,7 @@ const Rig3dModelInput = z.object({
 
 export interface Rigged3dModelDetails extends Record<string, unknown> {
   success: boolean
-  /** 带骨架的网格的绝对路径。交给 ue_content_import */
+  /** 带骨架的网格的绝对路径。复制进 Godot 工程用的就是它 */
   model_path?: string
   /** 绑骨任务号。失败时靠它对账、续取 */
   job_id: string
@@ -101,9 +101,10 @@ export function createRig3dModelTool(): UnrealAgentTool<Rigged3dModelDetails> {
 
 【只绑骨，不带动画】出来的网格有骨架但没有动作。
 
-【出完之后】返回值 \`model_path\` 是带骨架的网格。交给 \`ue_content_import\` 导入，
-**\`fbx_import_as\` 填 \`skeletal_mesh\`**（不填可能被当成静态网格），\`asset_names\` 给个 SK_ 开头的名字。
-要让它动起来，用 \`anim_retarget\` 把工程里现有的动画重定向过来。
+【出完之后】返回值 \`model_path\` 是带骨架的网格。要进 Godot 工程，把它交给 import_to_project
+（如 \`res://characters/\`），Godot 会把它导入成带 Skeleton3D 的场景。
+要让它动起来：在这个文件的导入设置里给骨架配 BoneMap（人形选 SkeletonProfileHumanoid），
+就能复用同样做过映射的动画库。这一步在 Godot 编辑器里点，告诉用户怎么做。
 `,
     input: Rig3dModelInput,
     execute: async (args, ctx) => {
@@ -133,7 +134,7 @@ export function createRig3dModelTool(): UnrealAgentTool<Rigged3dModelDetails> {
         sourceJobToken: source,
         ...(args.rig_type ? { rigType: args.rig_type } : {}),
         ...(args.spec ? { spec: args.spec } : {}),
-        ...(args.format ? { format: args.format } : {}),
+        format: args.format ?? 'glb',
         ...(ctx.signal ? { signal: ctx.signal } : {}),
         onProgress: (note) => ctx.report({ text: `绑骨：${note}` }),
         onSubmitted: (token) =>
@@ -185,7 +186,7 @@ async function saveAndReport(
   const saved = mesh
     ? await downloadAndSaveAIGCAsset(mesh.url, 'model', {
         suggestedName: baseName,
-        defaultExt: extensionOf(mesh.name) || '.fbx',
+        defaultExt: extensionOf(mesh.name) || '.glb',
         timeout: 300_000,
         prompt: `自动绑骨（任务号 ${token}）`
       })
@@ -195,7 +196,7 @@ async function saveAndReport(
   if (saved?.success && saved.localPath) {
     lines.push(`带骨架的网格已存进素材库 AIGC/模型：${saved.localPath}`)
     lines.push(
-      '进工程：交给 ue_content_import，fbx_import_as 填 skeletal_mesh。要动起来用 anim_retarget 重定向现有动画。'
+      '进 Godot 工程：把文件交给 import_to_project。要动起来，在导入设置里给骨架配 BoneMap 做重定向。'
     )
   } else {
     lines.push(

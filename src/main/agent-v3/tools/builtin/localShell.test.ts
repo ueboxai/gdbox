@@ -25,18 +25,11 @@ const toolNamed = (name: string): ExecutableTool => {
 const textOf = (result: { content?: unknown[] }): string =>
   ((result.content?.[0] as { text?: string })?.text ?? '') as string
 
-it.each(['darwin', 'win32'] as const)('points %s full rebuilds at cpp_full_rebuild', (platform) => {
-  vi.stubGlobal('process', { ...process, platform })
-  try {
-    const description = createShellTool().description
-    // 完整重编走 cpp_full_rebuild，不再教模型自己拼 Build 脚本、让用户关编辑器
-    expect(description).toContain('cpp_full_rebuild')
-    expect(description).not.toContain('先请用户关掉编辑器')
-    if (platform === 'darwin') expect(description).not.toContain('Live Coding 开着')
-    else expect(description).toContain('Live Coding 开着')
-  } finally {
-    vi.unstubAllGlobals()
-  }
+it('points checks and play-tests at the Godot tools, not raw shell', () => {
+  const description = createShellTool().description
+  expect(description).toContain('godot_check')
+  expect(description).toContain('godot_run')
+  expect(description).not.toContain('cpp_')
 })
 
 /**
@@ -103,28 +96,5 @@ describe('三个工具的风险等级', () => {
   ])('%s 的风险等级是 %s', (name, risk) => {
     const tool = toolNamed(name) as unknown as { unrealBox: { risk: string } }
     expect(tool.unrealBox.risk).toBe(risk)
-  })
-})
-
-describe('建工程提醒不拦路', () => {
-  // 写在临时目录里：放行就是真写，正是要断言的那件事
-  it('write_local_file 写 .uproject 照常写入，结果后面带上 create_project 提醒', async () => {
-    const { mkdtempSync, readFileSync, rmSync } = await import('fs')
-    const { join } = await import('path')
-    const dir = mkdtempSync(join(tmpdir(), 'ual-uproject-'))
-    try {
-      const file = join(dir, 'MyGame.uproject')
-      const result = await toolNamed('write_local_file').execute('call-1', {
-        path: file,
-        content: '{"FileVersion": 3}'
-      })
-
-      expect(result.isError).toBeFalsy()
-      expect(readFileSync(file, 'utf8')).toBe('{"FileVersion": 3}')
-      const texts = (result.content as Array<{ text?: string }>).map((c) => c.text ?? '')
-      expect(texts.at(-1)).toContain('create_project')
-    } finally {
-      rmSync(dir, { recursive: true, force: true })
-    }
   })
 })

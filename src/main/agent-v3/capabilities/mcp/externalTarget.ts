@@ -96,16 +96,16 @@ export class ExternalTargetError extends Error {
 export function normalizeProjectPath(value: string): string {
   let unified = value.trim().replace(/\\/g, '/')
 
-  // 容忍传进来的是 `.uproject` 文件。协议里说好了传工程根目录（§5），
+  // 容忍传进来的是 `project.godot` 文件。协议里说好了传工程根目录（§5），
   // 但第三方客户端很容易把用户手上那个文件路径原样发过来，
   // 而在这里砍掉文件名不可能砍错 —— 报一个「找不到工程」让人自己去查
   // 差在哪，没有任何价值。
-  if (/\.uproject$/i.test(unified)) {
+  if (/(^|\/)project\.godot$/i.test(unified)) {
     /*
      * `cut > 0` 这道守卫不能省。
      *
-     * 裸文件名（第三方客户端直接把 `MyGame.uproject` 发过来）没有分隔符，
-     * `lastIndexOf` 回 -1，`slice(0, -1)` 把它啃成 `MyGame.uprojec` ——
+     * 裸文件名（第三方客户端直接把 `project.godot` 发过来）没有分隔符，
+     * `lastIndexOf` 回 -1，`slice(0, -1)` 把它啃成 `project.godo` ——
      * 一个非空的垃圾键，过得了下面「空就拒绝」那道闸，然后和谁都比不上：
      * 一个明明连着的工程回 `PROJECT_NOT_CONNECTED`。
      * 同 `core/projectPathKey.ts`，那边有这一条的用例。
@@ -119,7 +119,7 @@ export function normalizeProjectPath(value: string): string {
 }
 
 /** `_meta.unrealBox` 的形状。多余的键忽略，不做未知字段拒绝 */
-interface UnrealBoxMeta {
+interface GDBoxMeta {
   cliContractVersion?: unknown
   projectPath?: unknown
 }
@@ -136,14 +136,14 @@ export function resolveExternalTarget(raw: unknown): TargetProjectRef | undefine
     throw new ExternalTargetError('INVALID_ARGUMENT', '_meta.unrealBox 必须是一个对象。')
   }
 
-  const meta = raw as UnrealBoxMeta
+  const meta = raw as GDBoxMeta
 
   // 版本只在给了的时候校验：没给等于「没打算用这套约定」，按不绑定处理。
   if (meta.cliContractVersion !== undefined && meta.cliContractVersion !== CLI_CONTRACT_VERSION) {
     throw new ExternalTargetError(
       'INVALID_ARGUMENT',
       `不支持的 cliContractVersion：${String(meta.cliContractVersion)}（本服务是 ${CLI_CONTRACT_VERSION}）。`,
-      '升级虚幻盒子或改用与它同版本的 CLI。'
+      '升级 GDBox 或改用与它同版本的 CLI。'
     )
   }
 
@@ -188,8 +188,8 @@ function resolveByProjectPath(projectPath: string): TargetProjectRef {
   if (candidates.length === 0) {
     throw new ExternalTargetError(
       'PROJECT_NOT_CONNECTED',
-      `工程 ${projectPath} 当前没有连接到虚幻盒子。`,
-      '打开该工程的虚幻编辑器并确认 UnrealAgentLink 插件已启用；其他工程在线不影响这一条。'
+      `工程 ${projectPath} 当前没有连接到 GDBox。`,
+      '用 Godot 编辑器打开该工程，并确认「项目设置 → 插件」里 GDBox Link 已启用；其他工程在线不影响这一条。'
     )
   }
 

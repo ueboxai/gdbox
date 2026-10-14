@@ -52,42 +52,39 @@ function fakeTool(
 
 const TOOLS: UnrealAgentTool<never>[] = [
   // 带 details：公共结果（structuredContent）那几条用例靠它
-  fakeTool('ue_get_actor', 'ue.actor', 'safe', undefined, {
-    success: true,
-    count: 1,
-    total_found: 137,
-    actors: [{ name: 'Cube_1', path: '/Game/L1:Cube_1', class: 'StaticMeshActor' }],
-    message: '找到 1 个 Actor'
+  fakeTool('editor_scene_tree', 'godot.editor', 'safe', undefined, {
+    scene: 'res://main.tscn',
+    tree: { path: '.', name: 'Main', type: 'Node2D' }
   }),
-  fakeTool('ue_destroy_actor', 'ue.actor', 'destructive'),
-  fakeTool('material_describe', 'ue.material', 'safe'),
-  fakeTool('material_create', 'ue.material', 'mutating'),
+  fakeTool('editor_stop', 'godot.editor', 'destructive'),
+  fakeTool('inspect_audio', 'godot.asset', 'safe'),
+  fakeTool('gen_sprite', 'godot.asset', 'mutating'),
   fakeTool('task', 'core', 'safe'),
   fakeTool('mcp_other_thing', 'mcp.other', 'destructive'),
   fakeTool('run_shell_command', 'local.shell', 'destructive'),
   fakeTool('write_local_file', 'local', 'destructive'),
   fakeTool('read_local_file', 'local', 'safe'),
-  fakeTool('boom', 'ue.system', 'safe', async () => {
+  fakeTool('boom', 'godot', 'safe', async () => {
     throw new Error('工具内部炸了')
   }),
   // 报出自己看到的目标连接。绑定到底生没生效，只有工具自己说了算
-  fakeTool('ue_session_health', 'ue.system', 'safe', async () => `目标=${getTargetConnectionId()}`)
+  fakeTool('godot_check', 'godot', 'safe', async () => `目标=${getTargetConnectionId()}`)
 ]
 
 describe('selectExposedTools', () => {
   // 把「删资产」「跑任意 Python」直接开给外部客户端不该是默认行为
   it('默认只暴露只读工具', () => {
     const names = selectExposedTools(TOOLS, {}).map((t) => t.name)
-    expect(names).toContain('ue_get_actor')
-    expect(names).toContain('material_describe')
-    expect(names).not.toContain('ue_destroy_actor')
-    expect(names).not.toContain('material_create')
+    expect(names).toContain('editor_scene_tree')
+    expect(names).toContain('inspect_audio')
+    expect(names).not.toContain('editor_stop')
+    expect(names).not.toContain('gen_sprite')
   })
 
   it('includeMutating 才放开写操作', () => {
     const names = selectExposedTools(TOOLS, { includeMutating: true }).map((t) => t.name)
-    expect(names).toContain('material_create')
-    expect(names).toContain('ue_destroy_actor')
+    expect(names).toContain('gen_sprite')
+    expect(names).toContain('editor_stop')
   })
 
   /**
@@ -124,8 +121,8 @@ describe('selectExposedTools', () => {
   })
 
   it('命名空间白名单能进一步收窄', () => {
-    const names = selectExposedTools(TOOLS, { namespaces: ['ue.material'] }).map((t) => t.name)
-    expect(names).toEqual(['material_describe'])
+    const names = selectExposedTools(TOOLS, { namespaces: ['godot.asset'] }).map((t) => t.name)
+    expect(names).toEqual(['inspect_audio'])
   })
 })
 
@@ -195,11 +192,11 @@ describe('McpServerHost 端到端', () => {
     const listed = await client.listTools()
     expect(listed.tools.map((t) => t.name).sort()).toEqual([
       'boom',
-      'material_describe',
+      'inspect_audio',
       'read_local_file',
       'task',
-      'ue_get_actor',
-      'ue_session_health'
+      'editor_scene_tree',
+      'godot_check'
     ])
   }, 30_000)
 
@@ -208,7 +205,7 @@ describe('McpServerHost 端到端', () => {
     const client = await connect(url, token)
 
     const listed = await client.listTools()
-    const tool = listed.tools.find((t) => t.name === 'ue_get_actor')!
+    const tool = listed.tools.find((t) => t.name === 'editor_scene_tree')!
     expect(tool.inputSchema.type).toBe('object')
     expect(Object.keys(tool.inputSchema.properties ?? {})).toEqual(['value'])
   }, 30_000)
@@ -217,8 +214,8 @@ describe('McpServerHost 端到端', () => {
     const { url, token } = await startHost()
     const client = await connect(url, token)
 
-    const result = await client.callTool({ name: 'ue_get_actor', arguments: {} })
-    expect(result.content).toEqual([{ type: 'text', text: 'ue_get_actor ok' }])
+    const result = await client.callTool({ name: 'editor_scene_tree', arguments: {} })
+    expect(result.content).toEqual([{ type: 'text', text: 'editor_scene_tree ok' }])
   }, 30_000)
 
   // 我们的工具用抛异常表示失败，MCP 协议用 isError —— 这里要翻译
@@ -235,7 +232,7 @@ describe('McpServerHost 端到端', () => {
     const { url, token } = await startHost()
     const client = await connect(url, token)
 
-    const result = await client.callTool({ name: 'ue_destroy_actor', arguments: {} })
+    const result = await client.callTool({ name: 'editor_stop', arguments: {} })
     expect(result.isError).toBe(true)
     expect(JSON.stringify(result.content)).toContain('不存在或未暴露')
   }, 30_000)
@@ -419,11 +416,11 @@ describe('McpServerHost 多客户端', () => {
     expect(listB.tools.length).toBe(listA.tools.length)
 
     const [callA, callB] = await Promise.all([
-      a.callTool({ name: 'material_describe', arguments: {} }),
-      b.callTool({ name: 'material_describe', arguments: {} })
+      a.callTool({ name: 'inspect_audio', arguments: {} }),
+      b.callTool({ name: 'inspect_audio', arguments: {} })
     ])
-    expect(JSON.stringify(callA.content)).toContain('material_describe ok')
-    expect(JSON.stringify(callB.content)).toContain('material_describe ok')
+    expect(JSON.stringify(callA.content)).toContain('inspect_audio ok')
+    expect(JSON.stringify(callB.content)).toContain('inspect_audio ok')
   }, 30_000)
 
   it('两个客户端的会话 id 不同 —— 会话是真的分开的', async () => {
@@ -445,8 +442,8 @@ describe('McpServerHost 多客户端', () => {
 
     await a.close()
 
-    const result = await b.callTool({ name: 'material_describe', arguments: {} })
-    expect(JSON.stringify(result.content)).toContain('material_describe ok')
+    const result = await b.callTool({ name: 'inspect_audio', arguments: {} })
+    expect(JSON.stringify(result.content)).toContain('inspect_audio ok')
   }, 30_000)
 
   /**
@@ -463,8 +460,8 @@ describe('McpServerHost 多客户端', () => {
           requestInit: { headers: { Authorization: `Bearer ${token}` } }
         })
       )
-      const result = await client.callTool({ name: 'material_describe', arguments: {} })
-      expect(JSON.stringify(result.content)).toContain('material_describe ok')
+      const result = await client.callTool({ name: 'inspect_audio', arguments: {} })
+      expect(JSON.stringify(result.content)).toContain('inspect_audio ok')
       await client.close()
     }
   }, 60_000)
@@ -582,16 +579,16 @@ describe('McpServerHost 契约声明', () => {
     const client = await connected()
     const listed = await client.listTools()
 
-    const actor = listed.tools.find((t) => t.name === 'ue_get_actor')!
+    const actor = listed.tools.find((t) => t.name === 'editor_scene_tree')!
     expect(actor._meta?.unrealBox).toMatchObject({
-      namespace: 'ue.actor',
+      namespace: 'godot.editor',
       risk: 'safe',
       projectScoped: true
     })
   }, 30_000)
 
   /**
-   * `ue_session_health` 的进程检测在盒子这一侧做，不走引擎 RPC ——
+   * `godot_check` 的进程检测在盒子这一侧做，不走引擎 RPC ——
    * 标成 projectScoped 会让调用方在「引擎没连上」时不敢调它，
    * 而那正是最需要它的时候。
    */
@@ -599,7 +596,7 @@ describe('McpServerHost 契约声明', () => {
     const client = await connected()
     const listed = await client.listTools()
 
-    const health = listed.tools.find((t) => t.name === 'ue_session_health')!
+    const health = listed.tools.find((t) => t.name === 'godot_check')!
     expect(health._meta?.unrealBox).toMatchObject({ projectScoped: false })
   }, 30_000)
 })
@@ -645,7 +642,7 @@ describe('McpServerHost 目标工程', () => {
     unrealBox: Record<string, unknown> | undefined
   ): ReturnType<Client['callTool']> {
     return client.callTool({
-      name: 'ue_session_health',
+      name: 'godot_check',
       arguments: {},
       ...(unrealBox ? { _meta: { unrealBox } } : {})
     })
@@ -773,31 +770,29 @@ describe('McpServerHost 公共结果', () => {
     return client
   }
 
-  it('有 serializer 的工具带上 structuredContent，且计数字段齐全', async () => {
+  it('有 serializer 的工具带上 structuredContent', async () => {
     const client = await connected()
 
-    const result = await client.callTool({ name: 'ue_get_actor', arguments: {} })
+    const result = await client.callTool({ name: 'editor_scene_tree', arguments: {} })
 
     expect(result.structuredContent).toMatchObject({
-      returnedCount: 1,
-      totalCount: 137,
-      truncated: true,
-      units: { location: 'cm', rotation: 'deg', scale: 'multiplier', bounds: 'cm' }
+      scene: 'res://main.tscn',
+      tree: { name: 'Main', type: 'Node2D' }
     })
   }, 30_000)
 
   it('文本块保持原样 —— 旧客户端看到的东西不变', async () => {
     const client = await connected()
 
-    const result = await client.callTool({ name: 'ue_get_actor', arguments: {} })
+    const result = await client.callTool({ name: 'editor_scene_tree', arguments: {} })
 
-    expect(result.content).toEqual([{ type: 'text', text: 'ue_get_actor ok' }])
+    expect(result.content).toEqual([{ type: 'text', text: 'editor_scene_tree ok' }])
   }, 30_000)
 
   it('没有 serializer 的工具不返回 structuredContent', async () => {
     const client = await connected()
 
-    const result = await client.callTool({ name: 'material_describe', arguments: {} })
+    const result = await client.callTool({ name: 'inspect_audio', arguments: {} })
 
     expect(result.structuredContent).toBeUndefined()
   }, 30_000)
@@ -864,7 +859,7 @@ describe('McpServerHost 按会话装配', () => {
     }, {})
     expect(flags.every(Boolean)).toBe(true)
     const names = (await client.listTools()).tools.map((t) => t.name)
-    expect(names).not.toContain('ue_destroy_actor')
+    expect(names).not.toContain('editor_stop')
   }, 30_000)
 
   it('客户端声明了 elicitation 才给提问通道', async () => {
@@ -887,7 +882,7 @@ describe('McpServerHost 按会话装配', () => {
     let aborted: Promise<boolean> | undefined
     const waiting = defineTool({
       name: 'wait_forever',
-      namespace: 'ue.system',
+      namespace: 'godot',
       risk: 'safe',
       description: '一直等到被取消',
       input: z.object({}),
@@ -936,8 +931,8 @@ describe('McpServerHost 工具注解', () => {
     const listed = (await client.listTools()).tools
     const byName = new Map(listed.map((t) => [t.name, t.annotations]))
 
-    expect(byName.get('ue_get_actor')).toMatchObject({ readOnlyHint: true, destructiveHint: false })
-    expect(byName.get('material_create')).toMatchObject({
+    expect(byName.get('editor_scene_tree')).toMatchObject({ readOnlyHint: true, destructiveHint: false })
+    expect(byName.get('gen_sprite')).toMatchObject({
       readOnlyHint: false,
       destructiveHint: false
     })

@@ -119,7 +119,7 @@ export interface ModelRequest {
   role?: ModelRole
   /** 官方网关时代的调用等级，用于在没有 role 时推导 */
   level?: ModelLevel
-  /** 调用方标识，如 'ue_editor'、'blueprint_layout'。目前仅用于日志与错误提示 */
+  /** 调用方标识，如 'agent-v3'。目前仅用于日志与错误提示 */
   agentType?: string
   /**
    * 本次请求是否包含图片。

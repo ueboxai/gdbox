@@ -1,5 +1,4 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
-import { readFileSync } from 'node:fs'
 import { electronMock, servicesMock, targetContextMock } from '../../testSupport/toolMocks'
 
 vi.mock('electron', () => electronMock())
@@ -20,7 +19,7 @@ import {
 } from './toolSearch'
 import { createTaskTool } from './task'
 import type { UnrealAgentTool } from '../defineTool'
-import { BROWSER_TOOL_NAMES, OFFLINE_UE_TOOLS } from '../toolNames'
+import { BROWSER_TOOL_NAMES, needsEditor } from '../toolNames'
 import { createSkillTools, discoverEnabledSkills } from '../../capabilities/skills'
 
 const ctx: SessionContext = {
@@ -59,23 +58,10 @@ function residentNames(): Set<string> {
 }
 
 describe('真实工具库检索回归', () => {
-  it('文档的 30 个和宿主交互工具全部常驻，领域工具继续按需加载', () => {
-    const document = readFileSync('docs/常驻工具集选定-2026-09-17.md', 'utf8')
-    const section = document.split('## 3. 推荐常驻集')[1].split('## 4.')[0]
-    const recommended = [...section.matchAll(/^\| `([^`]+)`/gm)]
-      .map((match) => match[1])
-      .concat('task')
-    expect(RESIDENT_TOOL_NAMES).toHaveLength(30)
-    expect([...RESIDENT_TOOL_NAMES].sort()).toEqual(recommended.sort())
+  it('点名的和宿主交互工具全部常驻，生成资源这类领域工具继续按需加载', () => {
     const search = createToolSearch(catalog, () => catalog)
-    /*
-     * 2026-09-21：这条原来钉的是「常驻集恰好等于这 34 个名字」。现在常驻分两路
-     * —— 点名的（文档 §3）和**整组**的（`RESIDENT_TOOL_GROUPS`，按 prompt cache
-     * 的账算出来的小组）—— 所以断言换成「两路都在、且只有这两路」。
-     *
-     * 换成集合关系而不是补一份新的名字清单：整组常驻是按组算的，把组里的成员
-     * 抄成名单，以后往 `ue.editor` 加一个工具就要改测试，而那恰恰是不该改的地方。
-     */
+    // 常驻分两路：点名的（RESIDENT_TOOL_NAMES）和整组的（RESIDENT_TOOL_GROUPS），
+    // 断言「两路都在、且只有这两路」，不抄一份成员名单
     const named = [
       ...RESIDENT_TOOL_NAMES,
       ...BROWSER_TOOL_NAMES,
@@ -91,28 +77,9 @@ describe('真实工具库检索回归', () => {
         named.includes(tool.name) || RESIDENT_TOOL_GROUPS.has(toolSearchGroup(tool)),
         `${tool.name} 既不在点名清单里，所属组 ${toolSearchGroup(tool)} 也不是整组常驻`
       ).toBe(true)
-    // `ue_get_actor` / `ue_screenshot` 曾经在这份「不该常驻」名单里，2026-09-17 按
-    // 「完全没有替代」改为常驻（文档 §3.8 / §4.2），所以从这里移走 —— 留着就是
-    // 用测试把一个已经被推翻的结论钉死。写操作和图操作仍然按需加载。
-    for (const name of ['material_get_graph', 'blueprint_compile', 'ue_spawn_actor']) {
-      expect(search.getTools().some((tool) => tool.name === name)).toBe(false)
+    for (const name of ['gen_sprite', 'gen_music', 'art_style', 'generate_3d_model']) {
+      expect(search.getTools().some((tool) => tool.name === name), name).toBe(false)
     }
-  })
-
-  /*
-   * 拆组和整组常驻都是**无声**改错的地方：多一个 `ue.content` 工具没归子组、
-   * 或者一个组没有领域词，表现都是「模型偶尔搜不到它」，没人会去查。
-   */
-  it('ue.content 的每个工具都归进了子组', () => {
-    const orphans = catalog
-      .filter((tool) => tool.unrealBox.namespace === 'ue.content')
-      .filter((tool) => toolSearchGroup(tool) === 'ue.content')
-      .map((tool) => tool.name)
-    expect(
-      orphans,
-      `这些 ue.content 工具还没归子组：${orphans.join('、')}。` +
-        '在 toolSearch.ts 的 UE_CONTENT_SUBGROUPS 里按「导入 / 整理 / 体检」归位。'
-    ).toEqual([])
   })
 
   /**
@@ -190,31 +157,6 @@ describe('真实工具库检索回归', () => {
     ).toEqual([])
   })
 
-  it.each([
-    ['ue-material-authoring', 'ue.material'],
-    ['ue-blueprint-graph-editing', 'ue.blueprint'],
-    ['ue-actor-placement', 'ue.actor']
-  ])('真实 %s 加载后直接提供整个 %s 组', async (name, group) => {
-    const search = createToolSearch(catalog, () => catalog)
-    const loader = createSkillTools(skills, 'off', search.loadFromSkill).find(
-      (tool) => tool.name === 'load_skill'
-    )!
-    const result = await loader.execute('skill', { name })
-    const members = catalog.filter((tool) => toolSearchGroup(tool) === group)
-    expect(members.length).toBeGreaterThan(1)
-    expect(search.getTools()).toEqual(expect.arrayContaining(members))
-    const details = result.details as { toolSearch?: { loadedToolNames?: string[] } }
-    expect(details.toolSearch?.loadedToolNames).toEqual(
-      expect.arrayContaining(
-        members
-          .filter((tool) => !(RESIDENT_TOOL_NAMES as readonly string[]).includes(tool.name))
-          .map((tool) => tool.name)
-      )
-    )
-    if (process.env.TOOL_SEARCH_MEASURE === '1')
-      console.info('TOOL_SEARCH_SKILL', name, JSON.stringify(result.details))
-  })
-
   it('常驻也服从断连、只读、子任务和白名单，MCP 不自动常驻', async () => {
     for (const overrides of [
       { ueConnected: false },
@@ -232,12 +174,7 @@ describe('真实工具库检索回归', () => {
           .every((tool) => tools.includes(tool))
       ).toBe(true)
       if ('ueConnected' in overrides)
-        expect(
-          search
-            .getTools()
-            .filter((tool) => tool.unrealBox.namespace.startsWith('ue.'))
-            .every((tool) => OFFLINE_UE_TOOLS.has(tool.name))
-        ).toBe(true)
+        expect(search.getTools().some((tool) => needsEditor(tool.unrealBox.namespace))).toBe(false)
       if ('readOnly' in overrides)
         expect(search.getTools().every((tool) => tool.unrealBox.risk === 'safe')).toBe(true)
       if ('isSubAgent' in overrides) expect(names).not.toEqual(expect.arrayContaining(['task']))
@@ -337,21 +274,13 @@ describe('真实工具库检索回归', () => {
   })
 
   it.each([
-    ['创建材质实例', 'material_create_instance'],
-    ['查看材质节点连线', 'material_get_graph'],
-    ['调整材质实例参数', 'material_set_param'],
-    ['整理材质节点布局', 'material_tidy_graph'],
-    ['compile blueprint', 'blueprint_compile'],
-    ['蓝图添加变量', 'blueprint_add_variable'],
-    ['按文件名查找 fbx', 'find_local_files'],
-    ['网页搜索', 'web_search'],
-    // 真机上模型没搜、直接写了 Python（2026-10-13 反馈）；钉住这条搜得到
-    ['新建增强输入动作', 'ue_input_add_mapping'],
-    ['灯光阴影普查', 'ue_light_census'],
-    // 以前技能让模型写 Python 的 set_convex_decomposition_collisions；现在要搜得到工具
-    ['凸包分解生成碰撞', 'mesh_optimize'],
-    // 改 C++ 成员前查波及面；以前技能说「没工具，全量编译看谁报错」
-    ['哪些蓝图用到了这个函数', 'blueprint_find_usages']
+    ['生成角色精灵帧动画', 'gen_sprite'],
+    ['做一段循环的背景音乐', 'gen_music'],
+    ['跳跃音效', 'gen_sfx'],
+    ['瓦片地图块', 'gen_tileset'],
+    ['统一美术风格和调色板', 'art_style'],
+    ['按文件名查找 png', 'find_local_files'],
+    ['网页搜索', 'web_search']
   ])('%s 应能加载 %s', async (query, expected) => {
     expect(
       catalog.some((tool) => tool.name === expected),
@@ -360,84 +289,6 @@ describe('真实工具库检索回归', () => {
     const search = createToolSearch(catalog, () => catalog)
     const result = await search.tool.execute('probe', { query })
     expect(loadedNames(result)).toContain(expected)
-  })
-
-  /*
-   * 灯光普查是按需子组：不常驻、不跟 ue.level 整组走（那组有开关卡、存关卡这些写操作），
-   * 而项目体检技能一加载就把它带上 —— 渲染线程 / GPU 瓶颈的排查正是从那里进来的
-   */
-  it('ue_light_census 自成按需子组，由项目体检技能带上', async () => {
-    const census = catalog.find((tool) => tool.name === 'ue_light_census')!
-    expect(census).toBeDefined()
-    expect(toolSearchGroup(census)).toBe('ue.level.lights')
-    expect(RESIDENT_TOOL_GROUPS.has('ue.level.lights')).toBe(false)
-    expect(residentNames().has('ue_light_census')).toBe(false)
-    expect(groupDomainTerms('ue.level.lights')).toContain('灯光')
-
-    const search = createToolSearch(catalog, () => catalog)
-    const loader = createSkillTools(skills, 'off', search.loadFromSkill).find(
-      (tool) => tool.name === 'load_skill'
-    )!
-    await loader.execute('skill', { name: 'ue-project-audit' })
-    expect(search.getTools().map((tool) => tool.name)).toContain('ue_light_census')
-  })
-
-  /*
-   * mesh_optimize 和 mesh_describe 同属 ue.mesh 命名空间，但 ue.mesh 是整组常驻的，
-   * 常驻预算（上面那条 30,000）已经满了 —— 跟着整组走就会把那条线顶破。
-   * 所以它单成按需子组，由几何编辑技能（和导入整理技能）点名带上。
-   */
-  it('mesh_optimize 自成按需子组，由几何编辑技能带上', async () => {
-    const optimize = catalog.find((tool) => tool.name === 'mesh_optimize')!
-    expect(optimize).toBeDefined()
-    expect(optimize.unrealBox.namespace).toBe('ue.mesh')
-    expect(toolSearchGroup(optimize)).toBe('ue.mesh.optimize')
-    expect(RESIDENT_TOOL_GROUPS.has('ue.mesh.optimize')).toBe(false)
-    expect(residentNames().has('mesh_optimize')).toBe(false)
-    // mesh_describe 仍然整组常驻，没被一起拆走
-    expect(residentNames().has('mesh_describe')).toBe(true)
-    expect(groupDomainTerms('ue.mesh.optimize')).toContain('凸包')
-
-    for (const name of ['ue-geometry-editing', 'ue-content-import-organize']) {
-      const search = createToolSearch(catalog, () => catalog)
-      const loader = createSkillTools(skills, 'off', search.loadFromSkill).find(
-        (tool) => tool.name === 'load_skill'
-      )!
-      await loader.execute('skill', { name })
-      expect(
-        search.getTools().map((tool) => tool.name),
-        `${name} 加载后应带上 mesh_optimize`
-      ).toContain('mesh_optimize')
-    }
-  })
-
-  /*
-   * blueprint_find_usages 属 ue.blueprint 命名空间，但单成按需子组：search_tools 按「谁在用」
-   * 命中时可以只加载它，不必连带二十多个写图工具（蓝图组是最大的一组）。
-   * 不进常驻（常驻预算已满），由 C++ 工作流和蓝图编辑两个技能点名带上；
-   * 搜得到它由上面 it.each 的「哪些蓝图用到了这个函数」那条钉住。
-   */
-  it('blueprint_find_usages 自成按需子组，由 C++ 和蓝图编辑技能带上', async () => {
-    const usages = catalog.find((tool) => tool.name === 'blueprint_find_usages')!
-    expect(usages).toBeDefined()
-    expect(usages.unrealBox.namespace).toBe('ue.blueprint')
-    expect(usages.unrealBox.risk).toBe('safe')
-    expect(toolSearchGroup(usages)).toBe('ue.blueprint.usages')
-    expect(RESIDENT_TOOL_GROUPS.has('ue.blueprint.usages')).toBe(false)
-    expect(residentNames().has('blueprint_find_usages')).toBe(false)
-    expect(groupDomainTerms('ue.blueprint.usages')).toContain('哪些蓝图')
-
-    for (const name of ['ue-cpp-workflow', 'ue-blueprint-graph-editing']) {
-      const search = createToolSearch(catalog, () => catalog)
-      const loader = createSkillTools(skills, 'off', search.loadFromSkill).find(
-        (tool) => tool.name === 'load_skill'
-      )!
-      await loader.execute('skill', { name })
-      const loaded = search.getTools().map((tool) => tool.name)
-      expect(loaded, `${name} 加载后应带上 blueprint_find_usages`).toContain(
-        'blueprint_find_usages'
-      )
-    }
   })
 
   it('泛称本地文件搜索时至少提供文件名查找或文件内容搜索', async () => {

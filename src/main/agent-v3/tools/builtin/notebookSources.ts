@@ -196,7 +196,7 @@ function createSearchAllNotebooksTool(): UnrealAgentTool<SourceHit[]> {
     namespace: 'notebook',
     risk: 'safe',
     description:
-      '在用户的知识库（虚幻盒子里用户自己收集的资料）里检索，拿回最相关的片段。' +
+      '在用户的知识库（GDBox 里用户自己收集的资料）里检索，拿回最相关的片段。' +
       '默认查全部知识库；用户点名了某一个就用 notebook 参数按标题缩小范围。\n\n' +
       '【什么时候用】问题可能和用户自己的资料有关时**先查一遍**，别凭记忆答 —— 那些资料模型没见过。\n' +
       SEARCH_DESCRIPTION_TAIL,

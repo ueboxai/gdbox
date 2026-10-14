@@ -68,10 +68,10 @@ const broadcastSender = {
 
 /** 握手说明的开头：告诉客户端下面那一大段是什么、哪些地方要换个读法 */
 const PREFACE = [
-  '# Unreal Box',
+  '# GDBox',
   '',
-  "You are connected to Unreal Box over MCP. Everything below is the system prompt Unreal Box gives its own built-in assistant, and it applies to you as written: the working rules, the skills (load one with `load_skill` before working in its area), and the guidance on each tool. Tool names are Unreal Box's own; your client may show them with a prefix.",
-  'The <environment> block at the end was captured when you connected. Engine connections come and go — call `ue_session_health` before relying on it.',
+  "You are connected to GDBox over MCP. Everything below is the system prompt GDBox gives its own built-in assistant, and it applies to you as written: the working rules, the skills (load one with `load_skill` before working in its area), and the guidance on each tool. Tool names are GDBox's own; your client may show them with a prefix.",
+  'The <environment> block at the end was captured when you connected. Editor connections come and go — call `box_status` (section `editors`) before relying on it.',
   '',
   '---',
   ''

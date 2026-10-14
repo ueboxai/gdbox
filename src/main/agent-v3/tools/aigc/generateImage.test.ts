@@ -5,7 +5,7 @@
  *
  * 盯的是这四件容易悄悄坏掉的事：
  *   1. 参考图真的传下去了 —— 漏了不会报错，只会出一张和白盒无关的图
- *   2. 出的图存进素材库并把**绝对路径**回出来 —— 界面和 ue_content_import 都靠它
+ *   2. 出的图存进素材库并把**绝对路径**回出来 —— 界面和复制进工程都靠它
  *   3. 存盘失败不吞图 —— 钱已经花了
  *   4. 进上下文的图有张数上限 —— 八张原图能把上下文烧穿
  */
@@ -83,16 +83,16 @@ describe('元数据', () => {
   })
 
   it('描述里写清白盒出图那条流程，否则模型不会想到先截图', () => {
-    expect(tool.description).toContain('ue_screenshot')
+    expect(tool.description).toContain('godot_screenshot')
     expect(tool.description).toContain('reference_images')
-    expect(tool.description).toContain('ue_content_import')
+    expect(tool.description).toContain('复制进工程文件夹')
   })
 
-  // 「把这个场景渲染成成品」两边都通：要么是 AI 概念图，要么是 MRQ 出片。
+  // 「把这个场景渲染成成品」两边都通：要么是 AI 概念图，要么是游戏里真实跑出来的画面。
   // 猜错了拿 AI 图顶上，用户要到很久以后才发现那张图根本不能用
   it('描述里说清它不是引擎渲染，且「渲染」有歧义时要先问', () => {
     expect(tool.description).toContain('不是引擎渲染结果')
-    expect(tool.description).toContain('Movie Render Queue')
+    expect(tool.description).toContain('godot_run')
     expect(tool.description).toContain('先问一句')
   })
 

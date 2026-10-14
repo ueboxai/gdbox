@@ -46,7 +46,7 @@ setLocalNetworkPolicy(() => appSettingsManager.getAgentBrowserAllowLocalNetwork(
  * 1. **窗口按需创建**。社区版承诺冷启动完全离线，所以在用户批准第一次
  *    `browser_open` 之前，这里不创建窗口、不发任何请求。
  * 2. **输入不抢焦点**。`webContents.sendInputEvent()` 要求窗口获得焦点
- *    （Electron 官方文档明写），那会打断用户正在 UE 里的操作 —— 所以走
+ *    （Electron 官方文档明写），那会打断用户正在编辑器里的操作 —— 所以走
  *    `webContents.debugger` 的 CDP Input 域，它不需要前台焦点。
  * 3. **点击前校验命中**。坐标上盖着什么由页面说了算，不校验就会出现
  *    「审批说点 A、实际点了 Cookie 横幅」。校验在 `pageScan.ts` 里。
@@ -57,7 +57,7 @@ const PARTITION = 'persist:unreal-box-agent-browser'
 const securedSessions = new WeakSet<Session>()
 
 /** 窗口标题前缀。页面改不掉它，见 `installWindowPolicy` 里的说明 */
-const BROWSER_WINDOW_TITLE = 'Unreal Box · Agent 浏览器'
+const BROWSER_WINDOW_TITLE = 'GDBox · Agent 浏览器'
 
 /** 顶层导航硬超时。超过就把当前状态交还给用户，不无限等 */
 const LOAD_TIMEOUT_MS = 30_000
@@ -71,7 +71,7 @@ const CONTENT_EXTRACT_MAX_CHARS = 400_000
 const SCREENSHOT_MAX_WIDTH = 768
 const SCREENSHOT_JPEG_QUALITY = 65
 
-/** 压缩后仍超过这个体积就不塞进上下文。经验值，与 UE 截图工具一致的量级 */
+/** 压缩后仍超过这个体积就不塞进上下文。经验值，与编辑器截图工具一致的量级 */
 const SCREENSHOT_MAX_BYTES = 180_000
 
 const PAGE_CLOSED_ITSELF = '这个页面打开后自己关掉了，没有可以读的内容。换一个地址再试。'
@@ -1043,7 +1043,7 @@ export class AgentBrowserService {
      * 标题栏永远表明这是谁的窗口。
      *
      * 默认行为是页面想叫什么就叫什么 —— 那意味着一个网页可以把自己的标题写成
-     * 「虚幻盒子 · 请输入授权码」，而用户看到的是一个长得像盒子自己的窗口。
+     * 「GDBox · 请输入授权码」，而用户看到的是一个长得像盒子自己的窗口。
      * 页面标题仍然显示（用户要知道自己在看哪一页），但前面钉死我们的名字。
      *
      * 嵌入模式没有自己的标题栏，这一条自然不适用。

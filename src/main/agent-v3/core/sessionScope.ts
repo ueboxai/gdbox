@@ -27,7 +27,7 @@ export interface SessionProjectRef {
   engineVersion?: string
 }
 
-/** 一个已连接的 UE 工程。字段取 `ProjectInfo` 的子集 */
+/** 一个连着 Godot 编辑器的工程。字段取 `ProjectInfo` 的子集 */
 export interface ConnectedProjectRef {
   connectionId: string
   projectName: string
@@ -40,7 +40,7 @@ export interface ConnectedProjectRef {
  *
  * 对话上的戳只有名字 —— 只有工程连着的那一刻盖的戳才顺带记下路径。
  * 于是「归入 test222」的对话，盒子其实**知道** test222 在哪（库里有），
- * 却从来没去查过：真机上模型为了找那个 `.uproject`，从 C:/ 开始整盘扫。
+ * 却从来没去查过：真机上模型为了找那个工程文件，从 C:/ 开始整盘扫。
  */
 export interface LibraryProjectRef {
   projectName?: string | null
@@ -50,15 +50,15 @@ export interface LibraryProjectRef {
 
 export interface SessionProjectScope {
   /**
-   * 这条对话能不能用引擎工具。
+   * 这条对话能不能用编辑器工具。
    *
-   * 归属的工程没连上时是 false —— 哪怕别的工程连得好好的。ue.* 工具因此
+   * 归属的工程没连上时是 false —— 哪怕别的工程连得好好的。`godot.editor` 工具因此
    * 整个不注册（见 `resolveTools`），模型想越界也没有手。
    */
   engineAvailable: boolean
   /** 这一轮工具该发往的连接。undefined = 不指定，工具回退到第一个连接 */
   targetConnectionId?: string
-  /** 工具实际会操作的那个已连接工程，进 `<environment>` 的「Unreal Engine: connected」一行 */
+  /** 工具实际会操作的那个已连接工程，进 `<runtime-status>` 的 `engine_link` 一行 */
   connectedProject?: ConnectedProjectRef
   /** 对话归属的工程，以及它此刻连没连着 */
   sessionProject?: { name: string; engineVersion?: string; path?: string; connected: boolean }
@@ -66,7 +66,7 @@ export interface SessionProjectScope {
    * 连着、但不属于这条对话的工程名。
    *
    * 只在归属工程没连上时有意义：模型得知道「引擎其实开着，只是开的不是你的工程」，
-   * 否则它会把用户往「装插件、连引擎」的方向引，而用户明明已经连着了。
+   * 否则它会把用户往「装插件、连编辑器」的方向引，而用户明明已经连着了。
    */
   outOfScopeProjects: string[]
 }

@@ -38,7 +38,7 @@ type InboundHandler = (message: MessageEnvelope, connectionId: string) => Promis
 
 /**
  * WebSocket 服务类
- * 实现与 Unreal Engine 实例的通讯
+ * 实现与编辑器插件（Godot 里的 GDBox Link）的通讯
  */
 /** 同一条连接连续这么多次请求超时，就当它死了（见 `trackLiveness`） */
 const ZOMBIE_TIMEOUT_STREAK = 3
@@ -120,7 +120,7 @@ export class WebSocketService implements IWebSocketService {
    *
    * 渲染层原来只在挂载时问一次 `ws:status`，于是两个方向都坏：用户修好端口冲突
    * 重启桥接后横幅还挂着；运行中桥接被停掉或重启失败则根本不提示 —— 回到
-   * 「应用一切正常、UE 永远连不上」那个症状。状态会变，就得推。
+   * 「应用一切正常、编辑器永远连不上」那个症状。状态会变，就得推。
    *
    * 动态 import `appWindows`：这个文件在服务启动路径上，不该把 electron 的
    * 窗口模块拉进它的静态依赖图。
@@ -323,9 +323,9 @@ export class WebSocketService implements IWebSocketService {
         WebSocketErrorCode.E_CLIENT_NOT_FOUND,
         // 面向用户那句：不出现工具名。这个错也经 `ws:call` 回到渲染层，
         // 任何一处改成 message.error(res.error) 就会把工具名弹给用户
-        '这条引擎连接已经断开了（编辑器关了或重启过）。',
+        '这条编辑器连接已经断开了（编辑器关了或重启过）。',
         // 给模型的下一步，由 agent 侧拼接
-        '用 ue_session_health 看看现在是什么状态，再决定是等插件重连还是让用户打开工程。'
+        '用 box_status 看看现在连着哪些编辑器，再决定是等插件重连（GDBox Link 断线后每 3 秒自动重连）还是让用户用 Godot 打开工程。'
       )
     }
 
@@ -494,7 +494,7 @@ export class WebSocketService implements IWebSocketService {
    *
    * 只有**恰好一个**存活连接时才回退，多个连接时返回 undefined 让调用方失败。
    *
-   * 以前这里是「取第一个」。多开 UE 时那等于把指令随机发给其中一个工程 ——
+   * 以前这里是「取第一个」。多开编辑器时那等于把指令随机发给其中一个工程 ——
    * 而且是静默的：用户看到的是「命令执行成功了，但我的场景没变」。
    * 猜错工程的代价（改错别人的关卡）远高于报一个错，所以宁可不猜。
    */
@@ -510,7 +510,7 @@ export class WebSocketService implements IWebSocketService {
   }
 
   /**
-   * 订阅来自 UE 的消息
+   * 订阅来自编辑器插件的消息
    */
   onEvent(
     method: string,
@@ -598,10 +598,10 @@ export class WebSocketService implements IWebSocketService {
       //
       // 原来这里是「太大就 return」，于是调用方那个 Promise 谁也不去动它，
       // 只能等超时（有的工具 60 秒），日志里只有一行 warn，
-      // 上层看到的是「虚幻引擎没反应」而不是「响应太大」。
+      // 上层看到的是「编辑器没反应」而不是「响应太大」。
       // 先解析出 id，就能把失败精确地还给那一个请求。
       //
-      // 只管回包（type=res）。这个上限是替 agent 的上下文挡大结果的；用户在虚幻里
+      // 只管回包（type=res）。这个上限是替 agent 的上下文挡大结果的；用户在编辑器里
       // 主动发来的事件（content.import_assets 带全部依赖的元数据，一个资产约 0.8KB）
       // 体积跟着资产数涨，八百多个就过 512KB —— 以前被这里整包丢掉，盒子毫无动静。
       if (envelope.type === 'res' && data.length > config.message.maxBytes) {
@@ -871,13 +871,13 @@ export class WebSocketService implements IWebSocketService {
 export function describeListenError(error: NodeJS.ErrnoException, port: number): string {
   if (error.code === 'EADDRINUSE') {
     return (
-      `端口 ${port} 已被占用，虚幻引擎桥接服务启动失败。` +
-      '可能已有虚幻盒子实例在运行，或该端口被其他程序占用。' +
-      '请关闭占用该端口的程序后重启虚幻盒子；在此之前，连接引擎相关的功能均不可用。'
+      `端口 ${port} 已被占用，Godot 编辑器连接服务启动失败。` +
+      '可能已有 GDBox 实例在运行，或该端口被其他程序占用。' +
+      '请关闭占用该端口的程序后重启 GDBox；在此之前，需要连接 Godot 编辑器的功能均不可用。'
     )
   }
   if (error.code === 'EACCES') {
-    return `没有权限监听端口 ${port}，虚幻引擎桥接服务启动失败。`
+    return `没有权限监听端口 ${port}，Godot 编辑器连接服务启动失败。`
   }
-  return `虚幻引擎桥接服务启动失败：${error.message}`
+  return `Godot 编辑器连接服务启动失败：${error.message}`
 }

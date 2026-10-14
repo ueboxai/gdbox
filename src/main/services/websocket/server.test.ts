@@ -562,7 +562,7 @@ describe('端口被占用', () => {
       // 光说「端口 X 已被占用」不够 —— 用户需要知道该关掉什么
       const status = loser.getStatus()
       expect(status.startError).toContain(String(taken))
-      expect(status.startError).toContain('虚幻盒子')
+      expect(status.startError).toContain('GDBox')
       expect(status.startError).toMatch(/关闭|其他程序/)
     } finally {
       await blocker.stopServer()
@@ -589,9 +589,9 @@ describe('describeListenError', () => {
   it('EADDRINUSE 翻成能照做的一句话', () => {
     const message = describeListenError({ code: 'EADDRINUSE' } as NodeJS.ErrnoException, 17860)
     expect(message).toContain('17860')
-    expect(message).toContain('虚幻盒子')
+    expect(message).toContain('GDBox')
     // 还要说清楚代价，否则用户不知道这条警告要不要紧
-    expect(message).toContain('连接引擎')
+    expect(message).toContain('需要连接 Godot 编辑器的功能')
   })
 
   it('EACCES 单独说，不跟占用混为一谈', () => {

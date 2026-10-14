@@ -79,9 +79,9 @@ describe('VOICE_TOOLS', () => {
 })
 
 describe('VOICE_INSTRUCTIONS', () => {
-  it('文件指代先读对话历史，不无条件查看虚幻编辑器', () => {
+  it('文件指代先读对话历史，不无条件查看 Godot 编辑器', () => {
     expect(VOICE_INSTRUCTIONS).toContain('先从最近的对话记录找指代')
-    expect(VOICE_INSTRUCTIONS).toContain('查看或解释对话中的文件不要求连接虚幻编辑器')
+    expect(VOICE_INSTRUCTIONS).toContain('查看或解释对话中的文件不要求连接 Godot 编辑器')
     expect(VOICE_INSTRUCTIONS).toContain('不假装重新读过文件')
     expect(VOICE_INSTRUCTIONS).not.toContain('用户在用嘴操作编辑器')
     const tool = VOICE_TOOLS.find((item) => item.name === LOOK_AT_EDITOR)
@@ -202,7 +202,7 @@ describe('summarizeProjects', () => {
     ])
 
     expect(text).toContain('已登记 2 个工程')
-    expect(text).toContain('DemoCity（引擎 5.5）')
+    expect(text).toContain('DemoCity（Godot 5.5）')
     expect(text).toContain('Sandbox')
     expect(text).not.toContain('{')
   })
@@ -227,7 +227,7 @@ describe('summarizeOpenEditors', () => {
     ])
 
     expect(text).toContain('当前连着 1 个编辑器')
-    expect(text).toContain('DemoCity（引擎 5.5）')
+    expect(text).toContain('DemoCity（Godot 5.5）')
     expect(text).not.toContain('Stale')
   })
 

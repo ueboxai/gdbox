@@ -1,6 +1,6 @@
 /**
  * 工程信息接口
- * 描述一个已连接的 Unreal Engine 工程项目
+ * 描述一个已连接的 Godot 工程
  */
 export interface ProjectInfo {
   /** WebSocket 连接 ID */
@@ -11,7 +11,7 @@ export interface ProjectInfo {
   projectVersion: string
   /** 引擎版本 */
   engineVersion: string
-  /** 项目根目录路径（包含 .uproject 文件的文件夹） */
+  /** 项目根目录路径（包含 project.godot 的文件夹） */
   projectPath: string
   /** 默认地图路径 */
   defaultMap: string

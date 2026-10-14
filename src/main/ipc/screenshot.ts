@@ -155,7 +155,7 @@ async function captureScreenshot(): Promise<{
 
     // 生成文件名
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-    const fileName = `UnrealAgent_${timestamp}.png`
+    const fileName = `GDBox_${timestamp}.png`
 
     // 保存到桌面
     const desktopPath = app.getPath('desktop')

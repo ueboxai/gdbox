@@ -1,6 +1,6 @@
 ---
 name: task-to-video
-description: Turns the current Agent task, conversation and results into an editable local tutorial, promotional or creative video. Use when the user says "把刚才的过程做成视频", "把成果做成宣传片", "整活视频", or asks to make a video from this task. Do not use for music-only requests (直接调用 generate_task_music), standalone AI video shots, video analysis, or Unreal Sequencer rendering without a conversation-to-video request.
+description: Turns the current Agent task, conversation and results into an editable local tutorial, promotional or creative video. Use when the user says "把刚才的过程做成视频", "把成果做成宣传片", "整活视频", or asks to make a video from this task. Do not use for music-only requests (直接调用 generate_task_music), standalone AI video shots, video analysis, or recording gameplay footage of the Godot game without a conversation-to-video request.
 ---
 
 # 任务成片
@@ -38,7 +38,7 @@ description: Turns the current Agent task, conversation and results into an edit
 原图不可用时，优先补拍当前成果（横屏至少 2560×1440）；只能用预览副本时明确说明清晰度受限，不能声称放大就恢复了细节。
 
 
-调用本技能已经包含**围绕当前任务适量补素材**的授权。优先顺序：现有素材 → 对当前成果补截图/局部图 → 用 `generate_image` 补必要的示意图、背景或创意画面。
+调用本技能已经包含**围绕当前任务适量补素材**的授权。优先顺序：现有素材 → 对当前成果补截图/局部图（游戏画面用 `godot_screenshot` 拍，或 `godot_run` 在指定时刻截几帧）→ 用 `generate_image` 补必要的示意图、背景或创意画面。
 
 - 按缺口补，不按镜头数机械生图。不重复生成已有、适用的素材。
 - 用户有明确预算或“只用现有素材”要求时优先遵守；没配生图模型就继续使用现有素材或说明缺口。

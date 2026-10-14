@@ -65,12 +65,12 @@ describe('对外 MCP server 的持久化配置', () => {
      * 所以磁盘上的 false **分不出**「用户明确关过」和「他从来没做过选择」。
      */
     it('老文件里的 false 不算用户的选择，按新默认开', async () => {
-      writeFileSync(file(), '{"enabled":false,"port":17861,"token":"abc"}', 'utf8')
+      writeFileSync(file(), '{"enabled":false,"port":17871,"token":"abc"}', 'utf8')
       expect((await readHostSettings()).enabled).toBe(true)
     })
 
     it('迁移过一次之后，用户关掉就是真关掉', async () => {
-      writeFileSync(file(), '{"enabled":false,"port":17861,"token":"abc"}', 'utf8')
+      writeFileSync(file(), '{"enabled":false,"port":17871,"token":"abc"}', 'utf8')
       await readHostSettings() // 迁移，落下标记
       await writeHostSettings({ ...(await readHostSettings()), enabled: false })
 
@@ -79,7 +79,7 @@ describe('对外 MCP server 的持久化配置', () => {
 
     /** 标记必须落盘，否则每次启动都把用户关掉的服务又打开一遍 */
     it('迁移标记会落盘，不会每次启动重来', async () => {
-      writeFileSync(file(), '{"enabled":false,"port":17861,"token":"abc"}', 'utf8')
+      writeFileSync(file(), '{"enabled":false,"port":17871,"token":"abc"}', 'utf8')
       await readHostSettings()
 
       expect(JSON.parse(readFileSync(file(), 'utf8')).defaultOnApplied).toBe(true)
@@ -149,8 +149,8 @@ describe('对外 MCP server 的持久化配置', () => {
 
 describe('客户端配置片段', () => {
   it('地址和 status() 报的一致 —— 两处不一样用户会以为自己抄错了', async () => {
-    const settings = { ...(await readHostSettings()), port: 17861 }
-    expect(hostUrl(settings)).toBe('http://127.0.0.1:17861/')
+    const settings = { ...(await readHostSettings()), port: 17871 }
+    expect(hostUrl(settings)).toBe('http://127.0.0.1:17871/')
   })
 
   /**
@@ -158,12 +158,12 @@ describe('客户端配置片段', () => {
    * 顶层 mcpServers、http 类型、Authorization 头。
    */
   it('生成的是能直接粘贴的 mcpServers 配置', async () => {
-    const settings = { ...(await readHostSettings()), port: 17861, token: 'abc123' }
+    const settings = { ...(await readHostSettings()), port: 17871, token: 'abc123' }
     const parsed = JSON.parse(clientConfigSnippet(settings))
 
     expect(parsed.mcpServers['unreal-box']).toEqual({
       type: 'http',
-      url: 'http://127.0.0.1:17861/',
+      url: 'http://127.0.0.1:17871/',
       headers: { Authorization: 'Bearer abc123' }
     })
   })

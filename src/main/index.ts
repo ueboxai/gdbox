@@ -658,7 +658,7 @@ appReady?.then(async () => {
     registerAllIPC(setAppIconTheme)
     logger.info('IPC处理函数注册完成')
 
-    // 用户上次开着「对外暴露虚幻引擎能力」的话，随盒子一起拉起来。
+    // 用户上次开着「对外暴露引擎能力」的话，随盒子一起拉起来。
     //
     // 外部客户端（Claude Code / Cursor）的 MCP 配置写在它们自己的磁盘上，
     // 是长期配置；要求用户每次开机再进设置点一次「开启」，那份配置就等于废的。
@@ -701,7 +701,7 @@ appReady?.then(async () => {
     // 放在窗口创建之后 —— 它要问「盒子的窗口在不在前台」
     startAgentNotifications(createWindow)
 
-    // 经验整理员：会话结束后从原始账里提炼经验，写进工程的 .uebox/experience（见 agent-v3/experience/）
+    // 经验整理员：会话结束后从原始账里提炼经验，写进工程的 .gdbox/experience（见 agent-v3/experience/）
     startExperienceCurator()
 
     // 初始化自动更新服务（仅在非开发环境或明确启用时）

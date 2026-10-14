@@ -20,9 +20,8 @@ const SESSION = 'session-1'
 
 /** 真表在 `listToolRisks()`，这里只列用得到的几个读工具，其余按写算 */
 const SAFE_TOOLS = new Set([
-  'blueprint_describe',
-  'blueprint_get_graph',
-  'material_describe',
+  'editor_scene_tree',
+  'read_local_file',
   'list_local_dir',
   'find_local_files'
 ])
@@ -268,20 +267,20 @@ describe('createVoiceTaskBus', () => {
       expect(spoken.at(-1)).toBe('没找到 moba 工程，告诉我它在哪个文件夹。')
     })
 
-    it('Agent 开口之后，机械的「在改蓝图」不再插嘴', () => {
+    it('Agent 开口之后，机械的「在改工程文件」不再插嘴', () => {
       register()
       bus.onSignal({
         type: 'report',
         sessionId: SESSION,
         status: 'running',
-        message: '开始改蓝图。'
+        message: '开始改脚本。'
       })
-      clock += estimateSpeechMs('开始改蓝图。') + PROGRESS_THROTTLE_MS
+      clock += estimateSpeechMs('开始改脚本。') + PROGRESS_THROTTLE_MS
 
-      bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'blueprint_apply_graph' })
+      bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'edit_local_file' })
       bus.flush()
 
-      expect(spoken).toEqual(['开始改蓝图。'])
+      expect(spoken).toEqual(['开始改脚本。'])
     })
 
     it('没报过 done 的，收尾照旧念正文最后一段', () => {
@@ -776,31 +775,31 @@ describe('createVoiceTaskBus', () => {
   it('只在换了阶段时播进度，同一阶段调十次工具不念十遍', () => {
     register()
 
-    bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'blueprint_add_variable' })
+    bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'edit_local_file' })
     clock += PROGRESS_THROTTLE_MS
-    bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'blueprint_apply_graph' })
+    bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'write_local_file' })
     clock += PROGRESS_THROTTLE_MS
-    bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'blueprint_compile' })
+    bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'edit_local_file' })
 
-    expect(spoken).toEqual(['在改蓝图。'])
-    expect(announced.at(-1)?.context).toBe('任务 t1 在改蓝图。')
+    expect(spoken).toEqual(['在改工程文件。'])
+    expect(announced.at(-1)?.context).toBe('任务 t1 在改工程文件。')
   })
 
   /*
-   * 真机 2026-09-17：用户问「他那个动画蓝图是怎么选的」，Agent 只是读，
-   * 语音却报「在改蓝图」——「它是不是把我的蓝图动了」是用户最在意的一条线，
+   * 真机 2026-09-17（虚幻盒子）：用户问了一句某个资产是怎么配的，Agent 只是读，
+   * 语音却报「在改」——「它是不是把我的东西动了」是用户最在意的一条线，
    * 不能靠命名空间一刀切。
    */
   it('只读的那几步说「在看」，真动手了才说「在改」', () => {
     register()
 
-    bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'blueprint_describe' })
+    bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'editor_scene_tree' })
     clock += PROGRESS_THROTTLE_MS
-    bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'blueprint_get_graph' })
+    bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'editor_scene_tree' })
     clock += PROGRESS_THROTTLE_MS
-    bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'blueprint_apply_graph' })
+    bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'edit_local_file' })
 
-    expect(spoken).toEqual(['在看蓝图。', '在改蓝图。'])
+    expect(spoken).toEqual(['在看场景。', '在改工程文件。'])
   })
 
   it('用户在说话时压着不播，说完了再放出去', () => {
@@ -1056,14 +1055,14 @@ describe('createVoiceTaskBus', () => {
     it('不在线期间的中途进度不补 —— 那是过去式', () => {
       register()
       floor = { active: false, userSpeaking: false, assistantSpeaking: false }
-      bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'blueprint_compile' })
+      bus.onSignal({ type: 'tool', sessionId: SESSION, toolName: 'edit_local_file' })
       floor = { active: true, userSpeaking: false, assistantSpeaking: false }
 
       bus.briefOnReconnect()
       drain()
 
-      // 旧进度那条（「在改蓝图。」）不当新闻念；只提一句「还在跑」，顺带说它现在在哪一步
-      expect(spoken).not.toContain('在改蓝图。')
+      // 旧进度那条（「在改工程文件。」）不当新闻念；只提一句「还在跑」，顺带说它现在在哪一步
+      expect(spoken).not.toContain('在改工程文件。')
       expect(spoken.some((line) => line.includes('还在跑'))).toBe(true)
     })
 

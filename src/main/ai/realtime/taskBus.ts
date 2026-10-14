@@ -73,7 +73,7 @@ export interface VoiceTask {
   /**
    * Agent 自己最近一次口头汇报（`voice_report` 工具）。
    *
-   * 有了它之后机械的「在改蓝图」进度就闭嘴：干活的模型自己会说做到哪了。
+   * 有了它之后机械的「在改场景」进度就闭嘴：干活的模型自己会说做到哪了。
    * 收尾时 status 是 done/blocked 的那一句已经念过，不再补念一遍。
    */
   report?: { status: 'running' | 'done' | 'blocked'; message: string }
@@ -122,7 +122,7 @@ export interface VoiceTaskBusDeps {
   /**
    * 这个工具是读还是写（`listToolRisks()` 那一份）。
    *
-   * 播进度要靠它分「在看蓝图」和「在改蓝图」—— 用户最在意的就是这条界线。
+   * 播进度要靠它分「在看场景」和「在改场景」—— 用户最在意的就是这条界线。
    * 查不到的工具不播进度，不猜。
    */
   toolRisk: (toolName: string) => ToolRisk | undefined
@@ -893,10 +893,10 @@ export function createVoiceTaskBus(deps: VoiceTaskBusDeps): VoiceTaskBus {
            * 真机上就念了半分钟的过程。
            */
           task.outcome = ''
-          // Agent 自己开口汇报过的，机械进度就闭嘴 —— 它比「在改蓝图」说得准
+          // Agent 自己开口汇报过的，机械进度就闭嘴 —— 它比「在改场景」说得准
           if (task.report) break
           const stage = stageOf(signal.toolName, deps.toolRisk(signal.toolName))
-          // 只在**换了阶段**时播。同一阶段里十次工具调用说十遍「在改蓝图」
+          // 只在**换了阶段**时播。同一阶段里十次工具调用说十遍「在改场景」
           // 就是碎碎念，而这正是要治的毛病
           if (!stage || stage === task.stage) break
           task.stage = stage

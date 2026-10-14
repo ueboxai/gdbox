@@ -72,7 +72,7 @@ const GenerateVideoInput = z.object({
     .optional()
     .describe(
       '参考图。每一项要么是一个字符串（按首帧处理），要么是 `{ path, role }`。' +
-        '路径收**本地绝对路径**（ue_screenshot 返回值里的 path 直接可用）、' +
+        '路径收**本地绝对路径**（godot_screenshot 存下的截图路径直接可用）、' +
         'http(s) 直链、data URI 三种 —— 与 generate_image 完全一样。太大的图会自动缩一遍再发。' +
         '**首尾帧**：给一张 first_frame 加一张 last_frame，视频就从前者过渡到后者；' +
         '首帧、尾帧各最多一张，尾帧不能单独给。' +
@@ -383,8 +383,8 @@ export function createGenerateVideoTool(): UnrealAgentTool<GeneratedVideoDetails
 
 【什么时候用】：概念片、氛围片、分镜演示、给客户看的动态效果参考。
 
-【拿白盒截图当参考图】和生图一样：\`ue_focus_viewport\` 对准 → \`ue_screenshot\`
-拍一张 → 把返回值里的 \`path\` 填进 \`reference_images\`。本地路径直接收，
+【拿白盒截图当参考图】和生图一样：\`godot_screenshot\` 拍一张场景
+→ 把截图路径填进 \`reference_images\`。本地路径直接收，
 不用先传到公网。
 
 每张图的 \`role\` 决定它是首帧、尾帧还是风格参考 —— **三种出来的东西完全不同**：

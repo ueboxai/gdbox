@@ -65,7 +65,7 @@ export function taskVideoTools(): UnrealAgentTool[] {
         const { readSettings } = await import('../../../ai/store')
         const history = await loadConversationVideoMessages(app.getPath('userData'), sessionId)
         const project = await createVideoProject(
-          join(app.getPath('videos'), 'UnrealBox', 'TaskVideos'),
+          join(app.getPath('videos'), 'GDBox', 'TaskVideos'),
           sessionId,
           [...history.messages, ...(await loadTranscript(sessionId))]
         )
@@ -134,7 +134,7 @@ export function taskVideoTools(): UnrealAgentTool[] {
           // without reading conversation content.
           dir = join(
             app.getPath('music'),
-            'UnrealBox',
+            'GDBox',
             createHash('sha256')
               .update(await standaloneMusicKey(prompt, seconds))
               .digest('hex')
@@ -202,7 +202,7 @@ export function taskVideoTools(): UnrealAgentTool[] {
         if (!binding) throw new Error('未配置语音合成模型。请到偏好设置 → 模型来源配置语音合成。')
         const { app } = await import('electron')
         const { join } = await import('node:path')
-        const dir = join(app.getPath('music'), 'UnrealBox', 'speech')
+        const dir = join(app.getPath('music'), 'GDBox', 'speech')
         const spoken = await speakToFile(binding, text, dir, ctx.signal, () =>
           ctx.report({ text: '正在合成语音' })
         )

@@ -82,7 +82,7 @@ export async function speakToFile(
   return { path: speechFile, seconds: (await fs.stat(speechFile)).size / PCM_BYTES_PER_SECOND }
 }
 
-/** 给 PCM 套上 WAV 头，播放器、UE 导入都能直接用。 */
+/** 给 PCM 套上 WAV 头，播放器、Godot 导入都能直接用。 */
 export async function pcmToWav(pcmFile: string, wavFile: string): Promise<void> {
   if (await exists(wavFile)) return
   const pcm = await fs.readFile(pcmFile)

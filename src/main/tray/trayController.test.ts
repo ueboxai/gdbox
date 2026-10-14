@@ -31,7 +31,7 @@ const mocks = vi.hoisted(() => {
       dir: string
     ) => undefined | { projectKey: string; projectName?: string; originPath?: string },
     interactiveProjects: [] as Array<{ projectPath: string }>,
-    /** 系统进程里正开着的 .uproject（没装插件、盒子认不出来的那种） */
+    /** 系统进程里正开着的 project.godot（没装插件、盒子认不出来的那种） */
     runningProcessPaths: [] as string[],
     /** 进程探测整个抛错（PowerShell/WMI 不可用之类） */
     processQueryFails: false,
@@ -119,12 +119,13 @@ vi.mock('../i18n', () => ({
   }
 }))
 
-vi.mock('../ipc/epicProjects', () => ({
-  getRecentProjectsFromAllEngines: () => mocks.listRecentCalls()
+vi.mock('../godot/recentProjects', () => ({
+  readGodotRecentProjects: () => mocks.listRecentCalls()
 }))
 
-vi.mock('../services/project/openUproject', () => ({
-  openUprojectFile: (path: string) => mocks.state.openFile(path)
+vi.mock('../services/project/openProject', () => ({
+  openProject: (path: string) => mocks.state.openFile(path),
+  projectDirOf: (path: string) => path
 }))
 
 vi.mock('../services/project/projectLibraryEvents', () => ({
@@ -157,12 +158,10 @@ vi.mock('../services', () => ({
   }
 }))
 
-vi.mock('../utils/UnrealProcessDetector', () => ({
-  default: {
-    findRunningProjectByPath: async (path: string) => {
-      if (mocks.state.processQueryFails) throw new Error('cim query blew up')
-      return mocks.state.runningProcessPaths.includes(path) ? { projectPath: path } : null
-    }
+vi.mock('../godot/processes', () => ({
+  isGodotProjectRunning: async (path: string) => {
+    if (mocks.state.processQueryFails) throw new Error('cim query blew up')
+    return mocks.state.runningProcessPaths.includes(path)
   }
 }))
 
@@ -220,7 +219,7 @@ function projectEntry(
   lastOpenTime: string
 ): { projectPath: string; projectName: string; lastOpenTime: string; isImported: boolean } {
   return {
-    projectPath: `${dir}/${name}.uproject`,
+    projectPath: `${dir}/project.godot`,
     projectName: name,
     lastOpenTime,
     isImported: true
@@ -234,7 +233,7 @@ function projectRecord(dir: string): {
 } {
   const key = `k-${dir.replace(/[^a-z0-9]/gi, '')}`
   const name = dir.split('/').pop() ?? dir
-  return { projectKey: key, projectName: name, originPath: `${dir}/${name}.uproject` }
+  return { projectKey: key, projectName: name, originPath: `${dir}/project.godot` }
 }
 
 function seedProjects(dirs: string[], times: Record<string, string>): void {
@@ -562,7 +561,7 @@ describe('trayController', () => {
       expect(takePending()).toEqual({ type: 'open-session', sessionId: 's1' })
     })
 
-    it('点「打开虚幻盒子」：只把窗口叫到前台，不落动作', async () => {
+    it('点「打开 GDBox」：只把窗口叫到前台，不落动作', async () => {
       const { items } = await darwinMenu()
 
       items.find((item) => item.label === 'tray.open')!.click!()
@@ -736,7 +735,7 @@ describe('trayController', () => {
       await launchFromMenu(tray)
 
       // 引擎起来了（进程在）、插件慢还没握手 —— 这不是残留，不许摘
-      s.runningProcessPaths = ['D:/A/A.uproject']
+      s.runningProcessPaths = ['D:/A/project.godot']
       await vi.advanceTimersByTimeAsync(40_000)
 
       s.trayHandlers.get('right-click')!()
@@ -786,7 +785,7 @@ describe('trayController', () => {
 
       resolveList([
         {
-          projectPath: 'D:/A/A.uproject',
+          projectPath: 'D:/A/project.godot',
           projectName: 'A',
           lastOpenTime: '2025-01-01T00:00:00',
           isImported: true
@@ -825,7 +824,7 @@ describe('trayController', () => {
       expect(takePending()).toEqual({
         type: 'plugin-failure',
         pluginFailure: 'PLUGIN_FILES_MISSING',
-        originPath: 'D:/A/A.uproject',
+        originPath: 'D:/A/project.godot',
         projectName: 'A'
       })
       expect(takePending()).toBeNull()
@@ -899,7 +898,7 @@ describe('trayController', () => {
     it('编辑器已经开着这个工程（盒子没认出来）：不开第二个，通知一声，菜单项不灰', async () => {
       setPlatform('win32')
       seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
-      s.runningProcessPaths = ['D:/A/A.uproject']
+      s.runningProcessPaths = ['D:/A/project.godot']
       const openFile = vi.fn(async () => ({ success: true }))
       s.openFile = openFile
       const tray = newTray()

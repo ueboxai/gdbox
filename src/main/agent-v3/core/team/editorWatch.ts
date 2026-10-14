@@ -246,7 +246,7 @@ export function buildCrashNotice(event: EditorWatchEvent): string {
     return [
       head,
       `The Unreal editor for ${event.projectDir} crashed${event.reason ? `: ${event.reason}` : '.'}`,
-      'Unreal Box is reopening the project. Editor calls in flight failed; teammates may report errors. Unsaved editor changes since the last save are lost.'
+      'GDBox is reopening the project. Editor calls in flight failed; teammates may report errors. Unsaved editor changes since the last save are lost.'
     ].join('\n')
   }
   if (event.kind === 'recovered') {

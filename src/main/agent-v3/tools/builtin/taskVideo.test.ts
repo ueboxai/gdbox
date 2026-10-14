@@ -73,7 +73,7 @@ describe('independent music generation', () => {
     })
     expect(mocks.save).toHaveBeenCalledTimes(2)
     const first = mocks.generate.mock.calls[0] as unknown as unknown[]
-    expect(String(first[4])).toMatch(new RegExp(`UnrealBox[\\\\/]`))
+    expect(String(first[4])).toMatch(new RegExp(`GDBox[\\\\/]`))
     expect(String(first[4]).startsWith(path.resolve('test-music'))).toBe(true)
     await tool.execute('two', { prompt: 'lofi piano', seconds: 180 })
     expect((mocks.generate.mock.calls[1] as unknown as unknown[])[4]).toBe(first[4])
@@ -135,7 +135,7 @@ describe('independent speech', () => {
   it('外部 MCP 没有盒子会话也能合成，交付 WAV', async () => {
     mocks.session.mockReturnValue(undefined as unknown as string)
     const result = await speech().execute('s1', { text: '呼叫指挥部，收到请回答' })
-    const dir = path.join(path.resolve('test-music'), 'UnrealBox', 'speech')
+    const dir = path.join(path.resolve('test-music'), 'GDBox', 'speech')
     expect(mocks.speak.mock.calls[0][2]).toBe(dir)
     expect(mocks.toWav).toHaveBeenCalledWith(`${dir}/line.pcm`, `${dir}/line.wav`)
     expect(result.details).toEqual({ path: `${dir}/line.wav`, seconds: 1.23 })

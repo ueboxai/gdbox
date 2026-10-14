@@ -1,7 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
+  <!-- 深色系统任务栏用：和 icon.svg 同形，配色取虚幻盒子 icon-dark 的那一套 -->
   <rect x="32" y="32" width="448" height="448" rx="112" fill="#17191c" stroke="#34383e" stroke-width="8" />
   <g transform="translate(16 16) scale(7.5)" fill="none" stroke-linecap="square" stroke-linejoin="miter">
     <path d="M27 10H10v17M37 10h17v17M54 37v17H37M27 54H10V37" stroke="#f2f1ed" stroke-width="7" />
-    <path d="m27 23 11 9-11 9" stroke="#9aa0a6" stroke-width="6" />
+  </g>
+  <g transform="translate(16 16) scale(7.5)" fill="#9aa0a6">
+    <rect x="23" y="23" width="8.2" height="8.2" />
+    <rect x="32.8" y="23" width="8.2" height="8.2" />
+    <rect x="23" y="32.8" width="8.2" height="8.2" />
+    <rect x="32.8" y="32.8" width="8.2" height="8.2" fill="#f2f1ed" />
   </g>
 </svg>

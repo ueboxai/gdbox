@@ -61,7 +61,7 @@ describe('decideNotice', () => {
 describe('enqueueNotice', () => {
   it('同一件任务的进度互相顶掉 —— 攒三条旧的连着念，用户听到的都是过去式', () => {
     let queue: VoiceNotice[] = []
-    queue = enqueueNotice(queue, notice('t1', 'low', '在改蓝图'))
+    queue = enqueueNotice(queue, notice('t1', 'low', '在改脚本'))
     queue = enqueueNotice(queue, notice('t1', 'low', '在编译'))
 
     expect(queue).toEqual([notice('t1', 'low', '在编译')])
@@ -113,22 +113,19 @@ describe('drainNotices', () => {
 
 describe('stageOf', () => {
   it('按命名空间说人话，不逐个工具翻译', () => {
-    expect(stageOf('blueprint_apply_graph', 'mutating')).toBe('在改蓝图')
-    expect(stageOf('material_set_param', 'mutating')).toBe('在调材质')
-    expect(stageOf('ue_playtest', 'mutating')).toBe('在运行试玩')
+    expect(stageOf('edit_local_file', 'mutating')).toBe('在改工程文件')
+    expect(stageOf('gen_sprite', 'mutating')).toBe('在生成精灵图')
+    expect(stageOf('godot_run', 'safe')).toBe('在运行试玩')
   })
 
-  // 用户只是问「他那个动画蓝图是怎么选的」，语音报「在改蓝图」——
-  // 听着像资产被动过（2026-09-17 反馈）
+  // 用户只是问了一句，语音报「在改」—— 听着像资产被动过（2026-09-17 反馈）
   it('只是查的，说「在看」不说「在改」', () => {
-    expect(stageOf('blueprint_describe', 'safe')).toBe('在看蓝图')
-    expect(stageOf('blueprint_get_graph', 'safe')).toBe('在看蓝图')
-    expect(stageOf('material_get_graph', 'safe')).toBe('在看材质')
-    expect(stageOf('widget_get_hierarchy', 'safe')).toBe('在看界面控件')
+    expect(stageOf('editor_scene_tree', 'safe')).toBe('在看场景')
+    expect(stageOf('project_organize', 'safe')).toBe('在看工程')
   })
 
   it('查询类的中间步骤不值得播 —— 说出来只是噪音', () => {
-    expect(stageOf('ue_content_search', 'safe')).toBe('')
+    expect(stageOf('read_local_file', 'safe')).toBe('')
     expect(stageOf('search_assets', 'safe')).toBe('')
   })
 

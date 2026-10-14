@@ -130,7 +130,7 @@ describe('createLoopBreaker', () => {
 
 describe('createLoopBreaker —— 世界变了就清账', () => {
   const metas: Record<string, { unrealBox: { namespace: string; risk: 'safe' | 'mutating' } }> = {
-    cpp_compile: { unrealBox: { namespace: 'cpp', risk: 'mutating' } },
+    godot_check: { unrealBox: { namespace: 'godot', risk: 'safe' } },
     edit_local_file: { unrealBox: { namespace: 'local', risk: 'mutating' } },
     read_local_file: { unrealBox: { namespace: 'local', risk: 'safe' } },
     get_note: { unrealBox: { namespace: 'note', risk: 'safe' } }
@@ -140,18 +140,18 @@ describe('createLoopBreaker —— 世界变了就清账', () => {
       lookup: (name) => metas[name] as never
     })
 
-  // 改代码 → 编译 → 再改 → 再编译：编译参数一字不差，但源文件不同了
-  it('编译失败、改文件成功、再失败、再改成功之后，编译仍被放行', () => {
+  // 改脚本 → 检查 → 再改 → 再检查：检查参数一字不差，但脚本不同了
+  it('检查失败、改文件成功、再失败、再改成功之后，检查仍被放行', () => {
     const b = make(1)
-    const compile = { module: 'Game' }
+    const compile = { project_path: 'D:/Game' }
 
-    fail(b, 'cpp_compile', compile)
-    after(b, 'edit_local_file', { path: 'a.cpp', v: 1 }, false)
-    expect(before(b, 'cpp_compile', compile)).toBeUndefined()
+    fail(b, 'godot_check', compile)
+    after(b, 'edit_local_file', { path: 'player.gd', v: 1 }, false)
+    expect(before(b, 'godot_check', compile)).toBeUndefined()
 
-    fail(b, 'cpp_compile', compile)
-    after(b, 'edit_local_file', { path: 'a.cpp', v: 2 }, false)
-    expect(before(b, 'cpp_compile', compile)).toBeUndefined()
+    fail(b, 'godot_check', compile)
+    after(b, 'edit_local_file', { path: 'player.gd', v: 2 }, false)
+    expect(before(b, 'godot_check', compile)).toBeUndefined()
   })
 
   it('成功的改动清掉所有工具的失败计数', () => {
@@ -200,13 +200,13 @@ describe('createLoopBreaker —— 世界变了就清账', () => {
   // 编译、试玩、截图的结果随工程状态变；什么都没变就连发仍然是撞墙，只是阈值更宽
   it('结果随状态变化的工具用更宽的阈值，但不是无限', () => {
     const b = make()
-    const args = { module: 'Game' }
-    fail(b, 'cpp_compile', args, MAX_IDENTICAL_FAILURES)
-    expect(before(b, 'cpp_compile', args)).toBeUndefined()
+    const args = { project_path: 'D:/Game' }
+    fail(b, 'godot_check', args, MAX_IDENTICAL_FAILURES)
+    expect(before(b, 'godot_check', args)).toBeUndefined()
 
-    fail(b, 'cpp_compile', args, MAX_VOLATILE_FAILURES - MAX_IDENTICAL_FAILURES)
-    expect(before(b, 'cpp_compile', args)?.block).toBe(true)
-    expect(VOLATILE_TOOLS.has('ue_playtest')).toBe(true)
+    fail(b, 'godot_check', args, MAX_VOLATILE_FAILURES - MAX_IDENTICAL_FAILURES)
+    expect(before(b, 'godot_check', args)?.block).toBe(true)
+    expect(VOLATILE_TOOLS.has('godot_run')).toBe(true)
     expect(VOLATILE_TOOLS.has('run_shell_command')).toBe(true)
   })
 })

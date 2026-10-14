@@ -64,19 +64,17 @@ describe('editorScreenshotAllowed', () => {
 })
 
 describe('VIEWPORT_CAPTURE_TOOLS', () => {
-  it('只摘拍视口那一个工具', () => {
-    expect([...VIEWPORT_CAPTURE_TOOLS]).toEqual(['ue_screenshot'])
+  it('只摘拍画面那一个工具', () => {
+    expect([...VIEWPORT_CAPTURE_TOOLS]).toEqual(['godot_screenshot'])
   })
 
   /**
-   * 这两个刻意不在名单里，理由见模块头。断言写在这里是因为「按名字往里加」
-   * 是最自然的下一步改动，而两个都会造成真实损失：
-   * 试玩被整个摘掉 = 拿隐私开关顺手关掉了「验证游戏能不能跑」；
-   * Widget 预览离屏渲染的是模型点名的那个资产，一个像素的隐私都没泄。
+   * `godot_run` 刻意不在名单里，理由见模块头。断言写在这里是因为「按名字往里加」
+   * 是最自然的下一步改动，而它会造成真实损失：整个摘掉 = 拿隐私开关顺手关掉了
+   * 「验证游戏行为对不对」。它该做的是自己强制不截图。
    */
-  it('试玩和 Widget 预览不在名单里', () => {
-    expect(VIEWPORT_CAPTURE_TOOLS.has('ue_playtest')).toBe(false)
-    expect(VIEWPORT_CAPTURE_TOOLS.has('widget_preview')).toBe(false)
+  it('试玩（godot_run）不在名单里', () => {
+    expect(VIEWPORT_CAPTURE_TOOLS.has('godot_run')).toBe(false)
   })
 })
 
@@ -88,15 +86,16 @@ describe('editorScreenshotRefusal', () => {
     expect(text).toContain('允许编辑器截图')
   })
 
-  // 少了这一句，模型会拿 Python 或 shell 自己去截一张 —— 那是在绕开用户明确关掉的东西
+  // 少了这一句，模型会写个脚本或拿 shell 自己去截一张 —— 那是在绕开用户明确关掉的东西
   it('明说不许换条路绕过去', () => {
-    expect(text).toContain('ue_run_python_script')
+    expect(text).toContain('写脚本')
     expect(text).toContain('run_shell_command')
   })
 
   // 只说「不许」的话，用户看到的是一次没有下文的失败
   it('给得出替代做法和放开的路径', () => {
-    expect(text).toContain('ue_get_actor')
+    expect(text).toContain('godot_run')
+    expect(text).toContain('editor_scene_tree')
     expect(text).toContain('设置 → AI 助手 → 隐私')
   })
 
@@ -110,10 +109,10 @@ describe('editorScreenshotRefusal', () => {
 describe('EDITOR_SCREENSHOT_SKIPPED_NOTE', () => {
   /**
    * 试玩没被挡住，只是不出图。不说清是**用户关的**的话，模型只会看见一份
-   * 没有图的报告，然后再调一次 `ue_screenshot` 去补 —— 那次同样会被挡。
+   * 没有图的报告，然后再调一次 `godot_screenshot` 去补 —— 那次同样会被挡。
    */
   it('说清是用户关的，且试玩本身跑完了', () => {
     expect(EDITOR_SCREENSHOT_SKIPPED_NOTE).toContain('允许编辑器截图')
-    expect(EDITOR_SCREENSHOT_SKIPPED_NOTE).toContain('试玩本身照常跑完')
+    expect(EDITOR_SCREENSHOT_SKIPPED_NOTE).toContain('运行本身照常跑完')
   })
 })

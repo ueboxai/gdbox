@@ -124,7 +124,8 @@ function suspectToolNames(
 /** 正文里引用的附带资源路径 */
 function referencedResources(body: string): string[] {
   const found = new Set<string>()
-  for (const match of body.matchAll(/(references|scripts|assets)\/[A-Za-z0-9._/-]+/g)) {
+  // 前面是字母、冒号或斜杠的不算：`res://assets/gen/...` 是工程里的目录，不是技能自带的文件
+  for (const match of body.matchAll(/(?<![\w:/])(references|scripts|assets)\/[A-Za-z0-9._/-]+/g)) {
     found.add(match[0].replace(/[.,;:)]+$/, ''))
   }
   return [...found]

@@ -1,5 +1,5 @@
 /**
- * 消息路由器 —— UE → 盒子 方向的入站分发。
+ * 消息路由器 —— 编辑器插件 → 盒子 方向的入站分发。
  */
 import { MessageEnvelope, MessageHandler, RouteConfig } from '../types'
 import { logger } from '../logger'

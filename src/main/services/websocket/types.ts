@@ -155,7 +155,7 @@ export interface IWebSocketService {
   ): Promise<T>
 
   /**
-   * 订阅来自 UE 的消息
+   * 订阅来自编辑器插件的消息
    * @param method 订阅的方法名
    * @param callback 回调函数
    * @returns 取消订阅的函数
@@ -223,7 +223,7 @@ export class WebSocketServiceError extends Error {
      * 给模型的下一步建议，**不给用户看**。
      *
      * 这个错误有两个去向：agent 工具（终点是模型）和 `ws:call` IPC（终点是界面）。
-     * 合成一句的话，写给模型的「用 ue_session_health 看看」就会弹给一个根本
+     * 合成一句的话，写给模型的「用 box_status 看看」就会弹给一个根本
      * 看不见这个工具的用户 —— 正是「写给 AI 的话给了用户」那类问题。
      * 所以 `message` 只放面向用户那句，这一句由 agent 侧自己拼上去。
      *
@@ -246,7 +246,7 @@ export const PROTOCOL_VERSION = '1.0'
  */
 export const DEFAULT_CONFIG = {
   /** 默认端口 */
-  port: 17860,
+  port: 17870,
   /** 默认超时时间（毫秒） */
   timeout: 5000,
   /** 心跳间隔（毫秒） */

@@ -1,7 +1,7 @@
 # 能力与限制对照表
 
 这份表里的限制来自实际适配器代码，不是推测。选错组合的后果分两种：**明确报错**
-（浪费一次往返）和**静默忽略**（参数没生效，账照扣，要到进引擎才发现）。
+（浪费一次往返）和**静默忽略**（参数没生效，账照扣，要到放进游戏才发现）。
 后者更贵，所以下面把哪些是静默的单独标出来。
 
 ## Contents
@@ -10,7 +10,7 @@
 - [generate_3d_model](#generate_3d_model)
 - [三家 3D 厂商的实际差异](#三家-3d-厂商的实际差异)
 - [自动绑骨（rig_3d_model）](#自动绑骨rig_3d_model)
-- [Unreal 侧能做什么](#unreal-侧能做什么)
+- [Godot 侧怎么接](#godot-侧怎么接)
 - [Blender 侧能做什么](#blender-侧能做什么)
 
 ## generate_image
@@ -29,9 +29,8 @@
 
 - 最多 **4 张**进模型上下文，其余照常存盘并在返回值里给路径。要看更多就分批。
 - 出图存进素材库的 AIGC/图片，返回**绝对路径**，可以直接喂给
-  `generate_3d_model` 的 `reference_images`，也可以 `ue_content_import` 进工程当贴图。
-- `ue_screenshot` 返回值里的 `path` 可以直接放进 `reference_images`，
-  白盒转概念图就靠这个（那条路有专门的 `ue-ai-render-from-blockout` skill）。
+  `generate_3d_model` 的 `reference_images`，也可以复制进 Godot 工程当贴图。
+- 用户给的白盒截图、草图也能放进 `reference_images`，拿它出概念图。
 
 ## generate_3d_model
 
@@ -40,10 +39,10 @@
 | `prompt` | 与 `reference_images` 至少给一个。写物体本身，**别写镜头和光线** |
 | `reference_images` | 同上三种来源。**多张都会用上**，按 `正面 → 左 → 背 → 右` 排，上限见下表 |
 | `quality` | `high` / `medium` / `low` / `extra-low`，直接对应面数 |
-| `topology` | `raw` = 三角面（直接进引擎），`quad` = 四边面（便于在 DCC 里继续改） |
-| `format` | 默认 `glb`（单文件自带材质，虚幻导入器认它）。还有 gltf / fbx / obj / usdz / stl |
+| `topology` | `raw` = 三角面（直接进游戏），`quad` = 四边面（便于在 DCC 里继续改） |
+| `format` | 默认 `glb`（单文件自带材质，Godot 首选格式）。还有 gltf / fbx / obj / usdz / stl |
 | `bounding_box` | `[宽, 高, 长]`，限制成品最大尺寸。**整批资产要比例一致时必填** |
-| `material` | `pbr`（进引擎用这个）/ `shaded`（只有烘死光照的基础色）/ `all` |
+| `material` | `pbr`（进游戏用这个）/ `shaded`（只有烘死光照的基础色）/ `all` |
 
 **绑了 Tripo 时**入参表里还会多出下面这组（绑别家时它们根本不出现）：
 
@@ -65,8 +64,8 @@
   它能判断主体对不对、风格对不对、大致形状对不对；**判断不了**拓扑、面数、朝向、
   穿模、尺寸。别拿它当「我看过模型了」。
 - 出的是一个**新网格**，不是从工程里的资产改出来的。要减面、要 LOD、要重拓扑现有资产，
-  那是引擎或 Blender 的事。
-- 不给 `bounding_box` 时每个模型都是各自归一化的大小，导进引擎要一个个手调缩放。
+  那是 Blender 的事。
+- 不给 `bounding_box` 时每个模型都是各自归一化的大小，放进游戏要一个个手调缩放。
 
 ## 三家 3D 厂商的实际差异
 
@@ -99,31 +98,58 @@ Meshy 的 `quality` 和 `topology` 在厂商侧默认是不生效的，工具已
 | --- | --- |
 | `source_job_id` | 那次生成的任务号，原样抄。别家生成的会明确报错 |
 | `rig_type` | biped / quadruped / hexapod / octopod / avian / serpentine / aquatic。不确定别填，按检查推荐的绑 |
-| `spec` | 默认 `mixamo`（进虚幻重定向最省事），`tripo` 是厂商原生命名 |
-| `format` | 默认 `fbx`。导入时 `ue_content_import` 的 `fbx_import_as` 填 `skeletal_mesh` |
+| `spec` | 默认 `mixamo`（Godot 的人形骨骼映射能自动认出这套命名），`tripo` 是厂商原生命名 |
+| `format` | 默认 `fbx`。放进 Godot 工程选 `glb` |
 | `resume_job_id` | 续取一个已提交的绑骨任务，不重新扣费 |
 
 要点：
 
 - 生成时就为绑骨做准备：提示词写 T-pose，`negative_prompt` 去掉底座和粘连道具。
-- 只出骨架，不带动画。要动起来用 `anim_retarget` 把工程里现有的动画重定向过来。
+- 只出骨架，不带动画。要动起来，用户得在 Godot 的高级导入设置里给骨架配人形 BoneMap，
+  再把别处的动画重定向过来 —— 这一步没有工具，说清楚交给用户。
 
-## Unreal 侧能做什么
+## Godot 侧怎么接
 
-几何编辑一律通过 `ue_run_python_script` 调 Geometry Script，没有专用工具。
-详细做法见 `ue-geometry-editing` skill，这里只列它覆盖的范围：
+glb 放进工程目录就会被导入成一个场景（PackedScene）。导入时 Godot 默认自动生成 LOD，
+所以远处的开销不用手管；近看的主角面数仍然要在生成时定。
 
-- 布尔并集与差集、平面切割
-- 简化减面、重网格（remesh）
-- 补洞、焊接顶点
-- UV 投影
-- 生成碰撞
-- 结果写回 Static Mesh 资产
+**默认做法：包装场景。** 不改 glb 的导入设置，另写一个 `.tscn` 把它包起来：
 
-读网格用 `mesh_describe`（面数、材质槽、包围盒、碰撞、UV 层）。
+```
+[gd_scene format=3]
 
-**驱动不了的**：交互式 Modeling Mode 里的雕刻、PolyEdit 这类工具没有脚本接口。
-需要它们就得去 Blender。
+[ext_resource type="PackedScene" path="res://models/cow.glb" id="1_model"]
+
+[sub_resource type="BoxShape3D" id="box"]
+size = Vector3(0.4, 0.55, 0.35)
+
+[node name="Cow" type="Node3D"]
+
+[node name="Model" parent="." instance=ExtResource("1_model")]
+position = Vector3(0, 0.275, 0)
+rotation_degrees = Vector3(0, 90, 0)
+scale = Vector3(0.55, 0.55, 0.55)
+
+[node name="Body" type="StaticBody3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="Body"]
+position = Vector3(0, 0.275, 0)
+shape = SubResource("box")
+```
+
+- `ext_resource` 只写 `path`，**不写 uid**（不知道就别编，Godot 按路径找得到）。
+- 缩放、朝向、抬高都写在 Model 实例上，用 `position` / `rotation_degrees` / `scale` 三行，
+  比手算 Transform3D 矩阵不容易错。编辑器下次保存会把它们合成一行 transform，这是正常的。
+  转完朝向截图确认，别凭心算定论。
+- 原点在中心的模型，Model 往上抬「缩放后高度的一半」，包装场景的原点就落在脚底。
+- 碰撞用 BoxShape3D 按计划尺寸给，形状复杂的也先用盒子；要贴合的凸包碰撞在 Godot
+  编辑器的高级导入里点生成，那是用户的操作。
+
+**逃生口**：一批同来源的模型都差同一个倍数时，可以改 glb 旁边 `.import` 里的
+`nodes/root_scale` 一次改全。改之前读一遍那个文件，只动这一行。
+
+**验证**：包装场景实例化进真正要用它的关卡，`godot_check` 后 `godot_screenshot`。
+预览图看不出尺寸和朝向，关卡里有玩家角色当尺子才看得出。
 
 ## Blender 侧能做什么
 
@@ -140,4 +166,5 @@ Meshy 的 `quality` 和 `topology` 在厂商侧默认是不生效的，工具已
 - `get_screenshot_of_window_as_image` / `get_screenshot_of_area_as_image` —— 直接截视口。
   注意后台模式下截图工具用不了，那种情况改用渲染。
 
-写文件时用用户文件访问范围内的路径，**不要往引擎安装目录里扔中间产物**。
+写文件时用用户文件访问范围内的路径，**不要往 Godot 工程里扔中间产物**（.blend、临时导出放工程外）。
+改完导出 glb 覆盖工程里那一份，包装场景不用动。

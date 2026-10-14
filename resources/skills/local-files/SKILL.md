@@ -1,13 +1,13 @@
 ---
 name: local-files
-description: Work with files and programs on the user's own computer — list a directory, find files by glob, search contents, read text or images, write and edit files, run shell commands where a shell exists, and connect a third-party MCP server the user has installed. Use when the user names a path outside the Unreal project, wants source or config files changed, asks to import files from disk, or says they installed an MCP server and wants it connected. Do not use for assets already inside the Unreal project.
+description: Work with files and programs on the user's own computer — list a directory, find files by glob, search contents, read text or images, write and edit files (GDScript, .tscn, .tres, project.godot included), run shell commands where a shell exists, and connect a third-party MCP server the user has installed. Use when the user names a path on disk, wants scripts, scenes or config files in their Godot project changed, asks to bring files from disk into the project ("把这个文件夹里的图放进工程"), or says they installed an MCP server and wants it connected. Do not use for searching the box's own asset library, for generating art or audio, or for verifying game behaviour (that is godot-verify-changes).
 ---
 
 # Files on the user's computer
 
-Seven tools, none of which need Unreal to be connected. They exist because every other tool in the
-box works on assets that are *already* in the project — nothing could look at the disk the user
-actually keeps their source files on.
+A Godot project is a folder of text files plus media. Scripts (`.gd`), scenes (`.tscn`),
+resources (`.tres`) and `project.godot` are all plain text, so these tools are how you read and
+change a Godot project — there is no separate "engine API" to go through.
 
 Read: `list_local_dir`, `find_local_files`, `grep_local_files`, `read_local_file`.
 Write: `write_local_file`, `edit_local_file`. Run: `run_shell_command` (only where a shell exists).
@@ -15,15 +15,14 @@ Write: `write_local_file`, `edit_local_file`. Run: `run_shell_command` (only whe
 ## `list_local_dir` — before you act on a folder, look inside it
 
 ```
-list_local_dir(path: "D:/素材/建筑")
-list_local_dir(path: "D:/素材/建筑", pattern: ".fbx")
+list_local_dir(path: "D:/素材/角色")
+list_local_dir(path: "D:/素材/角色", pattern: ".png")
 ```
 
 Directories come first and are marked `[目录]`; files show their size.
 
-When the user says "把这个文件夹里的模型导进来", list it first. Do not infer contents from the
-folder's name, and do not guess file paths to hand to `ue_content_import` — that tool takes
-concrete paths, and a guessed one simply fails.
+When the user says "把这个文件夹里的图放进工程", list it first. Do not infer contents from the
+folder's name, and do not guess file paths — a guessed one simply fails.
 
 Capped at 200 entries. When more exist, the header says so — pass that on to the user rather than
 quietly acting on the first 200. Use `pattern` to narrow before resorting to summarising.
@@ -31,8 +30,8 @@ quietly acting on the first 200. Use `pattern` to narrow before resorting to sum
 ## `read_local_file` — text and images
 
 ```
-read_local_file(path: "I:/Proj/Saved/Logs/Proj.log")
-read_local_file(path: "I:/Proj/Config/DefaultEngine.ini", offset: 40, limit: 30)
+read_local_file(path: "D:/Games/MyGame/project.godot")
+read_local_file(path: "D:/Games/MyGame/scenes/player.tscn", offset: 40, limit: 30)
 read_local_file(path: "C:/Users/me/Desktop/reference.png")
 ```
 
@@ -41,10 +40,10 @@ path, read it and describe what you see before proposing anything — do not ask
 their own reference.
 
 Long files are truncated with a note telling you the offset to continue from. Read the part you
-need rather than pulling a 200 MB log into the conversation.
+need rather than pulling a huge log into the conversation.
 
-This reads files on disk. `.uasset` files are binary — to inspect a project asset use
-`ue_content_describe` or the material and Blueprint tools, not this.
+Binary Godot formats (`.scn`, `.res`, `.glb`) are not readable as text. If a scene you need to
+change is a `.scn`, tell the user; do not try to patch binary bytes.
 
 ## What is off limits
 
@@ -53,34 +52,37 @@ Credential and browser-data locations are refused: the box's own key store, `.ss
 to look and tell you — do not try another path spelling to get around it.
 
 Everything else on disk is readable. The user naming a path is the authorisation; you should still
-say which file you are about to open when it is outside their Unreal project.
+say which file you are about to open when it is outside their Godot project.
 
 ## `find_local_files` — locate files across directories
 
 ```
-find_local_files(path: "D:/素材", pattern: "**/*.fbx")
-find_local_files(path: "I:/MyProject", pattern: "**/Default*.ini")
+find_local_files(path: "D:/素材", pattern: "**/*.png")
+find_local_files(path: "D:/Games/MyGame", pattern: "**/*.tscn")
 ```
 
 Use this instead of walking down with `list_local_dir` when the file could be at any depth.
 Patterns are glob, relative to `path`; cross-directory patterns need a leading `**/`.
 
-Four Unreal directories are always skipped: `DerivedDataCache`, `Intermediate`, `Binaries`,
-`Saved` — plus `.git` and `node_modules`. They hold engine-generated output (compile
-intermediates, shader caches, logs) that nobody searches for, and they dwarf the real content.
-If the user genuinely wants something from a build output directory, read it directly by path.
+`.godot`, `.import`, `build`, `export`, `exports`, `.git` and `node_modules` are skipped by
+default. `.godot/` is the editor's import cache — every texture and model is stored there a second
+time, and none of it is something the user edits. If the user genuinely wants something from an
+export folder, read it directly by path.
 
 ## `grep_local_files` — search inside files
 
 ```
-grep_local_files(path: "I:/MyProject", pattern: "Nanite", glob: "**/*.ini")
+grep_local_files(path: "D:/Games/MyGame", pattern: "move_and_slide", glob: "**/*.gd")
+grep_local_files(path: "D:/Games/MyGame", pattern: "res://art/hero.png", glob: "**/*.{tscn,tres}")
 ```
 
-Narrow with `glob` before searching wide. Files containing NUL bytes (`.uasset`, `.fbx` and other
-binaries) are skipped — to search project assets use `ue_content_search`, not this.
+The second form is how you answer "谁在用这个文件": scenes and resources reference each other by
+`res://` path (and by `uid://`), so a text search finds every user. Do it before renaming, moving or
+deleting anything in the project.
 
-An invalid regex is reported with the exact parser error. Read it and fix the pattern rather than
-trying a different spelling of the same mistake.
+Narrow with `glob` before searching wide. Binary files are skipped. An invalid regex is reported
+with the exact parser error — fix the pattern rather than trying a different spelling of the same
+mistake.
 
 Both tools cap their results and say so in the header when they hit the cap. Pass that on: "找到前
 200 个" is a different answer from "找到 200 个".
@@ -95,19 +97,43 @@ Reach for `edit_local_file` whenever the file already exists and you only need p
 
 For edits:
 
-- `oldText` must match the file **character for character**, indentation and newlines included. A
-  miss fails the whole call rather than applying half of it.
+- `oldText` must match the file **character for character**, indentation and newlines included.
+  GDScript indentation is tabs by default — copy it from what you read, do not retype it.
 - Every `oldText` is matched against the **original** file, not the result of your earlier edits in
   the same call. Do not write overlapping or nested edits.
-- Keep each `oldText` just long enough to be unique. Padding it with unchanged surrounding lines
-  wastes context and makes near-miss failures more likely.
+- Keep each `oldText` just long enough to be unique.
 - Read the file first. Editing from memory of what a file "usually" looks like is how you get an
   exact-match failure and burn a turn.
 
-Under the default approval setting neither one asks for confirmation: every write is snapshotted and
-shows up line by line in this turn's changes. Only a user who switched approvals to 「请求批准」
-("ask") gets a prompt. When the user asked for the file, write it — do not stop to ask first.
-Afterwards, say plainly which file you changed and what the change was.
+Godot-specific rules for project files:
+
+- **Never write under `.godot/`.** It is regenerated by the editor; changes there are lost or break
+  the import cache.
+- **Keep `uid://` values exactly as they are.** When you add an `[ext_resource]` for a file whose uid
+  you do not know, write `path=` only and leave `uid=` out — Godot resolves it by path. Never invent
+  a uid.
+- When the user has a `.tscn` open in the editor, call `editor_save_all` before editing it, so their
+  unsaved work is on disk first. After the write, the open editor reloads the scene from disk.
+
+Under the default approval setting neither write tool asks for confirmation: every write is
+snapshotted and shows up line by line in this turn's changes. When the user asked for the file,
+write it — do not stop to ask first. Afterwards, say plainly which file you changed and what the
+change was, then verify it (see the `godot-verify-changes` skill).
+
+## Bringing files from disk into the project
+
+In Godot, "importing" a file means putting it inside the project folder. The editor (or the next
+`godot_check` / `godot_run`) notices it and imports it automatically; nothing else is needed.
+
+- Copy with `run_shell_command` (`cp`), into the folder the project already uses for that kind of file (look first; `res://art/`, `res://audio/` and the like).
+  `write_local_file` writes text only — it cannot copy a PNG or a WAV.
+- **Copying from another Godot project? Copy the sidecars too.** Next to `hero.png` sits
+  `hero.png.import` (import settings + uid); next to scripts and shaders there may be a `.uid`
+  file. Copy them along, or scenes that referenced the file by uid break and the import settings
+  (pixel-art filter, loop flags) are lost. Never copy anything from the other project's `.godot/`.
+- Moving or renaming a file that is already in the project breaks every scene that points at its
+  `res://` path. Grep for users first (see above), and prefer asking the user to move it in the
+  Godot FileSystem panel, which rewrites references for them.
 
 ## Running commands
 
@@ -119,28 +145,9 @@ Prefer the dedicated tools where they fit: `list_local_dir`, `find_local_files`,
 `grep_local_files`, `read_local_file`. They are faster, produce tidier output, and work on every
 machine.
 
-For Unreal C++ specifically:
-
-- Build with UnrealBuildTool, not by invoking the compiler directly.
-- **The editor holds the module DLLs open.** A rebuild will fail at the link step while it is
-  running. Don't hand-roll that from the shell: `cpp_compile` builds into the running editor, and
-  `cpp_full_rebuild` closes the editor (refusing if anything is unsaved), runs UnrealBuildTool for
-  the right engine and target, then reopens the project. Prefer those (or `ue_restart_editor`) to
-  killing the editor. Only when it is frozen and the user agrees to lose unsaved work, end it with
-  `taskkill`.
-- Live Coding can be pinned to an MSVC toolset that is no longer installed, in which case hot
-  reload fails and `cpp_full_rebuild` is the only path. Read the error rather than retrying the
-  same build.
-
-## `inspect_uasset_file` — read a .uasset without opening the engine
-
-`read_local_file` gives you text. A `.uasset` / `.umap` is not text — reading it raw gets you
-binary noise. `inspect_uasset_file` parses the package header off disk and tells you what is
-actually inside: class, referenced packages, basic properties.
-
-Use it when the editor is closed, when the project will not open, or when you only need to answer
-"what is this file" without paying the cost of loading a project. When the editor *is* running and
-you need live state, the engine's own tools know more — this one only sees what was written to disk.
+Do not launch Godot from the shell to test the game. `godot_check`, `godot_run` and
+`godot_screenshot` already know where Godot is, run it off-screen and serialise runs so two
+imports do not trample the same `.godot/` cache.
 
 ## `connect_mcp_server` — something the user installed, wired into the box
 
@@ -165,16 +172,15 @@ Three things to get right:
 - **A port that answers is not proof of an MCP endpoint.** Many tools' ports belong to their own
   plugin channel, not to a server that speaks MCP.
 - **Its tools arrive on the next message, not this turn.** The tool list is assembled once per
-  message. Tell the user it is connected and let them send the next message; calling
-  `mcp_<id>_*` in the same turn only gets you "no such tool".
+  message. Tell the user it is connected and let them send the next message.
 
-Blender and Unreal's own official server are not done here — Settings → MCP installs those in one
-click, scripts and environment variables included. Point the user at that button instead.
+Blender is not done here — Settings → MCP installs it in one click, scripts and environment
+variables included. Point the user at that button instead.
 
 ## What is deliberately missing
 
 There is no dedicated delete tool, and you never remove, rename or move the user's files on your
 own initiative. When the user explicitly asks for it, do it through `run_shell_command`, which asks
 for their approval. Name the exact paths first, and confirm anything that is not obviously theirs to
-lose (whole folders, files outside the folder they named). Inside an Unreal project's `Content`,
-use the content tools instead — moving `.uasset` files on disk breaks references.
+lose (whole folders, files outside the folder they named). Inside a Godot project, deleting a file
+that a scene still references breaks that scene — grep for users before deleting.

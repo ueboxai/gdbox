@@ -497,7 +497,7 @@ export class CatalogService {
     } else if (probe.kind !== 'catalog') {
       throw new CatalogServiceError(
         'not-a-catalog',
-        'This address is neither an Unreal Box server nor an asset catalog'
+        'This address is neither an GDBox server nor an asset catalog'
       )
     }
     if (input.authMode === 'password' && !memberUrl) {
@@ -2017,7 +2017,7 @@ export class CatalogService {
         const context = await this.loreContext(server, controller.signal)
         const advisory = await this.importPlan(library, server, mapped).catch(() => null)
         const target = this.shadowTarget(library, server, input.repositoryId)
-        const message = input.message?.trim() || `Import ${mapped.length} file(s) from Unreal Box`
+        const message = input.message?.trim() || `Import ${mapped.length} file(s) from GDBox`
         const result = await this.shadows.importFiles(
           target,
           mapped,

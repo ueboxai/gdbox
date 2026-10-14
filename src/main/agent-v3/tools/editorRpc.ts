@@ -1,7 +1,7 @@
 /**
  * 调 Godot 编辑器里 GDBox Link 插件的 RPC。
  *
- * 连接方向和虚幻盒子一样：盒子是被动的 WebSocket 服务端，插件那边主动连过来，
+ * 连接方向和虚幻盒子的 UnrealAgentLink 一样：盒子是被动的 WebSocket 服务端，插件那边主动连过来，
  * 断了每 3 秒自己重试（`resources/godot/addons/gdbox_link/gdbox_link.gd`）。
  * 所以「编辑器没连上」时，不要让用户去界面上点「连接」—— 没有这个按钮。
  *

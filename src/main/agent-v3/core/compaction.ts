@@ -33,8 +33,8 @@ import { withoutSystemMessages } from './systemMessages'
 /**
  * 压缩设置。
  *
- * `keepRecentTokens` 给得比 pi 默认更大：UE 工作流里最近几轮往往带着刚探测出来的
- * 资产路径和 node_id，摘要抹掉这些细节会让模型重新探一遍 —— 省下的 token
+ * `keepRecentTokens` 给得比 pi 默认更大：游戏开发工作流里最近几轮往往带着刚探测出来的
+ * res:// 路径、节点路径和报错行号，摘要抹掉这些细节会让模型重新探一遍 —— 省下的 token
  * 会在重做里加倍还回去。
  */
 export const UNREAL_BOX_COMPACTION: CompactionSettings = Object.freeze({
@@ -108,11 +108,11 @@ export function resetPrecompactionsForTest(): void {
   precompactions.clear()
 }
 
-/** 压缩时给摘要模型的额外指示。UE 领域里哪些东西丢不得。 */
-const SUMMARY_INSTRUCTIONS = `这是虚幻引擎工作流的对话。生成摘要时**必须**逐字保留：
-- 已确认存在的资产完整路径（如 /Game/Materials/M_Wood），以及已确认**不存在**的路径
-- 材质/蓝图图表里已创建节点的 node_id 与类型
-- 已完成的操作及其结果（创建了什么、连了哪些线、编译是否通过）
+/** 压缩时给摘要模型的额外指示。Godot 工作流里哪些东西丢不得。 */
+const SUMMARY_INSTRUCTIONS = `这是 Godot 游戏开发工作流的对话。生成摘要时**必须**逐字保留：
+- 正在操作的工程目录，以及已确认存在的文件完整路径（如 res://scenes/player.tscn），已确认**不存在**的路径
+- 场景里已创建或改过的节点路径与类型（如 Player/Sprite2D），连过的信号
+- 已完成的操作及其结果（改了哪些文件、godot_check 是否通过、试玩时观察到的现象）
 - 用户明确表达过的偏好和约束
 - 尚未完成的待办
 

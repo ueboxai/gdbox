@@ -182,7 +182,7 @@ describe('skill 加载端到端', () => {
     '# 流程\n\n1. 先 blueprint.get_graph 拿真实 node_id\n2. 再 blueprint.connect_pins'
   )
 
-  it('模型调 load_skill → 正文回到上下文，且工具名已重写', async () => {
+  it('模型调 load_skill → 正文回到上下文', async () => {
     const { discoverSkills } = await import('../capabilities/skillsService/SkillsService')
     const { createSkillTools } = await import('../capabilities/skills')
 
@@ -202,9 +202,8 @@ describe('skill 加载端到端', () => {
     const transcript = JSON.stringify(agent.state.messages)
     // 正文进了上下文
     expect(transcript).toContain('拿真实 node_id')
-    // 点号工具名被重写 —— 否则模型会照着技能去调一个不存在的工具
-    expect(transcript).toContain('blueprint_get_graph')
-    expect(transcript).not.toContain('blueprint.get_graph')
+    // 原来这里还钉着「点号旧工具名被改写」：改写表（toolNames.ts 的
+    // CROSS_REFERENCE_RENAMES）随 UE 工具一起清空了，没有条目可测
   })
 
   it('技能不存在时报错并列出可选项，模型能自我纠正', async () => {

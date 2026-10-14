@@ -283,14 +283,18 @@ export function stripEditorSnapshotBlock(text: string): string {
  * 事实每轮不同、规则一个字不变，混在一起写会让 Prompt Cache 一次也命中不了。
  *
  * 全英文的理由同 `createAgent.ts` 的 `buildSystemPrompt`。
+ *
+ * 键名沿用 Unreal 时代的（`last_active_asset_editor` / `selected_actors` /
+ * `content_browser`）：GDBox Link 的 `_focus_context()` 把「正在编辑的场景」
+ * 「场景里选中的节点」「FileSystem 面板里选中的文件」填进同一套字段，格式化代码
+ * 不用分叉。代价是名字不贴切，所以这里明说一遍对应关系。Godot 那边从不报
+ * `selected_nodes`（图节点），原来讲 node id 的那两条随 UE 工具一起删了。
  */
 export const EDITOR_SNAPSHOT_RULES: readonly string[] = Object.freeze([
   'Editor snapshot:',
-  'Some user messages start with an `<editor-snapshot>` block — what the Unreal editor looked like **at the moment the user pressed send**, captured before you began thinking.',
+  'Some user messages start with an `<editor-snapshot>` block — what the Godot editor looked like **at the moment the user pressed send**, captured before you began thinking.',
   '- It is a point-in-time record, not live state. The user may have changed the selection seconds later; that does not change what they were pointing at when they spoke. Snapshots on older messages are historical observations, exactly like older `<runtime-status>` envelopes.',
-  '- `last_active_asset_editor` is the most recently activated **asset editor**, and falls back to the level only when no asset editor is open at all. So a blueprint listed there may simply still be open while the user works in the level viewport — a non-empty `selected_actors` is the stronger signal about where they actually are.',
-  '- When the user says "this" / "these" / "here" without naming anything: if the snapshot has exactly one kind of selection (only nodes, or only actors, or only assets), that is what they mean — act on it, do not ask and do not call a tool first. If both nodes and actors are selected, or the sentence works either way, ask one short question instead of guessing from `last_active_asset_editor`.',
-  '- Node ids that appear in the snapshot (`#...`) are stable and can be passed straight to the `ue_bp_*` / `ue_material_*` tools: blueprint nodes report their NodeGuid, material nodes their expression GUID. Both survive deleting other nodes, undo, and reopening the asset.',
-  '- A node listed **without** an id cannot be targeted from the snapshot — either it has no id at all (comment boxes) or the line says ids were omitted because that project runs an older plugin build. Locate it with `ue_bp_get_graph` / `ue_material_get_graph` first and act on the id you get back. Never guess an id, and never assume position in the list means anything.',
-  '- Call `ue_get_selection` only when you need the state **right now** — the user asks you to look again, or the thing you are about to change may have moved since. Do not call it merely to confirm what the snapshot already says.'
+  '- The keys keep their generic names: `last_active_asset_editor` is the scene being edited, `selected_actors` are the nodes selected in that scene (paths relative to its root), and `content_browser` is what is selected in the FileSystem dock (res:// paths).',
+  '- When the user says "this" / "these" / "here" without naming anything: if the snapshot has exactly one kind of selection (only nodes, or only files), that is what they mean — act on it, do not ask and do not call a tool first. If both are selected, or the sentence works either way, ask one short question instead of guessing.',
+  '- Call `editor_scene_tree` only when you need the state **right now** — the user asks you to look again, or the thing you are about to change may have moved since. Do not call it merely to confirm what the snapshot already says.'
 ])

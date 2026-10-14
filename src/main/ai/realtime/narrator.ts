@@ -13,7 +13,7 @@
  *
  *   - **高优先级**：任务结束、失败、Agent 反问用户。这几条是**用户在等的答案**，
  *     模型正在说话也要打断它播。
- *   - **低优先级**：中间进度（「在改蓝图了」）。锦上添花，能省则省。
+ *   - **低优先级**：中间进度（「在改脚本了」）。锦上添花，能省则省。
  *
  * 两档共同的红线：**用户正在说话时一个字都不插**。抢用户的话比冷场难受得多，
  * 而且实时语音的打断是双向的 —— 我们一插播，服务端可能把用户那半句话判成结束。
@@ -136,11 +136,11 @@ export function drainNotices(
 /**
  * 工具名 → 说得出口的一句「在做什么」。
  *
- * 按命名空间粗分，不逐个工具翻译：42 个 `ue_*` 各念各的名字，用户既记不住
- * 也不关心；他想知道的是「动到我的蓝图了没有」。
+ * 按用途粗分，不逐个工具翻译：每个工具各念各的名字，用户既记不住
+ * 也不关心；他想知道的是「动到我的场景了没有」。
  *
- * 正因为用户关心的就是这个，**读和写不能念同一句**。真机上「他那个动画蓝图是
- * 怎么选的」只是查了一下，语音却报「在改蓝图」，用户以为资产被动过
+ * 正因为用户关心的就是这个，**读和写不能念同一句**。虚幻盒子时期真机上，用户只是
+ * 问了一句某个资产是怎么配的、工具只是查了一下，语音却报「在改」，用户以为资产被动过
  * （2026-09-17 反馈）。读只说「在看」。
  *
  * `risk` 从工具注册表来（`listToolRisks()`），这里不另抄一张读写名单 ——
@@ -151,16 +151,20 @@ export function drainNotices(
 export function stageOf(toolName: string, risk: ToolRisk | undefined): string {
   if (!risk) return ''
   const reading = risk === 'safe'
-  if (toolName.startsWith('blueprint_')) return reading ? '在看蓝图' : '在改蓝图'
-  if (toolName.startsWith('material_')) return reading ? '在看材质' : '在调材质'
-  if (toolName.startsWith('widget_')) return reading ? '在看界面控件' : '在改界面控件'
-  if (toolName.startsWith('level_') || toolName.startsWith('ue_open_level'))
-    return reading ? '在看关卡' : '在动关卡'
+  if (toolName === 'godot_check') return '在检查报错'
+  if (toolName === 'godot_run' || toolName === 'editor_play') return '在运行试玩'
+  if (toolName === 'godot_screenshot') return '在截图看画面'
+  if (toolName === 'editor_scene_tree') return '在看场景'
+  if (toolName === 'editor_open_scene') return '在打开场景'
+  if (toolName === 'editor_save_all') return '在保存'
+  if (toolName === 'write_local_file' || toolName === 'edit_local_file') return '在改工程文件'
+  if (toolName === 'gen_sprite') return '在生成精灵图'
+  if (toolName === 'gen_tileset') return '在生成瓦片集'
+  if (toolName === 'gen_sfx') return '在生成音效'
+  if (toolName === 'gen_music') return '在生成音乐'
+  if (toolName === 'gen_voice') return '在生成配音'
+  if (toolName === 'generate_image') return '在生成图片'
+  if (toolName === 'generate_3d_model' || toolName === 'rig_3d_model') return '在生成模型'
   if (toolName.startsWith('project_')) return reading ? '在看工程' : '在处理工程'
-  if (toolName === 'ue_playtest') return '在运行试玩'
-  if (toolName === 'ue_save' || toolName.startsWith('ue_save_')) return '在保存'
-  if (toolName.startsWith('ue_content_import')) return '在导入资产'
-  if (toolName.startsWith('ue_spawn') || toolName.startsWith('ue_destroy')) return '在增删场景物件'
-  if (toolName.startsWith('ue_set_')) return '在改属性'
   return ''
 }

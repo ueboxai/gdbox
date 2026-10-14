@@ -946,7 +946,7 @@ export interface AgentV3ContinueArgs {
  *
  * 对话上的工程戳只有名字，路径只有「盖戳那一刻正连着」才会记下来。
  * 但盒子其实是知道路径的 —— 用户自己在首页登记过。以前没人把这两边接上：
- * 一条归入 test222 的对话，模型为了找它的 `.uproject` 从 C:/ 开始整盘扫，
+ * 一条归入 test222 的对话，模型为了找它的工程文件从 C:/ 开始整盘扫，
  * 而答案就躺在库里。
  */
 function projectLibrary(): LibraryProjectRef[] {
@@ -965,7 +965,7 @@ function projectLibrary(): LibraryProjectRef[] {
 }
 
 /**
- * 算出这一轮该操作哪个 UE 项目。
+ * 算出这一轮该操作哪个 Godot 工程。
  *
  * **项目对项目**：对话归属哪个工程，指令就发给哪个工程；它没开着，
  * 这条对话就没有引擎能力（`engineAvailable: false`），而不是顺手操作旁边那个。
@@ -1140,7 +1140,7 @@ export async function persistSessionProject(
  * 所以只有真的变了才换。但**判重本身也不能贵**：完整的
  * `resolveTargetProject()` 里带一次 `SELECT * FROM projects`（连 `projectData`
  * 那几个大字段一起拉出来），一轮几十步就是几十次全表读，全压在主进程那条
- * 既跑 IPC 又跑 UE WebSocket 的事件循环上。
+ * 既跑 IPC 又跑编辑器 WebSocket 的事件循环上。
  *
  * 所以先算一个纯内存的粗签名（有没有连接、连着哪些、目标是谁、归属是谁）——
  * 它没变就直接回 undefined，一次库都不读。只有粗签名动了才去做完整解析，
@@ -1188,7 +1188,7 @@ export function createEngineRefresher(
    * 的人装插件。漏掉它，那句话就一直挂在那儿。
    *
    * **工程路径同理，而且更隐蔽。** 环境块会印出路径，还会在缺路径时专门说一句
-   * 「盒子不知道 X 在哪，去问用户，别满盘找 .uproject」。老对话的戳只有名字，
+   * 「盒子不知道 X 在哪，去问用户，别满盘找工程文件」。老对话的戳只有名字，
    * 模型用 `set_session_project` 给它补上路径之后，名字、连接、越界清单一样都
    * 没变 —— 漏掉路径的话这次刷新会被判成「没变化」，那句「去问用户」就一直
    * 挂在提示词里，问的是一个盒子刚刚记下来的路径。
@@ -1498,7 +1498,7 @@ function emitContextUsage(
 }
 
 /**
- * 这台机器上有没有「用户视角的」UE 连接。
+ * 这台机器上有没有「用户视角的」编辑器连接。
  *
  * 底数还是 WebSocket 连接数，而不是 projectManager 的工程数 —— 插件连上到
  * 发出 project.info 之间有几秒空窗，那几秒里连接是真的、工程信息还没到，
@@ -1566,7 +1566,7 @@ export function registerAgentV3IPC(): void {
   })
 
   /**
-   * 锁状态同时推到虚幻编辑器里，让内容浏览器把角标画出来
+   * 锁状态同时推到编辑器里（GDBox Link 目前还不画角标，见 assetLockPush.ts）
    * （资产锁 C 阶段，）。
    *
    * 发**不出去也不报错**：编辑器可能还没连上、可能刚被用户关掉。角标是增强
@@ -1599,7 +1599,7 @@ export function registerAgentV3IPC(): void {
    * 工程连上来时强制重推一次（由 `restoreOnConnect` 在还原完之后触发）。
    *
    * 去重是按内容比的，而发失败的那次同样被记成「已推」。用户先在盒子里发起任务、
-   * 再打开 UE 的话，只要这一轮锁表内容不再变化就一个角标都不会出现。
+   * 再打开编辑器的话，只要这一轮锁表内容不再变化就一个角标都不会出现。
    *
    * 忘的是**全部**分组而不是这条连接：锁可能记在 `connectionId: undefined` 上
    * （对话没绑定目标工程时就是这样，单工程下最常见），拿真实 id 去忘碰不到它们。
@@ -1969,13 +1969,13 @@ export function registerAgentV3IPC(): void {
     // 算出来就钉在这一轮上：插话要抓闪存时读的是它，而不是自己重新解析一遍
     // 对话戳（那算出来的可能是另一个工程）
     reserved.scope = scope
-    // 这一轮的运行时作用域。工具（`ue_session_health`）在自己的执行流里读到的
+    // 这一轮的运行时作用域。工具在自己的执行流里读到的
     // 必须是**发起它那一轮**的 id，所以和目标工程、锁主一样绑在执行流上而不是
     // 模块级变量上 —— 两条会话并发时后来者会把前一个覆盖掉。
     const runtimeScopeId = createRuntimeScopeId()
     const envelope = buildRuntimeEnvelope(scope, runtimeScopeId)
 
-    // 整个执行流跑在这四层上下文里：里面所有 UE 工具（含并发的、含子 Agent 的）
+    // 整个执行流跑在这四层上下文里：里面所有编辑器工具（含并发的、含子 Agent 的）
     // 读到的目标工程、加锁时用的锁主、观测作用域、以及「这一轮准不准拍编辑器」，
     // 都是这一条会话自己的。
     return runWithRuntimeScope(runtimeScopeId, () =>
@@ -2087,7 +2087,7 @@ export function registerAgentV3IPC(): void {
         alwaysAllowed: alwaysAllowedFor(sessionId),
         thinkingLevel,
         skillLearning,
-        // 关着的话 `ue_screenshot` 不进这一轮的工具池，系统提示词里那句
+        // 关着的话 `godot_screenshot` 不进这一轮的工具池，系统提示词里那句
         // 「拍一张确认一下」也跟着换掉（见 `createAgent.ts`）
         editorScreenshotEnabled,
         // 用户在「偏好设置 → 个性化」里写的常驻说明。每轮现读：用户改完设置
@@ -2283,8 +2283,8 @@ export function registerAgentV3IPC(): void {
        * 先落盘再复核；继续任务时也使用同一套装配。
        *
        * 给的是 `allTools` 而不是这一轮开局的 `tools`：改动台账按**工具名**判断
-       * 「这一步算不算改了东西」，而起手没连引擎的那一轮里 `tools` 一个 `ue_*`
-       * 都没有。模型中途把工程打开、拿到引擎工具、开始改蓝图和关卡之后，
+       * 「这一步算不算改了东西」，而起手没连引擎的那一轮里 `tools` 一个编辑器工具
+       * 都没有。模型中途把工程打开、拿到引擎工具、开始改场景和脚本之后，
        * 按 `tools` 记的话那些改动一条都不入账 —— 审计员会对着一张空台账签字。
        */
       attachGoalLoop(agent, ctx, allTools, options, emit, await goalMaxRounds())
@@ -2568,7 +2568,7 @@ export function registerAgentV3IPC(): void {
       isReadOnly: () => readOnlyBySession.get(sessionId) === true,
       thinkingLevel: options.thinkingLevel,
       skillLearning: options.skillLearning,
-      // 同上：这一档也从执行记录里来，不然续跑那半程 `ue_screenshot` 会重新出现
+      // 同上：这一档也从执行记录里来，不然续跑那半程 `godot_screenshot` 会重新出现
       editorScreenshotEnabled: options.editorScreenshotEnabled,
       // 续跑也要带上：漏掉的话「接着跑」那半程会按默认习惯干活，
       // 用户看到的是同一条对话前后两种脾气
@@ -3638,8 +3638,8 @@ export function registerAgentV3IPC(): void {
     }
   )
 
-  // ── 对外暴露 UE 能力（MCP Server）──────────────────────────────────────
-  // 按持久化配置运行。开启后 Claude Code / Cursor 等外部客户端能直接操作虚幻引擎。
+  // ── 对外暴露 GDBox 能力（MCP Server）──────────────────────────────────────
+  // 按持久化配置运行。开启后 Claude Code / Cursor 等外部客户端能检查、试玩 Godot 工程，操作连着的 Godot 编辑器。
   ipcMain.handle('agent-v3:mcp-server:start', async (_event, args: McpServerHostOptions = {}) => {
     try {
       // 每条外部会话按盒子助手的装配路现造工具，再按用户保存的权限档位收窄

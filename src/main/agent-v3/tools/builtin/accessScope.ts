@@ -134,7 +134,7 @@ function refusal(target: string, allowed: AllowedRoot[]): string {
     `，只能碰：${places}。\n` +
     '不要换一种路径写法再试，也不要绕去 run_shell_command —— 换个写法一样会被挡。\n' +
     '要放开有两条路，**都得用户点头**：\n' +
-    '1. 如果那是个虚幻工程，让他把工程导入盒子（project_manage 的 import_project），' +
+    '1. 如果那是个 Godot 工程（文件夹里有 project.godot），请他在「我的项目」里把它导入盒子，' +
     '导完这个目录就在范围内了；\n' +
     '2. 如果那只是个普通文件夹（素材、参考图、下载目录），请他打开' +
     '「设置 → AI 助手 → 隐私 → 文件访问范围」，改成「整台电脑」。\n' +

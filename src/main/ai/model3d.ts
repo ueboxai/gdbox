@@ -254,7 +254,7 @@ export class Model3dNoFilesError extends Error {
  * 输出的网格格式。
  *
  * 只收各家普遍都给的这几种。`glb` 排第一并作为缺省：它自带材质与贴图，是单文件，
- * 而虚幻侧的导入器已经认这个扩展名。
+ * 也是 Godot 首选的 3D 格式，放进工程就能用。
  */
 export type Model3dFormat = 'glb' | 'gltf' | 'fbx' | 'obj' | 'usdz' | 'stl'
 
@@ -1786,7 +1786,7 @@ export const MODEL3D_RIG_TYPES = [
 ] as const
 export type Model3dRigType = (typeof MODEL3D_RIG_TYPES)[number]
 
-/** 骨骼命名规范。`mixamo` 是虚幻 / Unity 那边重定向方案最成熟的一套 */
+/** 骨骼命名规范。`mixamo` 是各引擎重定向方案最成熟的一套，Godot 的人形骨骼映射也认得 */
 export type Model3dRigSpec = 'mixamo' | 'tripo'
 
 /**
@@ -1806,7 +1806,7 @@ export interface RigModel3dRequest {
   rigType?: Model3dRigType
   /** 缺省 mixamo */
   spec?: Model3dRigSpec
-  /** 缺省 fbx：虚幻导骨骼网格走 FBX 最稳 */
+  /** 缺省 fbx（沿用虚幻盒子的选择）；Godot 两种都能导入，glb 是它的首选格式 */
   format?: 'glb' | 'fbx'
   signal?: AbortSignal
   onProgress?: (note: string) => void

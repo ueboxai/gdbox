@@ -57,16 +57,7 @@ const isWindows = process.platform === 'win32'
  * 要么太慢不适合每次本地自查（build，本地可用 --with-build 手动触发）。
  * localOnly（写不跑的理由）的步骤反过来，只在本地跑；`--ci` 下把它列成 NOT RUN，
  * 让 CI 的绿灯不被误读成「这一项也查过了」。
- *
- * ## 插件分发包检查按改动范围决定
- *
- * 日常门禁走 `verify:plugin`：先看这次改动要不要查包，再读
- * `VERIFY_PLUGIN_ENGINE`（或 `verify:plugin --engine`）。无关的 UI / 文档改动
- * 不会打开 zip，也不会去发现本机引擎。
- *
- * 严格的那一档仍是 `plugin:check:all`，挂在出正式安装包的脚本上
- * （`build:win` / `build:mac` / `build:linux`），要求**每个**版本都新鲜。
- * 普通打包 / 离线启动不因此要求全套发版包。
+
  */
 const STEPS = [
   {
@@ -157,19 +148,6 @@ const STEPS = [
     ]
   },
   {
-    title: '引擎文件读取 / UE file reads',
-    script: 'verify:ue-file-reads',
-    hint: [
-      '引擎保存 .uproject / .uplugin 用 AutoDetect 编码：内容里有一个非 ASCII 字符',
-      '（中文工程名、中文描述）就整份存成 UTF-16LE —— 中文用户那边这是常态。',
-      '按 utf-8 硬读会得到乱码，JSON.parse 抛 Unexpected token，',
-      '用户看到的是「插件装不上、AI 看不见引擎」，而报错信息他一个字也看不懂。',
-      '',
-      '改用 src/main/utils/ueTextFile.ts：readUeTextFile / readUeJsonFile / decodeUeText。',
-      '写回去仍然用 UTF-8（不带 BOM），引擎没有 BOM 时按 UTF-8 解，5.0–5.8 一致。'
-    ]
-  },
-  {
     title: '双语文档同步 / bilingual docs',
     script: 'docs:check',
     hint: [
@@ -191,14 +169,6 @@ const STEPS = [
       '',
       '规则全文：resources/skills/SKILL_STANDARD.md',
       '看每个 skill 的体检数据：node scripts/check-skills.mjs --list'
-    ]
-  },
-  {
-    title: '插件分发包（按改动）/ plugin package (scoped)',
-    script: 'verify:plugin',
-    localOnly: 'CI runner 上没有 Unreal 和插件包；插件原生构建/运行时同样未验证',
-    hint: [
-      '怎么修见上面这一步自己的输出；完整规则见 docs/contributing/packaging.zh-CN.md 的「日常门禁」。'
     ]
   },
   {

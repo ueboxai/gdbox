@@ -5,8 +5,7 @@
  *
  * 真机验证 68 个工具后发现的一个明确缺口：**没有任何工具能看本地磁盘。**
  * 用户说「把 D:\素材\ 这个文件夹里的模型导进来」，agent 无法枚举目录，
- * 而 `ue_content_import` 要的是一条条具体文件路径 —— 于是最自然的一句话
- * 请求直接卡死。参考图同理：用户给了路径，agent 看不到。
+ * 而导入要的是一条条具体文件路径 —— 于是最自然的一句话请求直接卡死。参考图同理：用户给了路径，agent 看不到。
  *
  * ## 为什么直接用 pi 的
  *
@@ -19,7 +18,7 @@
  * 实现了 `listDir`，用它包一个即可 —— 列目录这种基础能力不该依赖用户
  * 装没装 Git Bash（pi 的 bash 在 Windows 上只认
  * `Program Files\Git\bin\bash.exe`，找不到就返回 shell_unavailable）。
- * 引擎开发者机器上多半有，纯蓝图工程的用户则未必。
+ * 程序员机器上多半有，美术和策划的机器上则未必。
  *
  * ## 边界
  *
@@ -139,10 +138,10 @@ function createReadLocalFileTool(): UnrealAgentTool<never> {
       '读取用户电脑上的一个文件。\n\n' +
       '文本文件返回内容（可用 offset / limit 翻页，超长会截断）；' +
       '**图片文件会直接变成你能看到的图** —— 用户给了参考图路径就用这个看。\n\n' +
-      '【什么时候用】读日志、读 .uproject / ini 配置、看用户指定的参考图、' +
+      '【什么时候用】读日志、读 project.godot / .tscn / .tres / .gd 这类文本、看用户指定的参考图、' +
       '确认某个文件到底存不存在、内容是什么。\n' +
-      '【什么时候不用】读虚幻工程里的资产（.uasset 是二进制，' +
-      '要用 ue_content_describe 之类的工具）；列目录请用 list_local_dir。',
+      '【什么时候不用】看编辑器里正开着的场景结构用 editor_scene_tree；' +
+      '.godot/ 是编辑器缓存，不用读；列目录请用 list_local_dir。',
     execute: async (toolCallId, params, signal, onUpdate) => {
       const target = (params as { path?: string })?.path ?? ''
       const denied = assertPathAllowed(target) ?? (await assertInAccessScope(target))
@@ -187,8 +186,8 @@ const WRONG_TOOL_BINARY: Array<{ pattern: RegExp; hint: string }> = [
     hint: '这是文档容器，读成文本只会得到乱码。用 read_document 读它。'
   },
   {
-    pattern: /\.uasset$/i,
-    hint: '这是虚幻资产，二进制。用 ue_content_describe 之类的工具看它。'
+    pattern: /\.(scn|res)$/i,
+    hint: '这是 Godot 的二进制场景或资源，读成文本只会得到乱码。在编辑器里另存为 .tscn / .tres 才能读；场景结构用 editor_scene_tree 看。'
   },
   {
     pattern: /\.(exe|dll|so|dylib|zip|7z|rar|tar|gz|bin|pak)$/i,
@@ -333,7 +332,7 @@ function sizeHint(size?: number): string {
   return ` (${(size / 1024 / 1024).toFixed(1)} MB)`
 }
 
-/** 本地文件工具。不依赖引擎连接 —— 未连接虚幻时它们照样可用 */
+/** 本地文件工具。不依赖编辑器连接 —— 没连 Godot 编辑器时它们照样可用 */
 export function createLocalFileTools(): UnrealAgentTool<never>[] {
   return [
     createReadLocalFileTool(),

@@ -7,13 +7,15 @@ English: [AGENTS.md](AGENTS.md)（两份必须同步更新，CI 会检查）
 
 ## 1. 这是什么项目
 
-**虚幻盒子（Unreal Box）** —— 虚幻引擎的 agent harness：一套让 AI Agent 能够实际操作
-虚幻工程的本地运行环境。技术栈 Electron + Vue 3 + TypeScript。
+**GDBox** —— Godot 引擎的 agent harness：一套让 AI Agent 能够实际推进 Godot 工程的
+本地运行环境，侧重代码之外的活（美术、音频、验证、经验、团队）。和虚幻盒子出自同一家公司，
+代码从虚幻盒子分叉而来，界面与交互保持一致。技术栈 Electron + Vue 3 + TypeScript。
 
-产品的主体是这个 Agent。围着它的 harness 由四部分构成：模型接入、虚幻引擎工具集、技能、
-约束与核对；与编辑器之间的连接由随包的 UnrealAgentLink 插件承担。
+产品的主体是这个 Agent。围着它的 harness 由四部分构成：模型接入、Godot 工具集（无头检查与试玩、
+生成即资产、编辑器联动）、技能、约束与核对；与编辑器之间的连接由随包的 GDBox Link 插件
+（`resources/godot/addons/gdbox_link`）承担。
 
-其余模块 —— 项目库、资产库、蓝图库与材质库、笔记与知识库 —— 各自有完整的独立界面，
+其余模块 —— 项目库、资产库、笔记与知识库 —— 各自有完整的独立界面，
 但在产品结构中它们服务于 Agent：登记它的作用目标、给它供料、接住它的产出。
 判断一个功能该归到哪里时，按这个关系判断。
 
@@ -78,8 +80,6 @@ pnpm verify             # 约 3.5 分钟 —— 完整门禁
 | `lint:changed` | **对你改动的那些行跑全量 ESLint 规则** —— 零容忍 |
 | `docs:check` | 成对的中英文档有没有一起改 |
 | `verify:skills` | `resources/skills/**` 是否符合 `resources/skills/SKILL_STANDARD.md` |
-| `verify:ue-file-reads` | 引擎写的文件（`.uproject` / `.uplugin` / 引擎 `ini`）不许按固定编码读 —— 见第 5 节 |
-| `verify:plugin` | 仅本地 —— 改了会进分发包的插件输入才检查所选开发包；CI 把它列为 NOT RUN |
 | `typecheck` | `tsconfig.node.json`（主进程）+ `tsconfig.web.json`（渲染进程）+ `tsconfig.cli.json`（`packages/cli`） |
 | `test:run` | Vitest，跑全仓单测（数量不写在这里 —— 它每天都在变，写死只会变成又一个过期数字） |
 | `audit:prod` | 仅 CI —— 生产依赖没有高危漏洞 |
@@ -96,14 +96,6 @@ pnpm verify             # 约 3.5 分钟 —— 完整门禁
 
 另外两个变体：`pnpm verify:fast`（完整门禁，但单测那一步跳过原生产物预检）、
 `pnpm verify --with-build`（本地也跑打包与离线启动门禁，改了主进程 / 构建配置 / 依赖时用）。
-
-插件分发包新鲜度分两档。日常的 `pnpm verify` / `verify:changed` / `verify:fast` 走
-`verify:plugin`：只有改动碰到会进分发包的插件输入时才查包，而且只查 `VERIFY_PLUGIN_ENGINE`
-选定的那个版本；`pnpm verify --ci` 把它列为 NOT RUN。怎么选目标、没装 Unreal 时怎么声明，
-见[打包指南](docs/contributing/packaging.zh-CN.md#日常门禁)。
-严格的那一档是 `plugin:check:all`，挂在出正式安装包的脚本上
-（`build:win` / `build:mac` / `build:linux`），要求 **5.0–5.8 每个版本都新鲜**
-—— 发版时少一个版本，那个版本的用户就实实在在装到旧插件。出全套：`node scripts/build-all-plugins.mjs`。
 
 出正式安装包就是 `pnpm build:win` 一条命令，没有渠道之分（原来的 personal / enterprise
 双通道连同 `build:win:personal`、`sync:update-feed`、渠道标记文件一起删了）。更新源只有
@@ -140,9 +132,9 @@ Release 上的 `.exe`、`.blockmap`、`latest.yml`。运行期解析见 `src/mai
 
 | 区域 | 路径 | 义务 |
 |---|---|---|
-| Agent 工具 | `src/main/agent-v3/tools/` | 用 `defineTool` / `defineUeTool` 定义，在 `registry.ts` 注册；注意第 7 节的 `appSettingsManager` 坑 |
+| Agent 工具 | `src/main/agent-v3/tools/` | 用 `defineTool` 定义（调编辑器的走 `tools/editorRpc.ts`），在 `registry.ts` 注册；注意第 7 节的 `appSettingsManager` 坑 |
 | 运行时技能（盒子内置 Agent 和 CLI 加载的） | `resources/skills/**`、`packages/cli/skills/**` | 必须符合 `resources/skills/SKILL_STANDARD.md`，门禁步骤 `verify:skills` |
-| UE 插件 | `plugin/UnrealAgentLink/` | 改了会进分发包的输入就要重编所选开发目标的 zip 并设置 `VERIFY_PLUGIN_ENGINE`，否则门禁步骤 `verify:plugin` 变红（见第 3 节） |
+| Godot 编辑器插件 | `resources/godot/addons/gdbox_link/` | GDScript，随包分发，打开工程时拷进去。线上格式和 `src/main/services/websocket` 一致；加命令要两边一起改，并在真编辑器里跑一遍（`.local/` 下的有窗口编辑器测试） |
 | `uebox` 命令行 | `packages/cli/` | 门禁通过 `tsconfig.cli.json` 做类型检查；`pnpm verify:cli-package`（构建 + 发布包体检）不在门禁里，发包前自己跑 |
 
 ## 5. 硬规则
@@ -189,13 +181,8 @@ Release 上的 `.exe`、`.blockmap`、`latest.yml`。运行期解析见 `src/mai
       local-storage / official-endpoints）。它们天生只能一个会话一个会话地更新，
       同时改必冲突。要更新基线，先确认此刻只有你一个会话在收工。
 
-12. **引擎写的文件不许按固定编码读。** UE 保存 `.uproject` / `.uplugin` 用的是
-    `SaveStringToFile` 的 AutoDetect：内容里有一个非 ASCII 字符（中文工程名、中文描述）
-    就整份存成 UTF-16LE。按 `'utf-8'` 硬读得到的是乱码，`JSON.parse` 当场抛
-    `Unexpected token '�'` —— 用户那边表现为「插件装不上、AI 看不见引擎」，
-    而报错信息他一个字也看不懂。读一律走 `src/main/utils/ueTextFile.ts`
-    （`readUeTextFile` / `readUeJsonFile` / `decodeUeText`），写回去用不带 BOM 的 UTF-8
-    （引擎没有 BOM 时按 UTF-8 解，5.0–5.8 一致）。门禁见 `scripts/check-ue-file-reads.mjs`。
+12. **不许改 `.godot/` 下的任何东西。** 那是编辑器缓存，会被重新生成；改了轻则白改，
+    重则弄坏导入状态。改场景 / 资源时保留 `uid://` 引用，不要手写新 uid。
 
 13. **多媒体进模型：先走对象存储，走不通再退。** 图片、视频、音频 —— 凡是用户交给模型
     的多媒体，先传到用户自己配的对象存储（设置 → 对象存储），给模型一个链接。只有存储

@@ -7,15 +7,17 @@ Instructions for AI coding agents working in this repository.
 
 ## 1. What this project is
 
-**Unreal Box (虚幻盒子)** — an agent harness for Unreal Engine: a local runtime that lets an AI
-agent actually operate an Unreal project. Electron + Vue 3 + TypeScript.
+**GDBox** — an agent harness for the Godot engine: a local runtime that lets an AI agent
+actually move a Godot project forward, focused on the work beyond the code (art, audio,
+verification, experience, teams). It comes from the same company as Unreal Box and is forked
+from its code, keeping the same interface and workflow. Electron + Vue 3 + TypeScript.
 
-The agent is the product. The harness around it is model access, the Unreal tool set, the
-skills, and the constraints and verification that keep it in bounds; the engine connection
-itself runs through the bundled UnrealAgentLink plugin.
+The agent is the product. The harness around it is model access, the Godot tool set (headless
+check and play-test, generated-straight-into-the-project assets, the editor link), the skills,
+and the constraints and verification that keep it in bounds; the editor connection runs
+through the bundled GDBox Link addon (`resources/godot/addons/gdbox_link`).
 
-The other modules — project library, asset library, blueprint and material libraries,
-notebooks and wikis — each have a full standalone UI, but structurally they exist to serve the
+The other modules — project library, asset library, notebooks and wikis — each have a full standalone UI, but structurally they exist to serve the
 agent: they register what it acts on, feed it material, and receive what it produces. Treat
 them that way when deciding where a feature belongs.
 
@@ -67,9 +69,7 @@ is published. Two things make deferring it safe:
 - Every commit got its own 30-second check, so a red full gate points at _this_ batch, not at a
   commit someone made three hours ago and can no longer reconstruct.
 - **CI is the backstop.** `.github/workflows/quality.yml` runs `pnpm verify --ci` on pull requests
-  and pushes to `main`. The shared gate adds audit, packaging and offline boot in CI, while
-  plugin package/native checks are explicitly NOT RUN. A green repository job is not
-  native acceptance. The gate is defined in exactly one place (`scripts/verify.mjs`), so local and
+  and pushes to `main`. The shared gate adds audit, packaging and offline boot in CI. The gate is defined in exactly one place (`scripts/verify.mjs`), so local and
   CI cannot drift. Forgetting to run it locally costs you a red run on GitHub, not a broken
   release.
 
@@ -84,8 +84,6 @@ gate no longer touches the `better-sqlite3` native binding.
 | `lint:changed` | **Full ESLint rules on the lines you changed** — zero tolerance |
 | `docs:check` | Bilingual doc pairs were updated together |
 | `verify:skills` | `resources/skills/**` conforms to `resources/skills/SKILL_STANDARD.md` |
-| `verify:ue-file-reads` | Engine-authored files (`.uproject` / `.uplugin` / engine `ini`) are never read with a hard-coded encoding — see §5 |
-| `verify:plugin` | Local only — plugin packaged inputs changed ⇒ inspect the selected development package; CI lists it as NOT RUN |
 | `typecheck` | `tsconfig.node.json` (main) + `tsconfig.web.json` (renderer) + `tsconfig.cli.json` (`packages/cli`) |
 | `test:run` | Vitest, whole-repo unit tests (no count here — it changes daily and would just go stale) |
 | `audit:prod` | CI only — no high-severity vulnerabilities in production deps |
@@ -104,16 +102,6 @@ front of you, pin it: `VERIFY_BASE=HEAD pnpm verify:changed`.
 Two other variants: `pnpm verify:fast` (the whole gate, but the test step skips the native-ABI
 preflight) and `pnpm verify --with-build` (adds packaging and the offline-boot gate locally — use
 it when you touched the main process, build config, or dependencies).
-
-Plugin package freshness comes in two tiers. Everyday `pnpm verify` / `verify:changed` /
-`verify:fast` run `verify:plugin`: it inspects a package only when the change touches packaged
-plugin inputs, and only the version selected by `VERIFY_PLUGIN_ENGINE`; `pnpm verify --ci` lists
-it as NOT RUN. How to select the target, and what to declare without Unreal installed, is in
-[the packaging guide](docs/contributing/packaging.md#the-everyday-gate). The strict tier is
-`plugin:check:all`, wired into the official installer scripts (`build:win` / `build:mac` /
-`build:linux`); it requires **every version, 5.0–5.8, to be fresh** — ship a release with one
-version behind and those users really do install a stale plugin. Rebuild the whole set with
-`node scripts/build-all-plugins.mjs`.
 
 Shipping an official installer is one command, `pnpm build:win`, with no channels (the old
 personal / enterprise split is gone, along with `build:win:personal`, `sync:update-feed`, and the
@@ -155,9 +143,9 @@ until it is met:
 
 | Area | Path | Obligation |
 |---|---|---|
-| Agent tools | `src/main/agent-v3/tools/` | Define with `defineTool` / `defineUeTool` and register in `registry.ts`; mind the `appSettingsManager` trap in §7 |
+| Agent tools | `src/main/agent-v3/tools/` | Define with `defineTool` (editor calls go through `tools/editorRpc.ts`) and register in `registry.ts`; mind the `appSettingsManager` trap in §7 |
 | Runtime skills (loaded by the in-app agent and the CLI) | `resources/skills/**`, `packages/cli/skills/**` | Conform to `resources/skills/SKILL_STANDARD.md` — gate step `verify:skills` |
-| UE plugin | `plugin/UnrealAgentLink/` | Packaged inputs changed ⇒ rebuild the selected development zip and set `VERIFY_PLUGIN_ENGINE`, or gate step `verify:plugin` fails (§3) |
+| Godot editor addon | `resources/godot/addons/gdbox_link/` | GDScript, shipped with the app and copied into projects on open. Its wire format matches `src/main/services/websocket`; adding a command means changing both sides and running it once in a real editor (the windowed-editor test under `.local/`) |
 | `uebox` CLI | `packages/cli/` | Typechecked by the gate via `tsconfig.cli.json`; `pnpm verify:cli-package` (build + package check) is not in the gate — run it before publishing the package |
 
 ## 5. Hard rules
@@ -211,15 +199,9 @@ until it is met:
       concurrent updates always conflict. Before updating one, confirm you are the only
       session wrapping up.
 
-12. **Never read engine-authored files with a hard-coded encoding.** UE saves
-    `.uproject` / `.uplugin` through `SaveStringToFile` with AutoDetect: one non-ASCII
-    character anywhere in the file (a Chinese project name or description) and the whole
-    file is written as UTF-16LE. Reading it as `'utf-8'` yields mojibake and `JSON.parse`
-    throws `Unexpected token '�'` — which reaches the user as "the plugin will not
-    install, the AI cannot see the engine", wrapped in an error message they cannot read.
-    Always read through `src/main/utils/ueTextFile.ts` (`readUeTextFile` / `readUeJsonFile` /
-    `decodeUeText`); write back as UTF-8 without a BOM (with no BOM the engine decodes as
-    UTF-8, identically on 5.0-5.8). Gate: `scripts/check-ue-file-reads.mjs`.
+12. **Never edit anything under `.godot/`.** It is the editor's cache and is regenerated;
+    editing it is wasted at best and corrupts the import state at worst. Keep `uid://`
+    references intact when editing scenes and resources; never hand-write new uids.
 
 13. **Media going to a model tries object storage first, and falls back only when that
     does not work.** Images, video, audio — anything a user hands to a model — is

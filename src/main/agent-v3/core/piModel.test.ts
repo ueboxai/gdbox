@@ -522,10 +522,10 @@ describe('toPiModel', () => {
   it('带上 provider 的自定义请求头（有些网关做 bot 检测）', () => {
     const withHeaders: ProviderConfig = {
       ...ollamaProvider,
-      headers: { 'User-Agent': 'UnrealBox/1.0' }
+      headers: { 'User-Agent': 'GDBox/1.0' }
     }
     expect(toPiModel(withHeaders, withHeaders.models[0]).headers).toEqual({
-      'User-Agent': 'UnrealBox/1.0'
+      'User-Agent': 'GDBox/1.0'
     })
   })
 })

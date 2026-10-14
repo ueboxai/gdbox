@@ -267,51 +267,6 @@ async function getCurrentUEProject(): Promise<Record<string, unknown>> {
 }
 
 /**
- * 读取 UE 项目配置文件
- * @param projectPath 项目路径
- * @param configFileName 配置文件名，如 DefaultEditor.ini
- * @param section 可选的 section 名
- * @param key 可选的 key 名
- */
-async function readUEProjectConfig(
-  projectPath: string,
-  configFileName: string,
-  section?: string,
-  key?: string
-): Promise<Record<string, unknown>> {
-  if (!projectPath) {
-    return {
-      success: false,
-      error: '未提供项目路径',
-      content: '',
-      sections: {},
-      value: ''
-    }
-  }
-
-  const configPath = path.join(projectPath, 'Config', configFileName)
-
-  try {
-    const result = await readIniFile(configPath, section, key)
-    return {
-      success: true,
-      ...result,
-      configPath
-    }
-  } catch (error) {
-    console.warn(`[File IPC] 读取配置文件失败: ${configPath}`, error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-      content: '',
-      sections: {},
-      value: '',
-      configPath
-    }
-  }
-}
-
-/**
  * 读 Godot 工程信息（通道名沿用历史的 getUEProjectInfo）
  * @param projectPath 工程目录或 project.godot 的路径
  */
@@ -392,13 +347,6 @@ export function registerFileIPC(): void {
           return await joinPaths((params.paths as string[]) || [])
         case 'getCurrentUEProject':
           return await getCurrentUEProject()
-        case 'readUEProjectConfig':
-          return await readUEProjectConfig(
-            params.projectPath as string,
-            params.configFileName as string,
-            params.section as string | undefined,
-            params.key as string | undefined
-          )
         case 'getUEProjectInfo':
           return await getUEProjectInfo(params.projectPath as string)
         case 'parseExcel': {

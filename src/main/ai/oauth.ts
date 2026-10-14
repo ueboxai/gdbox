@@ -284,7 +284,7 @@ async function runPkceLogin(
       if (!code) {
         const denied = url.searchParams.get('error') || '未收到授权码'
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-        res.end(resultPage('授权未完成', `可以关掉这个页面回到虚幻盒子重试。（${denied}）`))
+        res.end(resultPage('授权未完成', `可以关掉这个页面回到 GDBox 重试。（${denied}）`))
         finish(new OAuthCancelledError(denied))
         return
       }
@@ -298,7 +298,7 @@ async function runPkceLogin(
       }
 
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-      res.end(resultPage('授权成功', '可以关掉这个页面回到虚幻盒子了。'))
+      res.end(resultPage('授权成功', '可以关掉这个页面回到 GDBox 了。'))
 
       // 换令牌放在响应之后：先让用户看到结果，别把浏览器晾在那儿转圈
       void (async () => {

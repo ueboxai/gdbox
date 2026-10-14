@@ -20,7 +20,7 @@ import type { ModelRequest, ModelRole, ProviderConfig } from './types'
 /**
  * 不带工具的一次模型调用。
  *
- * 应用里除 Agent 之外还有一批「一问一答」的调用点：连通性探针、蓝图自动布线、
+ * 应用里除 Agent 之外还有一批「一问一答」的调用点：连通性探针、
  * 助手对话、追问建议、截图分析。它们此前走 AI SDK，而 Agent 走 pi —— 同一个
  * Provider 配置要伺候两套 HTTP 实现，等于每家厂商的怪癖都要修两遍。
  * 上一次就栽在这上面：ChatGPT 订阅的 Codex 后端在 pi 那边是好的，AI SDK 这边

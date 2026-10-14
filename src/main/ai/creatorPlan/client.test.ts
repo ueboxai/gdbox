@@ -91,7 +91,7 @@ describe('pollForKey', () => {
     const { fetchImpl } = scripted([
       json({ error: { code: 'authorization_pending' } }, 400),
       json({ error: { code: 'slow_down' } }, 400),
-      json({ api_key: 'ubx-sk-abc', key_name: '虚幻盒子 · W', base_url: `${ORIGIN}/v1` })
+      json({ api_key: 'ubx-sk-abc', key_name: 'GDBox · W', base_url: `${ORIGIN}/v1` })
     ])
     const issued = await pollForKey(
       ORIGIN,
@@ -104,7 +104,7 @@ describe('pollForKey', () => {
     )
     expect(issued).toEqual({
       apiKey: 'ubx-sk-abc',
-      keyName: '虚幻盒子 · W',
+      keyName: 'GDBox · W',
       baseUrl: `${ORIGIN}/v1`
     })
     expect(waits).toEqual([5000, 5000, 10000])

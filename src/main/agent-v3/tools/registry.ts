@@ -24,6 +24,8 @@
  */
 
 import { aigcTools } from './aigc'
+import { godotEditorTools, godotRuntimeTools, reloadEditedScene } from './godot'
+import { godotAssetTools } from './godot-asset'
 import { taskVideoTools } from './builtin/taskVideo'
 import { createWebTools } from './builtin/web'
 import { createLocalFileTools } from './builtin/localFiles'
@@ -32,6 +34,7 @@ import { createAddNotebookSourceTool } from './builtin/addNotebookSource'
 import { createSearchNotebookSourcesTool, type NotebookScope } from './builtin/notebookSources'
 import { createBoxTools } from './builtin/box'
 import { createOrganizeProjectsTool } from './adapted/project/organizeProjects'
+import { createProjectListTool } from './adapted/project/listProjects'
 import { createLocalWriteTools, createShellTool } from './builtin/localShell'
 import { mcpTools } from './builtin/mcpConnect'
 import { createBrowserTools } from './builtin/browser'
@@ -132,7 +135,11 @@ function getLocalFileTools(): UnrealAgentTool<never>[] {
     localFileToolsCache = [
       ...createLocalFileTools(),
       ...createLocalSearchTools(),
-      ...createLocalWriteTools({ afterWrite: lintWrittenSkill }),
+      ...createLocalWriteTools({
+        // 写完 SKILL.md 就地体检；写完编辑器开着的场景就让它从磁盘重新加载
+        afterWrite: async (params) =>
+          (await lintWrittenSkill(params)) + (await reloadEditedScene(params))
+      }),
       // shell 工具照常造出来，由 `resolveTools` 按 `local.shell` 命名空间
       // 决定这台机器上给不给 —— 注册表本身是同步的，探测 shell 是异步的
       createShellTool()
@@ -336,6 +343,10 @@ export function listToolRisks(): Record<string, ToolRisk> {
   for (const tool of [
     ...getLocalFileTools(),
     ...createBoxTools(),
+    ...godotRuntimeTools(),
+    ...godotEditorTools(),
+    ...godotAssetTools(),
+    createProjectListTool() as unknown as UnrealAgentTool<never>,
     ...aigcTools(),
     ...(taskVideoTools() as unknown as UnrealAgentTool<never>[]),
     ...mcpTools
@@ -458,6 +469,14 @@ export function buildAllTools(deps: BuildToolsDeps = {}): UnrealAgentTool<never>
   // 再包一层 adaptV2Tool 会因为找不到 inputSchema 而直接抛
   const all = [
     ...adapted,
+    // 检查、试玩、截图：起一个无头 Godot，编辑器没开也能用
+    ...godotRuntimeTools(),
+    // 用户开着的那个编辑器：要 GDBox Link 连着
+    ...godotEditorTools(),
+    // 精灵、瓦片、音效、循环音乐、配音：直接写成工程里能用的 Godot 资源
+    ...godotAssetTools(),
+    // 「我的项目」里登记了哪些工程（只读）；整理分组在 REGISTRATIONS 的 project_organize
+    createProjectListTool() as unknown as UnrealAgentTool<never>,
     ...aigcTools(),
     ...(taskVideoTools() as unknown as UnrealAgentTool<never>[]),
     // 无头检索：只读、不开窗口、不弹审批。和 browser_* 的分工见 builtin/web.ts

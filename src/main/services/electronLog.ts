@@ -3,9 +3,10 @@
  * 本地日志持久化（electron-log）。社区版不含任何远程上报。
  *
  * 日志文件位置：
- * - Windows: %USERPROFILE%\AppData\Roaming\UnrealAgent\logs\unreal-agent.log
- * - macOS: ~/Library/Logs/UnrealAgent/unreal-agent.log
- * - Linux: ~/.config/UnrealAgent/logs/unreal-agent.log
+ * - Windows: %APPDATA%\GDBox\logs\unreal-agent.log
+ * - macOS: ~/Library/Logs/GDBox/unreal-agent.log
+ * - Linux: ~/.config/GDBox/logs/unreal-agent.log
+ * （文件名沿用虚幻盒子的 unreal-agent.log）
  */
 import log from 'electron-log/main'
 

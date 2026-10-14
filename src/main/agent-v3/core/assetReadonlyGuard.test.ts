@@ -40,7 +40,7 @@ function isWritable(file: string): boolean {
 }
 
 function ledgerFile(): string {
-  return path.join(root, 'Saved', 'UnrealBox', 'readonly-ledger.json')
+  return path.join(root, 'Saved', 'GDBox', 'readonly-ledger.json')
 }
 
 beforeEach(() => {

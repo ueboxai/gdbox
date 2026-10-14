@@ -79,14 +79,6 @@ describe('buildSkillsSection', () => {
     expect(section).toContain('ue-material-create-pbr')
   })
 
-  it('description 里的点号工具名也要重写', () => {
-    // 清单常驻 system prompt，这里留着旧名字，模型第一眼看到的就是错的
-    const section = buildSkillsSection(skills)
-    // connect_pins 已下线，映射指向接替它的 blueprint_apply_graph
-    expect(section).toContain('blueprint_apply_graph')
-    expect(section).not.toContain('blueprint.connect_pins')
-  })
-
   it('没有技能时不产出空章节', () => {
     expect(buildSkillsSection([])).toBe('')
   })
@@ -191,32 +183,6 @@ describe('skill summaries', () => {
 })
 
 describe('load_skill', () => {
-  it('正文和附带资源都在旧工具名重写后触发加载，并保留完整正文及加载记录', async () => {
-    const loadTools = vi.fn((content: string) => ({
-      text: `整组已加载：${content.length}`,
-      details: { loadedToolNames: ['blueprint_get_graph'], loadedGroups: ['ue.blueprint'] }
-    }))
-    const wired = createSkillTools(skills, 'off', loadTools)
-    for (const [name, args] of [
-      ['load_skill', { name: 'ue-blueprint-graph-wiring' }],
-      [
-        'read_skill_resource',
-        { name: 'ue-blueprint-graph-wiring', relativePath: 'references/notes.md' }
-      ]
-    ] as const) {
-      const result = await wired.find((tool) => tool.name === name)!.execute('load', args)
-      // 加载记录跟着 details 落盘，下一条消息靠它把工具装回来（toolSearch.ts 的 restore）
-      expect(result.details).toMatchObject({
-        toolSearch: { loadedToolNames: ['blueprint_get_graph'], loadedGroups: ['ue.blueprint'] }
-      })
-      expect(JSON.stringify(result.content)).toContain('拿')
-    }
-    expect(loadTools).toHaveBeenCalledTimes(2)
-    for (const call of loadTools.mock.calls) {
-      expect(call[0]).toContain('blueprint_get_graph')
-      expect(call[0]).not.toContain('blueprint.get_graph')
-    }
-  })
 
   it('返回 SKILL.md 正文', async () => {
     const result = await loadSkillTool.execute('c1', { name: 'ue-blueprint-graph-wiring' })
@@ -226,20 +192,8 @@ describe('load_skill', () => {
     expect(text).toContain('拿真实 node_id')
   })
 
-  // 53 个内置 skill 里有 13 个引用点号工具名。不重写的话，模型会照着
-  // 技能的指示去调 blueprint.get_graph，而注册的是 blueprint_get_graph。
-  it('正文里的点号工具名全部重写成下划线', async () => {
-    const result = await loadSkillTool.execute('c1', { name: 'ue-blueprint-graph-wiring' })
-    const text = (result.content[0] as { text: string }).text
-
-    expect(text).toContain('blueprint_get_graph')
-    expect(text).toContain('blueprint_apply_graph')
-    expect(text).toContain('blueprint_compile')
-    expect(text).not.toMatch(/blueprint\.[a-z_]+/)
-  })
-
   /**
-   * skill 不是写完就定死的。`ue-skill-creator` 早就写了「更新」该怎么做，
+   * skill 不是写完就定死的。`skill-creator` 早就写了「更新」该怎么做，
    * 缺的是有人叫它去做 —— 没有这句话，agent 照着一条过时的 skill 撞了墙，
    * 会绕过去接着干，那条 skill 继续错着等下一个人。
    */
@@ -255,7 +209,7 @@ describe('load_skill', () => {
     expect(text).toContain('not a reason')
   })
 
-  // 关档时 ue-skill-creator 根本不在清单里，叫模型去改它只会让它手搓一个改法
+  // 关档时 skill-creator 根本不在清单里，叫模型去改它只会让它手搓一个改法
   it('沉淀关档时不追那句话', async () => {
     const offTool = createSkillTools(skills, 'off').find((t) => t.name === 'load_skill')!
     const result = await offTool.execute('c1', { name: 'ue-blueprint-graph-wiring' })
@@ -282,16 +236,6 @@ describe('load_skill', () => {
 })
 
 describe('read_skill_resource', () => {
-  it('读取 references/ 下的文件并重写工具名', async () => {
-    const result = await readResourceTool.execute('c1', {
-      name: 'ue-blueprint-graph-wiring',
-      relativePath: 'references/notes.md'
-    })
-    const text = (result.content[0] as { text: string }).text
-
-    expect(text).toContain('blueprint_get_graph')
-    expect(text).not.toContain('blueprint.get_graph')
-  })
 
   it('路径穿越被拒', async () => {
     await expect(
@@ -366,11 +310,11 @@ describe('内置 skill 的工具名重写覆盖度', () => {
  * 技能沉淀的三档开关。
  *
  * 关档必须是**真的看不到** —— 留在清单里再叫模型别用，既照付 token
- * 又时灵时不灵；自动档必须**明说覆盖** —— `ue-skill-creator` 正文写死了
+ * 又时灵时不灵；自动档必须**明说覆盖** —— `skill-creator` 正文写死了
  * 「先提案，后写入」，不覆盖的话用户选了自动档等于没选。
  */
 describe('技能沉淀档位', () => {
-  it('关档时 ue-skill-creator 整条从清单里消失', () => {
+  it('关档时 skill-creator 整条从清单里消失', () => {
     const trimmed = applySkillLearningMode(skills, 'off')
     expect(trimmed.some((s) => s.name === SKILL_CREATOR_NAME)).toBe(false)
     // 只删这一条，别的 skill 一个不动
@@ -397,7 +341,7 @@ describe('技能沉淀档位', () => {
   })
 
   // 这台机器上没装那个 skill 时，说了也没用，反而占 token
-  it('清单里没有 ue-skill-creator 时整段不出现', () => {
+  it('清单里没有 skill-creator 时整段不出现', () => {
     const without = skills.filter((s) => s.name !== SKILL_CREATOR_NAME)
     expect(buildSkillLearningSection(without, 'auto')).toBe('')
   })
@@ -525,7 +469,7 @@ describe('技能正文的读与写', () => {
 })
 
 /**
- * 工程自带的 skill（`<工程根>/.uebox/skills`）。
+ * 工程自带的 skill（`<工程根>/.gdbox/skills`）。
  *
  * 那次数字人动作导入：工程 `Scripts/` 里现成的导入脚本 agent 从没看见过 ——
  * 跨工程的目录放不下只属于一个工程的做法，所以工程自己得有一层。
@@ -533,7 +477,7 @@ describe('技能正文的读与写', () => {
 describe('工程自带的 skill', () => {
   const projectRoot = join(root, 'MyProject')
   const projectSkill = (name: string, description: string): void => {
-    const dir = join(projectRoot, '.uebox', 'skills', name)
+    const dir = join(projectRoot, '.gdbox', 'skills', name)
     mkdirSync(dir, { recursive: true })
     writeFileSync(
       join(dir, 'SKILL.md'),

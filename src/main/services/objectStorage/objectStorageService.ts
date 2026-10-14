@@ -535,7 +535,7 @@ export async function testObjectStorage(input: ObjectStorageSaveInput): Promise<
   if (config.preset === 'uebox') return planStorage.testPlanStorage()
   try {
     const target = await targetFor(config, secretAccessKey)
-    const key = `${config.prefix}.uebox-connection-test-${Date.now()}.txt`
+    const key = `${config.prefix}.gdbox-connection-test-${Date.now()}.txt`
     const body = Buffer.from('uebox object storage connection test')
     await putObjectBytes(target, key, body, 'text/plain')
     try {

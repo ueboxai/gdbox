@@ -15,13 +15,10 @@
  *
  * ## 为什么必须自己定排除规则
  *
- * 通用 glob 工具不认识虚幻工程的目录约定。`DerivedDataCache/`、
- * `Intermediate/`、`Binaries/`、`Saved/` 装的全是引擎生成物 ——
- * 编译中间产物、着色器缓存、历年日志和自动保存。用户搜的从来不是它们。
- *
- * 体量差别很大：这台机器上的测试工程（几乎是空的）`Intermediate/` 就有
- * 2.4GB / 138 个文件，文件数从 413 降到 98；真实生产工程里这几个目录
- * 是几十 GB 起步的量级，而且随构建次数不断长。
+ * 通用 glob 工具不认识 Godot 工程的目录约定。`.godot/`（Godot 4）和
+ * `.import/`（Godot 3）是编辑器的导入缓存：每张贴图、每个模型都在里面另存一份
+ * 转换后的副本，文件数和体量都随素材线性涨；导出目录里是打好的包。
+ * 用户搜的从来不是它们，而且搜到了也只会把缓存当成真文件去改。
  */
 
 import { readFile, stat } from 'fs/promises'
@@ -36,19 +33,19 @@ import { assertPathAllowed } from './pathBoundary'
 /**
  * 默认跳过的目录。
  *
- * 前四个是虚幻工程的生成物（缓存、中间产物、编译输出、日志与自动保存），
+ * 前几个是 Godot 工程的生成物（导入缓存、常见的导出 / 构建目录），
  * 后面是通用的版本控制与包管理目录。这些目录的共同点：内容是机器生成的，
  * 平时搜的不是它们，但体量能大到把整次搜索拖垮。
  *
- * 但排查问题时要找的恰恰在这里：`Saved/Logs` 的编辑器日志、`Saved/Crashes` 的崩溃
- * 报告、`Intermediate` 里 UHT 生成的头文件。所以给一个 `include_ignored` 开关，
- * 调用方明确要了才进去 —— 默认仍然跳过。
+ * 偶尔也要进去看（查导出产物、查导入缓存是否生成），所以给一个 `include_ignored`
+ * 开关，调用方明确要了才进去 —— 默认仍然跳过。
  */
 const ALWAYS_IGNORE = [
-  '**/DerivedDataCache/**',
-  '**/Intermediate/**',
-  '**/Binaries/**',
-  '**/Saved/**',
+  '**/.godot/**',
+  '**/.import/**',
+  '**/build/**',
+  '**/export/**',
+  '**/exports/**',
   '**/.git/**',
   '**/node_modules/**'
 ]
@@ -62,8 +59,8 @@ const MAX_MATCHES_LIMIT = 1000
 /**
  * 单个文件超过这个大小就不搜内容。
  *
- * 原先是 2 MB，挡掉的正是排查时最该搜的东西：长一点的编辑器会话，`Saved/Logs` 里的
- * 日志轻松过 2 MB。32 MB 整个读进内存跑正则还撑得住；再大的多半是数据转储。
+ * 原先是 2 MB，挡掉的正是排查时最该搜的东西：长一点的编辑器会话，日志
+ * 轻松过 2 MB。32 MB 整个读进内存跑正则还撑得住；再大的多半是数据转储。
  */
 const MAX_SEARCHABLE_BYTES = 32 * 1024 * 1024
 /** 命中行超长时截断，避免一行压缩过的 JSON 就占满上下文 */
@@ -73,12 +70,12 @@ const findInput = z.object({
   path: z.string().describe('起始目录的绝对路径，如 "I:/MyProject" 或 "D:/素材"'),
   pattern: z
     .string()
-    .describe('glob 模式，相对起始目录。如 "**/*.fbx"、"**/SKILL.md"、"Content/**/*.uasset"'),
+    .describe('glob 模式，相对起始目录。如 "**/*.png"、"**/SKILL.md"、"scenes/**/*.tscn"'),
   limit: z.number().optional().describe(`默认 ${MAX_FILES}，最多 ${MAX_FILES_LIMIT}`),
   include_ignored: z
     .boolean()
     .optional()
-    .describe('也搜默认跳过的目录（Saved/Logs、Saved/Crashes 等）')
+    .describe('也搜默认跳过的目录（.godot/、导出目录等）')
 })
 
 const grepInput = z.object({
@@ -87,7 +84,7 @@ const grepInput = z.object({
   glob: z
     .string()
     .optional()
-    .describe('可选，只在匹配这个 glob 的文件里搜，如 "**/*.ini"。不给则搜所有文本文件'),
+    .describe('可选，只在匹配这个 glob 的文件里搜，如 "**/*.gd"。不给则搜所有文本文件'),
   ignoreCase: z.boolean().optional().describe('可选，忽略大小写，默认 false'),
   limit: z.number().optional().describe(`默认 ${MAX_MATCHES}，最多 ${MAX_MATCHES_LIMIT}`),
   include_ignored: z.boolean().optional().describe('同 find_local_files')
@@ -98,7 +95,7 @@ const grepInput = z.object({
  *
  * 从这里起扫是个陷阱：`**` 会走遍整块盘，几十万个文件、几分钟起步，
  * 而且**这几分钟里用户按停止是没用的**——工具还在 fs 里转，模型收不到中断。
- * 真机上模型为了找一个 `.uproject` 连着扫了 `C:/`、`C:/Users`、`D:/`，
+ * 真机上模型为了找一个工程文件连着扫了 `C:/`、`C:/Users`、`D:/`，
  * 用户只能干看着。与其扫完再说，不如当场拒绝，让它去问路径。
  */
 function isFilesystemRoot(target: string): boolean {
@@ -145,11 +142,11 @@ function createFindTool(): UnrealAgentTool<never> {
     risk: 'safe',
     description:
       '按文件名模式在用户电脑上找文件（glob）。\n\n' +
-      '【什么时候用】「D:/素材 底下所有 fbx 在哪」「这个工程里有哪些 ini 配置」——' +
+      '【什么时候用】「D:/素材 底下所有 png 在哪」「这个工程里有哪些场景」——' +
       '需要跨多层目录找文件时用这个，不要用 list_local_dir 一层层翻。\n' +
-      '【默认跳过】DerivedDataCache、Intermediate、Binaries、Saved、.git、node_modules；' +
-      '找日志、崩溃报告传 include_ignored。\n' +
-      '【模式示例】"**/*.fbx"、"Content/**/*.uasset"、"**/Default*.ini"\n' +
+      '【默认跳过】.godot、.import、build、export、exports、.git、node_modules；' +
+      '确实要搜这些目录时传 include_ignored。\n' +
+      '【模式示例】"**/project.godot"、"**/*.tscn"、"scripts/**/*.gd"\n' +
       '【找素材不要用这个】用户导入保管库的素材，落盘是 `assetData/<时间戳>/` 这样的目录，' +
       '文件名早就不是原来那个了 —— 按名字去 glob 一定搜不到，而库里明明有。' +
       '按名字/标签/文件夹找素材一律用 search_assets（查的是数据库，还能跨库）。\n' +
@@ -189,7 +186,7 @@ function createFindTool(): UnrealAgentTool<never> {
               '如果确定文件存在，检查一下模式：跨目录要用 ** 开头（如 "**/*.fbx"），' +
               (args.include_ignored
                 ? ''
-                : '而且这几个目录默认跳过：DerivedDataCache、Intermediate、Binaries、Saved' +
+                : '而且这几个目录默认跳过：.godot、.import、build、export、exports' +
                   '（要搜它们传 include_ignored: true）。')
           }
         }
@@ -250,7 +247,7 @@ async function grepFile(file: string, regex: RegExp, remaining: number): Promise
     if (info.size > MAX_SEARCHABLE_BYTES) return []
 
     const content = await readFile(file, 'utf8')
-    // 有 NUL 字节基本可以断定是二进制。.uasset / .fbx 这类搜文本没有意义，
+    // 有 NUL 字节基本可以断定是二进制。.scn / .glb 这类搜文本没有意义，
     // 而且内容会带一堆乱码进上下文
     if (content.includes('\u0000')) return []
 
@@ -281,11 +278,11 @@ function createGrepTool(): UnrealAgentTool<never> {
     risk: 'safe',
     description:
       '在用户电脑上的文件内容里搜正则。\n\n' +
-      '【什么时候用】「哪个配置文件里写了 Nanite」「这批脚本里谁调用了某个函数」——' +
+      '【什么时候用】「哪个场景引用了 player.gd」「这批脚本里谁连了某个信号」——' +
       '需要按内容而不是文件名找东西时用。\n' +
-      '【只搜文本】含 NUL 字节的文件（.uasset、.fbx 等二进制）自动跳过，' +
-      '要查虚幻资产请用 ue_content_search / ue_content_describe。\n' +
-      '【先收窄】用 glob 限定范围（如 "**/*.ini"）。',
+      '【只搜文本】含 NUL 字节的文件（.scn、.res、.glb 等二进制）自动跳过。' +
+      'Godot 的 .tscn / .tres / .gd / project.godot 都是文本，可以直接搜。\n' +
+      '【先收窄】用 glob 限定范围（如 "**/*.gd"）。',
     input: grepInput,
     execute: async (args, ctx) => {
       const limit = Math.max(1, Math.min(args.limit ?? MAX_MATCHES, MAX_MATCHES_LIMIT))

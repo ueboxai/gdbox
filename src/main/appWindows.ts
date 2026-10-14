@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron'
 
 /**
- * 「属于 Unreal Box 自己的窗口」。
+ * 「属于 GDBox 自己的窗口」。
  *
  * 在 Agent 浏览器出现之前，主进程里到处写着 `BrowserWindow.getAllWindows()`：
  * 有的拿第一个未销毁的当主窗口，有的按尺寸猜，有的直接给所有窗口广播 IPC。

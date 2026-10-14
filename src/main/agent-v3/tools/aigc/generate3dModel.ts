@@ -5,7 +5,7 @@
  *
  * 三个都是「用用户自己配的 Provider 直连厂商」，但下游差别很大：
  * 图和视频是**给人看的**，3D 是**要进引擎的**。所以这个工具比另外两个多做一步 ——
- * 把网格和贴图一起落盘，并把网格路径单独回出来，好让 `ue_content_import` 接得上。
+ * 把网格和贴图一起落盘，并把网格路径单独回出来 —— 复制进 Godot 工程的就是这一个文件。
  *
  * ## 三处刻意的设计
  *
@@ -50,8 +50,8 @@ const NAME_MAX_LENGTH = 40
  * 哪些扩展名算「网格本体」。
  *
  * 一次生成回来的是一组文件：网格 + 若干贴图 + 一张预览渲染图。
- * 下游（ue_content_import、对话窗口的预览器）要的是网格那一个，
- * 分不出来的话会把一张 png 当模型导进引擎。
+ * 下游（复制进工程、对话窗口的预览器）要的是网格那一个，
+ * 分不出来的话会把一张 png 当模型放进工程。
  */
 const MESH_EXTENSION = /\.(glb|gltf|fbx|obj|usdz|stl)$/i
 
@@ -80,7 +80,7 @@ const Generate3dModelInput = z.object({
     .array(z.string())
     .optional()
     .describe(
-      '参考图（图生 3D，比纯文字稳得多）。收**本地绝对路径**（ue_screenshot 的 path 直接可用）、' +
+      '参考图（图生 3D，比纯文字稳得多）。收**本地绝对路径**（godot_screenshot 存下的截图路径直接可用）、' +
         'http(s) 直链、data URI 三种 —— 本地图会自动先传给厂商换成引用。' +
         '**给多张时整组都会用上**，按 `正面 → 左 → 背 → 右` 的顺序放 —— 顺序错了' +
         '不会报错，只是出一个左右颠倒的模型。**只给两张时它们就是「正面 + 左」**，' +
@@ -106,7 +106,7 @@ const Generate3dModelInput = z.object({
     .enum(['glb', 'gltf', 'fbx', 'obj', 'usdz', 'stl'])
     .optional()
     .describe(
-      '输出格式，默认 glb（单文件自带材质，虚幻侧导入器认它）。' +
+      '输出格式，默认 glb（单文件自带材质，是 Godot 首选的 3D 格式，放进工程就能用）。' +
         '选了厂商给不了的组合会明确报错，不会静默给你另一种'
     ),
   bounding_box: z
@@ -239,7 +239,7 @@ const TRIPO_ONLY_KEYS = {
 export interface Generated3dModelDetails extends Record<string, unknown> {
   success: boolean
   model: string
-  /** 网格本体的绝对路径。对话窗口的预览器和 ue_content_import 都用它 */
+  /** 网格本体的绝对路径。对话窗口的预览器用它，复制进工程的也是它 */
   model_path?: string
   /** 一起下载下来的贴图等附属文件 */
   extra_paths: string[]
@@ -447,8 +447,8 @@ Tripo、Meshy 三家，各家支持的参数不同，选了对方没有的会明
 
 判断得对不对都不是重点，重点是**花的是用户的钱，选择权归他**。
 
-【出完之后】网格存在素材库的 AIGC/模型 下，返回值 \`model_path\` 是绝对路径，
-交给 \`ue_content_import\` 就能进工程。
+【出完之后】网格存在素材库的 AIGC/模型 下，返回值 \`model_path\` 是绝对路径。
+要进 Godot 工程，把它交给 import_to_project（如放到 \`res://models/\`）。
 ${tripo ? TRIPO_DESCRIPTION_NOTE : ''}${planOptions ? planDescriptionNote(planOptions) : ''}
 `,
     input,
@@ -484,7 +484,7 @@ ${tripo ? TRIPO_DESCRIPTION_NOTE : ''}${planOptions ? planDescriptionNote(planOp
        * `toBytes` 认不出路径，只能当裸 base64 解 —— 而路径里的字母正好都在 base64
        * 字母表里，于是解出几个垃圾字节、一句报错都没有、照常提交。用户付了全款，
        * 换回一个凭空捏造的模型。而这条路是**主路**：skill 教的四视图流程、
-       * 用户在对话里贴的附件、`ue_screenshot` 拍的白盒，给的全是本地路径。
+       * 用户在对话里贴的附件、`godot_screenshot` 拍的白盒，给的全是本地路径。
        */
       const references = await loadReferenceImages(sources, MODEL3D_REFERENCE_BUDGET)
 
@@ -587,7 +587,7 @@ async function saveAndReport(
   const lines = [`用 ${modelLabel} 完成（任务号 ${token}）。`]
   if (meshPaths[0]) {
     lines.push(`网格已存进素材库 AIGC/模型：${meshPaths[0]}`)
-    lines.push('用户可以在对话窗口里转着看。要进工程就把这个路径交给 ue_content_import。')
+    lines.push('用户可以在对话窗口里转着看。要进 Godot 工程就把这个文件交给 import_to_project。')
   } else {
     lines.push(
       '没有拿到网格文件。厂商返回的地址是：' +

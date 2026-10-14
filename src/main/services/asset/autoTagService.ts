@@ -154,11 +154,11 @@ export function autoTagPluginVersion(
 
     // 添加引擎版本标签（如果有）
     if (pluginVersion.engineVersion) {
-      // 简化引擎版本：5.3.0-0+++UE5+Release-5.3 -> UE5.3
+      // 简化引擎版本：4.3.stable.official.77dcf97d8 -> Godot 4.3
       let engineTag = pluginVersion.engineVersion
       const versionMatch = engineTag.match(/(\d+\.\d+)/)
       if (versionMatch) {
-        engineTag = `UE${versionMatch[1]}`
+        engineTag = `Godot ${versionMatch[1]}`
       }
       try {
         const tagId = ensureTag(engineTag, '#3B82F6') // 蓝色，表示引擎版本

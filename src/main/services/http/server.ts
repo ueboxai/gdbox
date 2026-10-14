@@ -103,7 +103,7 @@ export class HttpServer {
    * 刚退出的上一个实例会让端口停留在 TIME_WAIT / 尚未释放，此时 listen 拿到
    * EADDRINUSE。而 `ServiceManager.start()` 在 HTTP 失败时会 `stop()` **所有**
    * 服务并抛出 —— 结果是应用窗口起来了，但 WebSocket 服务也一起没了，
-   * 虚幻引擎永远连不上，界面上还没有任何提示。
+   * Godot 编辑器永远连不上，界面上还没有任何提示。
    *
    * 用户「关掉再马上打开」就会踩到。等几秒重试一次即可，比让整个应用瘫掉好。
    */
@@ -895,11 +895,11 @@ export class HttpServer {
 
       // 目标工程要能从外面指定。
       //
-      // UE 工具的目标连接来自 AsyncLocalStorage（`projectTargetContext`），
+      // 编辑器工具的目标连接来自 AsyncLocalStorage（`projectTargetContext`），
       // 由会话的工程作用域设进去，**不是工具参数**。这个端点原来没有设过，
       // 于是同时连着多个工程时 `pickDefaultConnectionId` 拒绝猜测，一律报
       // 「没有可用的客户端连接」。开发机上同时开着两三个编辑器是常态，
-      // 那时这个端点对所有 UE 工具都是废的。
+      // 那时这个端点对所有编辑器工具都是废的。
       //
       // 更要紧的是**不指定就没法保证写到哪个工程**。评测要在一次性副本上跑
       // 写操作，用户的真实工程往往就在旁边连着 —— 猜错一次就是不可还原的损失。
@@ -1358,7 +1358,7 @@ export class HttpServer {
       if (!this.isLoopbackRequest(req)) {
         res.status(403).json({
           success: false,
-          error: 'Debug UE command endpoint is restricted to local requests'
+          error: 'Debug editor command endpoint is restricted to local requests'
         })
         return
       }

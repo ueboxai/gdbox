@@ -1,6 +1,8 @@
 /**
  * 内容处理器
- * 处理来自 Unreal Engine 的内容相关事件（如导入文件夹）
+ * 处理来自编辑器插件的内容相关事件（如导入文件夹）。
+ * GDBox Link 在 Godot 文件系统面板的右键菜单里发 `content.import_folder`；
+ * 带 `asset_metadata` 的 `content.import_assets` 是虚幻盒子插件的格式，Godot 插件不发。
  */
 import { MessageRouter } from '../router'
 import type { ReplySender } from '../replySender'
@@ -43,7 +45,7 @@ interface ImportFolderPayload {
 function trimEngineVersion(version: string): string {
   if (!version) return 'Unknown'
   // 提取 Major.Minor 并补 .0（如 "5.3.2-xxx" -> "5.3.0"）
-  // UE 的 Patch 号是内部 hotfix 编号，不对应用户认知的引擎版本
+  // 按大版本归档：同一个 4.3 的 4.3.1、4.3.2 放进同一个文件夹
   const match = version.match(/^(\d+\.\d+)/)
   if (match) return match[1] + '.0'
   const fallbackMatch = version.match(/(\d+\.\d+)/)
@@ -86,7 +88,7 @@ export class ContentHandler {
   /**
    * 正在进行中的导入（键是「项目名 + 这批路径」）
    *
-   * 虚幻那边点「导入到盒子」是发事件，不等回包，界面上没有任何反馈 ——
+   * 编辑器那边点「添加到素材库」是发事件，不等回包，界面上没有任何反馈 ——
    * 用户等不到动静就会连点几次。同一批资产重复导一遍纯属白干，这里直接挡掉。
    */
   private readonly inFlightImports = new Set<string>()
@@ -190,12 +192,12 @@ export class ContentHandler {
     // 单文件批量导入会先返回、后台接着跑，那条分支自己负责释放
     let releaseOnReturn = true
 
-    // 这一趟导入在界面上的身份。用户从虚幻点进来，界面这边没有任何发起动作，
+    // 这一趟导入在界面上的身份。用户从编辑器点进来，界面这边没有任何发起动作，
     // 所以进度挂件的任务得由主进程造出来 —— 造完之后走的就是拖拽导入那套事件，
     // 挂件、百分比、完成后刷新全都是现成的。
     const uiTaskId = `ue-import-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
-    // 🔔 立刻告诉界面「开始导入了」——虚幻那边不显示任何东西，
+    // 🔔 立刻告诉界面「开始导入了」——编辑器那边不显示任何东西，
     // 用户唯一能看到进展的地方就是盒子
     this.broadcast('asset:unrealImportStarted', {
       taskId: uiTaskId,
@@ -242,8 +244,8 @@ export class ContentHandler {
         img: ''
       })
 
-      // 创建版本文件夹: ALL/UE {version}
-      const versionFolderName = `UE${trimmedVersion}`
+      // 创建版本文件夹: ALL/Godot {version}（folderKey 沿用虚幻盒子的 ue_ 前缀，只是内部键）
+      const versionFolderName = `Godot ${trimmedVersion.replace(/\.0$/, '')}`
       const versionFolderKey = `ue_${trimmedVersion.replace(/\./g, '_')}`
       safeCreateFolder({
         folderKey: versionFolderKey,
@@ -253,7 +255,7 @@ export class ContentHandler {
         img: ''
       })
 
-      // 创建项目文件夹: ALL/UE {version}/{project_name}
+      // 创建项目文件夹: ALL/Godot {version}/{project_name}
       const projectFolderKey = `proj_${projectName.replace(/[^a-zA-Z0-9_]/g, '_')}_${trimmedVersion.replace(/\./g, '_')}`
       safeCreateFolder({
         folderKey: projectFolderKey,
@@ -645,7 +647,7 @@ export class ContentHandler {
    * @param count - 导入数量
    * @param error - 错误信息（可选）
    * @param method - 方法名
-   * @param importedPath - 导入到的路径，例如 "默认保管库/ALL/UE5.0/UALinkDev"
+   * @param importedPath - 导入到的路径，例如 "默认保管库/ALL/Godot 4.3/MyGame"
    */
   private sendResponse(
     connectionId: string,

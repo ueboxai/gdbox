@@ -304,7 +304,7 @@ const DENY_MESSAGE =
 
 // 配置能读不能写。说清楚为什么、该找谁改，不然模型会换个写法再写一遍
 const DENY_CONFIG_WRITE_MESSAGE =
-  '这是虚幻盒子自己的配置（权限、模型、MCP、插件），可以读，不允许直接改写 —— ' +
+  '这是 GDBox 自己的配置（权限、模型、MCP、插件），可以读，不允许直接改写 —— ' +
   '改了等于绕过设置页给 agent 换权限。需要调整请告诉用户去设置页里改。'
 
 // 命令被挡时不能用上面那句：那句在说「换个目录」，而这里的问题是整条命令
@@ -315,7 +315,7 @@ const DENY_COMMAND_MESSAGE =
   '不要改写路径再试（换引号、换成 $HOME、拆成多条都一样会被挡）。' +
   '确实需要其中的信息，请让用户自己查看后告诉你。'
 
-// 脚本走的是 UE 里的 Python，说「命令」对不上，模型会以为是别的工具被挡了
+// 脚本跑在引擎进程里，说「命令」对不上，模型会以为是别的工具被挡了
 const DENY_SCRIPT_MESSAGE =
   '这段脚本里出现了凭据、密钥或浏览器数据的存放位置，已拒绝执行。' +
   '不要改写路径再试（os.path.expanduser、字符串拼接、换个变量名都一样会被挡）。' +
@@ -344,12 +344,8 @@ export function assertPathAllowed(path: string, mode: AccessMode = 'read'): stri
  *   2. **路径里不可能出现的字符一律变成 `/`，再把连续的 `/` 压成一个。**
  *      空格、引号、管道、分号、括号、反引号全算。这一步让引号插在路径中间时
  *      不影响比对（`~/".ssh"/id_rsa`）。
- *
- * 导出是给 `projectCreationGuard` 用的：那边管的是另一回事（建工程该走专用工具），
- * 但「在一条命令里认出某个路径」这一步的规矩必须一模一样 —— 各写一份的结果
- * 一定是其中一份漏掉引号或反斜杠那种写法。
  */
-export function normalizeCommand(command: string): string {
+function normalizeCommand(command: string): string {
   return command
     .replace(/\\/g, '/')
     .toLowerCase()
@@ -460,10 +456,10 @@ export function assertCommandAllowed(command: string): string | undefined {
 /**
  * 同上，用于在引擎里执行的 Python 脚本。
  *
- * 为什么这条也要管：`ue_run_python_script` 跑在 UE 进程里，但 UE 的 Python
- * 有完整的 `open()` —— `open(os.path.expanduser('~/.ssh/id_rsa')).read()`
- * 一样能把私钥读出来回给模型。这道边界只要漏掉一个出口就不成其为边界，
- * 而这是除 shell 之外最宽的那个出口。
+ * 虚幻盒子时期给 `ue_run_python_script` 用：引擎里的 Python 有完整的 `open()`，
+ * `open(os.path.expanduser('~/.ssh/id_rsa')).read()` 一样能把私钥读出来回给模型。
+ * GDBox 目前没有在引擎里执行任意脚本的工具；以后加（比如在编辑器里跑 GDScript），
+ * 必须接上这一条 —— 这道边界只要漏掉一个出口就不成其为边界。
  */
 export function assertScriptAllowed(script: string): string | undefined {
   return mentionsDeniedLocation(script, 'script') ? DENY_SCRIPT_MESSAGE : undefined

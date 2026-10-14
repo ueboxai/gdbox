@@ -6,7 +6,6 @@ import { registerBaiduyunIPC } from './baiduyun'
 import { registerWebdavIPC } from './webdav'
 import { registerShellIPC } from './shell'
 import { registerPathIPC } from './path'
-import { registerAssistantIPC } from './assistant'
 import { registerAgentV3IPC } from './agentV3'
 import { registerAgentBrowserIPC } from './agentBrowser'
 import { registerUpdaterIPC } from './updater'
@@ -40,7 +39,6 @@ import { registerDiagnosticsIPC } from './diagnostics'
 // 导入assetImport以注册其IPC处理器
 import './assetImport'
 import './projectArchiveUpload'
-import './projectTemplate'
 import { registerContextMenuIPC } from './contextMenu'
 
 /**
@@ -70,8 +68,6 @@ export function registerAllIPC(setAppIconTheme: SetAppIconTheme): void {
 
   // 注册路径相关IPC
   registerPathIPC()
-  // 注册 AI 助手相关IPC
-  registerAssistantIPC()
   // 注册 Agent V3 相关IPC（pi 内核，V2 已下线）
   registerAgentV3IPC()
   // Agent 浏览器的界面通道（嵌入模式的面板位置 / 关闭）

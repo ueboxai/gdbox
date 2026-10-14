@@ -224,7 +224,7 @@ class MiniChatWindowManager {
       fullscreenable: false,
       skipTaskbar: false,
       alwaysOnTop: true,
-      title: 'Unreal Box AI',
+      title: 'GDBox AI',
       icon: join(__dirname, '../../resources/icon.ico'),
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),

@@ -489,8 +489,8 @@ export async function runBlenderSetup(
 function onlineAccessNote(installerOutput: string): string {
   if (!/BLMCP_ONLINE=False/i.test(installerOutput)) return ''
   return (
-    '（注意：Blender 的「允许在线访问」处于关闭状态。由虚幻盒子启动的 Blender 不受影响，' +
-    '但手动启动的 Blender 不会开启 MCP 桥。请通过虚幻盒子启动 Blender，' +
+    '（注意：Blender 的「允许在线访问」处于关闭状态。由 GDBox 启动的 Blender 不受影响，' +
+    '但手动启动的 Blender 不会开启 MCP 桥。请通过 GDBox 启动 Blender，' +
     '或在 Blender 的偏好设置 → 系统 → 网络中勾选该选项。）'
   )
 }
@@ -542,7 +542,7 @@ async function clearPartialInstall(installRoot: string): Promise<string | undefi
   if (unexpected.length > 0) {
     return (
       `${installRoot} 中存在未完成的安装，且包含无法识别的文件` +
-      `（${unexpected.slice(0, 3).join('、')}），虚幻盒子未做改动。` +
+      `（${unexpected.slice(0, 3).join('、')}），GDBox 未做改动。` +
       '请确认该目录中没有需要保留的文件，删除该目录后重试。'
     )
   }

@@ -154,7 +154,7 @@ describe('二进制挡在读取之前', () => {
     ['D:/素材/clip.mp4', 'analyze_video'],
     ['D:/录音/voice.m4a', 'analyze_video'],
     ['D:/需求/案子.pdf', 'read_document'],
-    ['D:/工程/Mesh.uasset', 'ue_content_describe']
+    ['D:/工程/level.scn', 'editor_scene_tree']
   ])('%s 指向 %s', (path, tool) => {
     const message = rejectOpaqueBinary(path)
     expect(message).toContain(tool)

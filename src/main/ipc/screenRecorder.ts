@@ -24,7 +24,7 @@ const QUICK_WINDOW_COLLAPSED_WIDTH = 56
 const QUICK_WINDOW_COLLAPSED_HEIGHT = 160
 
 const getRecordingsDir = (): string => {
-  return path.join(app.getPath('videos'), 'UnrealAgent', 'Recordings')
+  return path.join(app.getPath('videos'), 'GDBox', 'Recordings')
 }
 
 const ensureRecordingsDir = async (): Promise<string> => {

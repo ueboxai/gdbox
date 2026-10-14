@@ -14,7 +14,7 @@ description: Turns friction from a just-finished task into a defect report the d
 
 - **用户开口**：「抱怨一下」「刚才哪儿别扭」「这次有什么问题」→ 直接展开。
 - **自己提议**：这一趟确实卡过，在交付的最后加**一行**：
-  「这次有 3 处卡了：改控件类型没有那个取值、旋转回读只给数字、导入要分四步。
+  「这次有 3 处卡了：试玩只能看属性看不到 is_on_floor、旋转回读只给弧度、放素材要一张张拷。
   要我记下来提给开发者吗？」
 
 那一行只列标题，不展开。用户说要，才做后面的事；用户没理，就翻篇，不追问第二次。
@@ -32,7 +32,7 @@ description: Turns friction from a just-finished task into a defect report the d
   那会让工具越加越肥，而真问题被埋掉。
 
 这条判据有一个例外，必须认出来：**工具让任何模型都在盲飞**的情况。回读只给裸数据、
-没有任何语义（回一个 `Pitch: -37.5`，看不出灯是朝上还是朝下），换谁来都得猜 ——
+没有任何语义（回一个 `rotation: (0, 1.5708, 0)`，看不出模型脸朝哪），换谁来都得猜 ——
 这不是模型的问题，是真缺口。
 
 其余不记的：一次没能复现的偶发；引擎本身的行为；用户工程里的脏数据；
@@ -63,7 +63,8 @@ description: Turns friction from a just-finished task into a defect report the d
 3. 它返回了什么 —— **抄原话**，不要转述；
 4. 我最后怎么绕过去的，多花了几次往返；没绕过去就写没做成。
 
-**不要写猜的根因。** 「因为插件里没实现 XXX」这种话，除非真的读过 `plugin/` 下的源码，
+**不要写猜的根因。** 「因为 GDBox Link 插件里没实现 XXX」这种话，除非真的读过工程里
+`addons/gdbox_link/` 的源码，
 否则一律放进报告最后那节「猜测」里，并且标明没核实过。错的根因比没有根因贵：
 开发者会照着它去改，防线守在错的地方，问题还在。
 
@@ -74,13 +75,15 @@ description: Turns friction from a just-finished task into a defect report the d
 
 一次抱怨一个文件，方便用户直接拿一份去提一个 issue。
 
-1. 先 `ue_get_project_info` 拿 `projectPath`、`engineVersion`、`pluginBuild`；
-2. 写到 `<projectPath>/AgentFeedback/YYYY-MM-DD-短标题.md`，日期用系统提示词里的今天；
+1. 先确定工程：这条对话绑定的那个 Godot 工程；拿不准就 `project_list` 查，
+   顺带拿到 Godot 版本。插件版本读工程里 `addons/gdbox_link/plugin.cfg` 的 `version=`；
+2. 写到 `<工程目录>/AgentFeedback/YYYY-MM-DD-短标题.md`，日期用系统提示词里的今天
+   （Godot 不导入 `.md`，放在工程里不影响游戏）；
 3. 用 `list_local_dir` 看一眼这个目录已经有什么，重名就换标题，不要覆盖旧的；
-4. 用 `write_local_file` 写。它每次都会请求用户确认，这是正常的。
+4. 用 `write_local_file` 写。
 
-引擎没连、拿不到工程路径时，**问用户写哪儿**，不要猜一个路径。也不要往盒子自己的
-数据目录里写（`AppData/Roaming/Unreal Box` 那一层）—— 那里除了 `skills/` 和素材库全被
+这条对话没有工程、也问不出该放哪时，**问用户写哪儿**，不要猜一个路径。也不要往盒子自己的
+数据目录里写（`AppData/Roaming/GDBox` 那一层）—— 那里除了 `skills/` 和素材库全被
 挡着，会退回一句「这个位置存放的是凭据」，而那跟这件事毫无关系。
 
 文件内容照 `assets/feedback-report.md` 填。那个模板里的每一节都要有内容，
@@ -99,8 +102,8 @@ description: Turns friction from a just-finished task into a defect report the d
 
 两条 skill 都在任务结束后回头看，但看的不是一件事：
 
-- 卡点的解法是**把正确步骤写清楚**，下次照着做就不会卡 → 那是 `ue-skill-creator` 的活，
-  改 skill，不占开发者的清单。
+- 卡点的解法是**把正确步骤写清楚**，下次照着做就不会卡 → 那是沉淀或修改 skill 的活，
+  不占开发者的清单。
 - 卡点是**照着做也做不到**，得改代码才行 → 这条 skill，写反馈文件。
 
 拿不准就按这个分：如果我现在能把「下次该怎么做」讲明白，那它就不是缺陷。
@@ -108,5 +111,5 @@ description: Turns friction from a just-finished task into a defect report the d
 ## Coverage
 
 - **Verified**：无。这条 skill 刚写出来，还没在真机任务里跑过一次。
-- **Not tried**：引擎未连接时的问路径分支；同一天写第二份报告时的重名处理；
+- **Not tried**：对话没有绑定工程时的问路径分支；同一天写第二份报告时的重名处理；
   用户把目录指到工程外面的情况。

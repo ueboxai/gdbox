@@ -217,7 +217,7 @@ export const searchProjects = (db: Database.Database, keyword: string): ProjectR
  *
  * 比较前两边都过一遍 `projectComparisonKey`，不能直接拿字符串相等去查：
  * 同一个工程从不同入口进来，路径写法不一样 —— 首页点导入拿到的是
- * `I:\UE Project\X`，UE 插件上报的是 `I:/UE Project/X`。字符串比就都判成
+ * `I:\UE Project\X`，编辑器插件上报的是 `I:/UE Project/X`。字符串比就都判成
  * 「没见过」，于是一个工程在首页上出现两张卡片（实际发生过）。
  *
  * 全表拉出来在 JS 里比，是为了让「算不算同一个工程」只有一处定义：
@@ -278,7 +278,7 @@ export const canonicalizeProjectPaths = (db: Database.Database): void => {
  * 迁移：同一个工程在库里有多条记录时，合并成一条。
  *
  * 这些重复是老的判重逻辑留下的（见 `getProjectByPath`）：路径写法一变就判不出
- * 重复，于是用 UE 打开过的工程又被自动登记了一遍，首页上并排两张一样的卡片。
+ * 重复，于是用编辑器打开过的工程又被自动登记了一遍，首页上并排两张一样的卡片。
  *
  * 留最早的那一条 —— 用户先看到的就是它，排序、置顶都是围着它调的。被删的那条
  * 上面如果有留最早那条没有的封面 / 备注 / 分组，先补过来再删，免得合并完

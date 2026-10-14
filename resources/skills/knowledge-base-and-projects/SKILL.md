@@ -1,13 +1,12 @@
 ---
 name: knowledge-base-and-projects
-description: Read and add sources to the user's knowledge base, list and create Unreal projects from templates, tidy the project library into collections, import assets from the box's library into an Unreal project, and check or manage the box itself (its assistant's past conversations, stuck imports, skills, third-party MCP servers, backups). Use when the user wants researched material saved to a knowledge base, wants to recall material from the bound knowledge base, wants their projects grouped, sorted or pinned on the home screen, or wants assets moved from their library into an Unreal project, or asks about the box itself ("盒子里刚才那个对话", "导入卡住了", "关掉这个技能"). Do not use for a standalone note: notes are an internal knowledge-base source type and have no separate user-facing entrance.
+description: Read and add sources to the user's knowledge base, list the Godot projects registered in 我的项目, tidy that project list into collections and pins, bring assets from the box's library into a Godot project, and check or manage the box itself (its assistant's past conversations, stuck imports, skills, third-party MCP servers, backups). Use when the user wants researched material saved to a knowledge base, wants to recall material from the bound knowledge base, wants their projects grouped, sorted or pinned on the home screen ("按 Godot 版本把工程分个组"), wants assets from their library put into a Godot project, or asks about the box itself ("盒子里刚才那个对话", "导入卡住了", "关掉这个技能"). Do not use for a standalone note: notes are an internal knowledge-base source type and have no separate user-facing entrance.
 ---
 
 # Knowledge base and projects
 
-Verified against a live box. Only two things here need Unreal running: importing an external file
-(FBX/PNG/OBJ) and placing actors in a level. Everything else, `.uasset` import included, works with
-the project closed.
+Nothing here needs the Godot editor running. Projects are folders on disk; the box keeps a list
+of them (我的项目) and a library of assets beside them.
 
 ## Knowledge base
 
@@ -46,107 +45,81 @@ to verify it.
 
 ## Projects
 
-Split in three by how much damage they can do:
+Two tools, split by what they touch:
 
-**`project_list`** (never asks) — `list_templates`, `list_projects`.
+**`project_list`** (read-only, never asks) — every Godot project registered in 我的项目: its
+`projectKey`, name, Godot version, folder, whether the folder is still on disk, whether an editor is
+connected right now, plus the collections. Pass `keyword` to narrow by name or path.
 
-**`project_organize`** (tidies the library, touches no project files) — `group_projects`,
+**`project_organize`** (tidies the list, touches no project files) — `group_projects`,
 `ungroup_projects`, `pin_projects`, `update_collection`, `delete_collection`.
 
-**`project_manage`** (asks every time) — `create_project`, `open_project`, `import_assets`,
-`import_assets_to_scene`, `setup_level_sequence`.
+There is no tool that creates a project or opens one in the editor. When the user wants a new
+project, the folder plus a `project.godot` is a project — but ask before writing one, and tell them
+to open it from Godot (or add it to 我的项目 in the box) so it shows up on the home screen.
 
-If you call an action on the wrong one, the error names the tool that has it.
+### Tidying the project list
 
-### Tidying the project library
-
-"按虚幻版本帮我把项目分个组" is `project_organize`, one call per group:
+"按 Godot 版本帮我把项目分个组" is `project_organize`, one call per group:
 
 ```
-project_list(action: "list_projects")   → engineVersion, collection, pinned, plus collections
-project_organize(action: "group_projects", collection: "UE 5.5", projects: [...])
+project_list()                      → godotVersion per project, plus collections
+project_organize(action: "group_projects", collection: "Godot 4.3", projects: [...])
 ```
 
-Read `list_projects` first. It reports which collection each project is already in and which
-collections exist (empty ones included), so you do not re-sort projects that are already grouped
-and do not create a second collection with a name that is taken.
+Read `project_list` first. It reports which collections exist (empty ones included) and which
+projects are in them, so you do not re-sort projects that are already grouped and do not create a
+second collection with a name that is taken.
 
 `group_projects` creates the collection when it does not exist yet and fills it in the same call.
-There is no create-an-empty-collection action on purpose: the home screen only renders collections
-that contain projects, so an empty one is invisible to the user.
 
-**A project belongs to exactly one collection.** Adding it to B takes it out of A — the reply's
-`left_collection` says which one it left, and that belongs in what you tell the user.
+**A project can sit in several collections at once.** Adding it to B does not take it out of A — the
+user can group by version and by purpose side by side. To take it out of one collection, use
+`ungroup_projects` naming that collection; without a collection it leaves all of them.
 
-`delete_collection` dissolves the grouping only. Every project stays in the library; the reply says
-how many went back to ungrouped. Deleting projects is not something this tool does.
+`delete_collection` dissolves the grouping only. Every project stays in the list. Deleting projects
+is not something this tool does.
 
-Collection colours, icons and descriptions are columns in the database that no screen renders, so
-they are not exposed. If the user asks for a coloured collection, say it cannot be done rather than
-writing a field they will never see.
+Collection colours, icons and descriptions are not exposed, because no screen renders them. If the
+user asks for a coloured collection, say it cannot be done rather than pretending.
 
-### Importing from the library into a project
+A project whose folder is no longer on disk shows up as such in `project_list`; say so instead of
+reporting it as a normal project.
 
-This is the one people actually want: "把我素材库里那两把椅子导进工程".
+### Bringing library assets into a project
 
-```
-search_assets(query: "chair")        → assetKeys
-project_manage(action: "import_assets", assetKeys: [...])
-```
-
-`assetKeys` come from `search_assets` results and nowhere else — an asset name will not work and
-they cannot be guessed.
-
-**Do not open the project first.** A `.uasset` import copies files into `<project>/Content/` and
-resolves their dependencies; the engine is not involved, so the project does not have to be running.
-Name the target with `projectKey` (from `list_projects`) or `projectPath`; without either, the
-import goes to whichever project is currently open. Opening a project just to import costs the user
-a full editor launch and changes nothing about the result.
+"把我素材库里那两把椅子放进工程" is a copy, not an import call:
 
 ```
-project_manage(action: "import_assets", projectKey: "<from list_projects>", folder: "SoStylized")
+search_assets(query: "chair")       → real_path for each hit
+project_list(keyword: "MyGame")     → the project's folder
+run_shell_command: cp "<real_path>" "<project folder>/models/"
 ```
 
-Two exceptions still need the editor running. External files (FBX, PNG, OBJ — anything that is not
-`.uasset`/`.umap`) go through the engine's import API. If a batch mixes both and the project is
-closed, the `.uasset` assets still import and each external file is listed separately in `details`
-— tell the user which ones are waiting on the project being opened, do not report the batch as a
-clean success.
+Godot imports whatever lands inside the project folder — the editor does it on focus, and the next
+`godot_check` / `godot_run` does it too. Pick a folder that matches the project's existing layout
+(look with `list_local_dir` first) rather than inventing a new tree.
 
-**A whole folder goes in one call — do not enumerate it.**
-
-```
-project_manage(action: "import_assets", folder: "SoStylized")
-```
-
-`folder` takes a folder name, a full path (`/ALL/SoStylized`) or a folderKey, and includes
-subfolders unless you pass `includeSubfolders: false`. Paging a 776-asset folder through
-`search_assets` to collect keys is wasted work: the folder is the selection.
-
-At most 200 assets are imported per call. The reply's `folder_selection` says how many the folder
-holds and, when `hasMore` is true, gives `nextFolderOffset` — call again with
-`folderOffset: <that>` for the next batch. Tell the user how many batches you are running before
-you start; importing hundreds of assets is not instant.
-
-The asset lands at the path recorded in the library (its `softPath`), not somewhere you choose.
-Confirm with `ue_content_search` afterwards rather than trusting the success message; and note
-that a `.uasset` carries its own internal object name, so a file imported under a different
-filename still shows the original name in the engine. That is normal, not a failed import.
-
-`import_assets_to_scene` is the second exception: it places actors in the **currently open level**,
-so that project does have to be running. Say that plainly before doing it — the user may have a
-level open they did not expect to be modified.
+- Only Godot-usable formats belong in a Godot project (images, `wav` / `ogg` / `mp3`, `glb` /
+  `gltf` / `obj` / `fbx`, `.tscn` / `.tres`). Leave out engine-private files from other engines and
+  say which ones you skipped.
+- When the asset is itself a Godot resource with a `.import` or `.uid` file beside it, copy those
+  too.
+- Without a shell (`run_shell_command` missing) you cannot copy binaries — give the user the
+  `real_path` list and tell them to drag the files into Godot's FileSystem panel.
+- Confirm afterwards: list the target folder, and if a scene now uses the asset, run
+  `godot_check`. A copy that "succeeded" into the wrong folder is not done.
 
 ## The box itself
 
-`box_status` reads the box in one call: running Unreal editors, import tasks (including stuck ones
+`box_status` reads the box in one call: connected editors, import tasks (including stuck ones
 waiting for a decision), third-party MCP servers and whether they connect, skills and whether each is
 on, knowledge bases, backups. Pass `sections` when you only need one part.
 
 `box_sessions` reads the box assistant's own conversations — `list`, then `read` one. Use it when the
 user refers to work done in the box ("盒子里刚才让它做的那个") or you are picking up where it stopped.
-It shows what was said and which tools ran, not the result on disk: re-read the engine or library
-before you tell the user what was changed.
+It shows what was said and which tools ran, not the result on disk: re-read the project files or
+the library before you tell the user what was changed.
 
 `box_manage` changes the box: `enable_skill` / `disable_skill`, `reconnect_mcp`, `remove_mcp_server`,
 `resume_import` / `abandon_import`, `reimport_asset` / `reimport_folder`, `backup_database`. Take the

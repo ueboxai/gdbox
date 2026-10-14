@@ -157,13 +157,13 @@ export function buildSearchCriteria(params: AssetSearchParams): AssetSearchCrite
 
   // 把别名展开的结果分成「扩展名」和「资产类型」两半。
   //
-  // 判据是**原始大小写**：虚幻类型名一律是 PascalCase（StaticMesh、
-  // Texture2D、Material），文件扩展名一律小写（fbx、png、uasset）。
+  // 判据是**原始大小写**：Godot 类型名一律是 PascalCase（Texture2D、
+  // SpriteFrames、ShaderMaterial），文件扩展名一律小写（glb、png、tscn）。
   //
   // 原来这里拿 `fmt.toLowerCase()` 去测 `^\.?[a-z0-9]+$` —— 小写之后
   // `Material` 变成 `material`，**必然匹配**，于是所有类型名都被当成
   // 扩展名塞进 fileExtensions，再拿去和 `ad.fileExtension` 比，永远比不中。
-  // 后果：凡是别名里只有类型名的（材质 / 蓝图 / 特效 / 动画），
+  // 后果：凡是别名里只有类型名的（材质 / 特效 / 动画），
   // 筛选结果恒为空，然后被自动放宽兜回整个库 —— 真机上问「有哪些材质」，
   // 8 个资产一个不少地全回来了，调用方会把贴图和动画当成材质报给用户。
   const fileExtensions: string[] = []
@@ -177,8 +177,8 @@ export function buildSearchCriteria(params: AssetSearchParams): AssetSearchCrite
     }
   })
 
-  // 别名的两半是 **或** 的关系：静态网格可能是外部导入的 .fbx，
-  // 也可能是引擎里的 .uasset，用 AND 一个都命中不了
+  // 别名的两半是 **或** 的关系：一张贴图可能按扩展名（.png）认出来，
+  // 也可能只记了类型（Texture2D），用 AND 一个都命中不了
   if (fileExtensions.length > 0 || aliasAssetTypes.length > 0) {
     criteria.formatMatch = {
       ...(fileExtensions.length ? { extensions: Array.from(new Set(fileExtensions)) } : {}),
@@ -291,7 +291,7 @@ export async function searchAssets(
       !!(criteria.fileExtensions && criteria.fileExtensions.length) ||
       !!criteria.formatMatch
 
-    // 类型/格式过滤没结果时自动放宽再搜一次，让非 uasset（fbx/obj 等）
+    // 类型/格式过滤没结果时自动放宽再搜一次，让类型没认出来的文件
     // 也有机会被命中。
     //
     // **放宽了必须说出来。** 不说的话调用方拿到的是「你要的类型有 N 个」，

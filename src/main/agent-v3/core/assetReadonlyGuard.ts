@@ -43,7 +43,7 @@ import path from 'node:path'
 import { resolveExistingPackageFile } from './assetSnapshotPaths'
 
 /** 台账放 `Saved/` 底下 —— UE 约定里那是不进版本库的目录，和快照同一个根 */
-const LEDGER_RELATIVE = path.join('Saved', 'UnrealBox', 'readonly-ledger.json')
+const LEDGER_RELATIVE = path.join('Saved', 'GDBox', 'readonly-ledger.json')
 
 /** 一条台账：我们把这个文件从可写翻成了只读 */
 export interface ReadonlyLedgerEntry {

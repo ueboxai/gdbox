@@ -10,44 +10,20 @@ import { BROWSER_TOOL_NAMES } from '../toolNames'
 
 export const TOOL_SEARCH_NAME = 'search_tools'
 /*
- * 这里曾经有一个 `LOADED_TOOL_BYTES = 64_000` 的加载区上限，2026-09-17 整个删掉。
- *
- * 删它的理由是这道闸**不可能防住任何事**：已加载 + 常驻永远是全库的子集，
- * 所以工具搜索的最坏情况恰好等于全量注入 —— 也就是关掉 Beta 的现状。
- * 一个永远不会让结果比现状更差的机制，不需要一道会让任务失败的闸。
- *
- * 而它的代价是真实的。实测：材质组 + 蓝图组被这道闸拒绝时，前缀是 56,605 token，
- * **只有全量注入（123,146）的 46%** —— 我们在一个仍然省一半的地方把任务判了死刑。
- * 而"蓝图 + 内容整理""场景 + 蓝图"等六种两组组合都会撞上，其中五种带蓝图组。
- *
- * 连带删掉的还有 `deferredGroups` / `capacityBlocked` 和那条"请关闭 Beta"的提示 ——
- * 容量既然不会不够，那条路径就是死的，留着只会让人以为它还在守什么。
+ * 加载区不设容量上限：已加载 + 常驻永远是全库的子集，最坏情况恰好等于全量注入
+ * （也就是关掉 Beta 的现状），一道会让任务失败的闸防不住任何事。
  */
 
 /**
- * docs/常驻工具集选定-2026-09-17.md §3。仅在原权限过滤后仍可用时常驻。
+ * 单个常驻的工具。仅在原权限过滤后仍可用时常驻。
  *
- * 末尾三个（`ue_get_actor` / `ue_screenshot` / `ue_playtest`）是 2026-09-17 按
- * **「完全没有替代、且高频」** 这条判据补进来的，见文档 §4.2 / §4.3 ——
- * 纯按频次性价比排，这三个都在边缘甚至落选（`ue_screenshot` 0.5 pp 每千 token）。
- * 换判据的理由有两条：
- *
- * 1. 频次数据本身可疑。那 166 个会话是开发期测试记录，重心在蓝图和材质，
- *    actor / 关卡那几路被系统性压低了（文档 §5.7）。「有没有替代品」不随测试重心漂移。
- * 2. `ue_get_actor` 是 09-11 的头号混淆磁铁（22 次误伸里 10 次指向它），
- *    但那是**描述写太宽**造成的，已按文档 §6.5 改掉。藏起来不会让误用消失，
- *    只会换个形式落到别的常驻工具头上。
+ * 读写文件、搜索、验证这几类每一轮都可能用到；折进搜索的话，模型每次都要先
+ * 多走一轮才能干最基本的活。
  */
 export const RESIDENT_TOOL_NAMES = [
   'load_skill',
-  'ue_get_project_info',
-  'ue_content_search',
-  'ue_get_current_level',
-  'ue_session_health',
   'read_skill_resource',
   'project_list',
-  'list_engines',
-  'ue_get_selection',
   'read_local_file',
   'list_local_dir',
   'grep_local_files',
@@ -56,20 +32,14 @@ export const RESIDENT_TOOL_NAMES = [
   'edit_local_file',
   'web_search',
   'web_read',
-  'ue_run_python_script',
   'run_shell_command',
-  'ue_run_console_command',
-  'ue_save',
-  'ue_list_unsaved',
-  'ue_undo',
-  'ue_undo_history',
   'search_assets',
   'library_overview',
   'task',
-  // 见上面文件注释：按「没有替代品」补入，不是按频次
-  'ue_get_actor',
-  'ue_screenshot',
-  'ue_playtest'
+  'godot_check',
+  'godot_run',
+  'godot_screenshot',
+  'editor_scene_tree'
 ] as const
 
 const CORE_NAMES = new Set<string>([
@@ -82,71 +52,17 @@ const CORE_NAMES = new Set<string>([
 ])
 
 /**
- * 整组常驻的小组。2026-09-21 加。
+ * 整组常驻的工具组。
  *
- * ## 这条线是怎么算出来的
- *
- * 折叠省的是**前缀字节**，但开了 prompt cache 之后前缀字节很便宜（首轮 1.25×
- * 写入，之后每轮 0.1× 读取），而**每加载一次组都让前缀变一次 = 作废整份缓存、
- * 全价重写一遍**。把一个组常驻 vs 折叠，跑一个 N 轮的会话：
- *
- * - 常驻：`1.25·g + 0.1·g·(N−1)`，N=10 时是 `2.15·g`
- * - 折叠且用到：比常驻多付 `1.25·P₀ − 0.1·g·(t−1)` ≈ `1.25·P₀`（P₀ 是底座前缀）
- *
- * 所以折叠划算的条件是 `p · 1.25·P₀ < (1−p) · g · 2.15`，其中 p 是「这个组在一条
- * 会话里被用到」的概率。P₀ ≈ 24,000 token 时右边那个阈值是 37,500 —— 一次加载事件
- * 顶得上 **17 轮**把这个组白带在前缀里。小组根本摊不平这笔钱。
- *
- * 逐组的盈亏平衡 p（`g × 2.15 / 37500`，g 取实测字节 ÷ 3.05 换成 token）。
- * **字节数测于 2026-09-21**，用 `TOOL_SEARCH_MEASURE=1` 跑
- * `toolSearchCatalog.test.ts` 的「记录各按需工具组的体积」可以复现 ——
- * 描述改一改这些数就会漂（本表成稿当天 `ue.sequencer` 就从 9,526 漂到 10,468），
- * 所以**重算这张表之前先重测一遍**，别拿今天的字节去比去年的行：
- *
- * | 组 | 字节 | 平衡 p | 取舍 |
- * |---|---:|---:|---|
- * | `local` | 1,129 | 2.1% | 常驻 |
- * | `mcp` | 3,187 | 6.0% | **留在折叠区**，见下 |
- * | `note` | 1,219 | 2.3% | 常驻 |
- * | `ue.mesh` | 1,309 | 2.5% | 常驻 |
- * | `ue.cpp` | 3,322 | 6.2% | 常驻 |
- * | `ue.animation` | 4,158 | 7.8% | 常驻 |
- * | `library` | 4,737 | 8.9% | 常驻 |
- * | `ue.input` | 5,331 | 10.0% | 常驻 |
- * | `ue.editor` | 6,098 | 11.5% | 常驻 |
- * | `ue.system` | 8,253 | 15.5% | **留在折叠区** |
- * | `video.production` | 9,521 | 17.9% | **留在折叠区** |
- * | `ue.sequencer` | 10,468 | 19.7% | **留在折叠区** |
- *
- * 线划在 6.1 KB 和 8.3 KB 之间，不是「小于 10 KB」这种整数 —— 上面三个的平衡 p
- * 已经进了 15%~20%，而 `ue.system` 在真实会话样本里是 12%（27/223 轮）。**它们是
- * 真正的边缘，留在折叠区等数据，不是被漏掉了。**
- *
- * `mcp`（2026-09-22 加）按平衡 p 排在 `ue.cpp` 和 `library` 之间，也就是这张表的
- * 常驻那一侧，但**没有放进来**：整组常驻另有一条 30,000 字节的线
- *（见 `toolSearchCatalog.test.ts` 的「测量完整真实定义」），此刻只剩约 1.5 KB 余量，
- * 放它进去就得抬那条线 —— 而那条线的规矩是「要抬先拿实测 p，不是改个数字」，
- * 我没有这个组的实测 p。折叠它的代价由另外两条路补上：`local-files` 技能正文里
- * 点了 `connect_mcp_server` 的名字（技能带组是主路径），系统提示词的 MCP 那一段
- * 也一直写着这个工具名（见 `capabilities/mcp/promptSection.ts`），
- * 所以模型不必靠 `search_tools` 撞才知道它存在。
- *
- * ## 这里的不确定性，别当它已经定了
- *
- * p 的分母是「会话」还是「轮次」会把结论翻过来：按轮次算，223 轮的样本里除
- * `ue.mesh`（7.2%）外这些组都 ≤5%，`ue.cpp` 往下那几个就该折叠。按会话算（一次
- * 加载事件本来就是会话级的），p 要乘 3~5 倍，整张表才都站得住。**我按会话算，
- * 因为付钱的单位是加载事件。**这个换算系数现在没有实测，拿到之后要回来重算。
+ * `godot`（检查、试玩、截图）几乎每一轮改动都要用来验证，`godot.editor` 是
+ * 「用户正开着什么」的入口；两组都小。生成资源（`godot.asset`）说明长、
+ * 只在要素材时用，留在折叠区由技能或 `search_tools` 加载。
  */
 export const RESIDENT_TOOL_GROUPS = new Set<string>([
   'local',
   'note',
-  'ue.mesh',
-  'ue.cpp',
-  'ue.animation',
-  'library',
-  'ue.input',
-  'ue.editor'
+  'godot',
+  'godot.editor'
 ])
 
 /**
@@ -180,53 +96,23 @@ export function isDefaultResidentTool(tool: GroupedTool): boolean {
 }
 
 /**
- * 只用于检索，不替代工具原文。
- *
- * 键是**工具组**（`toolSearchGroup`），不是命名空间 —— 两者从 2026-09-21 起会分叉
- * （见 `UE_CONTENT_SUBGROUPS`）。查不到会按 `a.b.c → a.b → a` 逐段回退，所以子组
- * 不写也能继承父段；`local.shell` 这种以前查不到的也跟着修好了。
+ * 只用于检索，不替代工具原文。键是**工具组**（`toolSearchGroup`）。
+ * 查不到会按 `a.b.c → a.b → a` 逐段回退，所以子组不写也能继承父段。
  *
  * 表里缺一行的后果是无声的：那一组的中文查询只能指望描述里刚好有字面词。
  * `toolSearchCatalog.test.ts` 有一条门禁钉住「每个在用的组都回退得到一行」。
  */
 const DOMAIN_TERMS: Record<string, string> = {
-  'ue.blueprint': '蓝图 逻辑 节点 变量 事件 函数 blueprint graph node logic event function',
-  'ue.blueprint.usages':
-    '谁在用 哪些蓝图 用到 调用了 引用 波及 改名 删除 全局搜索 在所有蓝图中查找 uproperty ufunction find in blueprints usages callers references rename',
-  'ue.material': '材质 材质实例 表面 颜色 贴图 纹理 material shader color surface texture',
-  'ue.actor': '物体 场景 对象 位置 旋转 缩放 移动 灯光 actor transform spawn light',
-  'ue.content': '内容浏览器 工程资产 内容 资产 content asset',
-  'ue.content.import': '导入 导入资产 fbx 贴图 外部文件 入库 import ingest',
-  'ue.content.organize': '整理 重命名 移动 删除 重定向 清理 organize rename move delete redirector',
-  'ue.content.edit':
-    '资产设置 属性 贴图设置 压缩 遮罩 最大尺寸 纹理组 翻转绿通道 碰撞复杂度 lod组 asset property texture srgb compression nanite collision lodgroup',
-  'ue.datatable': '数据表 表格 配置表 行 列 数值 datatable data table row column csv',
-  'ue.content.audit': '体检 依赖 引用 占用 体积 排行 报错日志 audit dependency size reference log',
-  'ue.editor': '编辑器 截图 保存 撤销 运行 测试 重启 editor screenshot save undo playtest restart',
-  'ue.editor.autoplay':
-    '试玩 自动试玩 机器人 按键 操作 走到 目标 autoplay bot play input objective',
-  'ue.level': '关卡 场景 大纲 世界 分区 流送 level world outliner streaming',
-  'ue.level.lights':
-    '灯光 光源 点光源 聚光灯 阴影 阴影缓存 渲染线程 显卡 普查 light shadow point spot gpu census wpo',
-  'ue.landscape':
-    '地形 地表 高度图 虚拟纹理 rvt 融合 landscape terrain heightmap virtual texture blend',
-  'ue.system': '性能 崩溃 日志 插件 控制台 脚本 卡顿 crash log performance plugin python',
-  'ue.widget': '界面 控件 按钮 文本 布局 widget umg ui layout button text',
-  'ue.animation': '动画 骨骼 运动 animation skeleton motion',
-  'ue.sequencer': '过场 镜头 摄像机 时间轴 序列 sequencer camera cinematic timeline',
-  'ue.pcg': '程序化 散布 植被 pcg procedural scatter foliage',
-  'ue.mesh': '网格 几何 模型 mesh geometry model',
-  'ue.mesh.optimize':
-    '生成 自动 lod 减面 远处低模 碰撞 简单碰撞 凸包 凸包分解 盒体 胶囊 穿模 lod collision convex hull decomposition box capsule',
-  'ue.cpp': '代码 编译 类 模块 c++ compile code module',
-  'ue.input': '输入 按键 操作 映射 input action key mapping',
-  'ue.input.edit': '加按键 绑定 键位 新建输入动作 改映射 add bind key mapping input action imc',
+  godot:
+    '检查 报错 运行 试玩 截图 场景 脚本 验证 check error run play test screenshot scene script verify',
+  'godot.editor':
+    '编辑器 选中 场景树 节点 打开场景 运行游戏 停止 保存 editor selection scene tree node open play stop save',
+  'godot.asset':
+    '生成 精灵 帧动画 瓦片 地图块 音效 音乐 循环 配音 语音 听 声音 sprite animation tileset tile sfx sound music loop voice audio',
+  'godot.style': '美术风格 画风 调色板 像素 风格 art style palette pixel',
   box: '盒子 对话记录 会话 状态 导入 卡住 续传 技能 开关 备份 box session status import skill backup',
   asset: '盒子素材库 保管库 标签 文件夹 asset library vault tag folder',
-  library: '蓝图库 材质库 片段 收藏 snippet library',
-  project:
-    '工程 项目 创建 打开 启动 打包 发布 可执行文件 冒烟 project create open launch package build exe smoke',
-  engine: '引擎 版本 安装 路径 engine version install path',
+  project: '工程 项目 分组 置顶 整理 project organize group pin',
   aigc: '生成 图片 视频 三维 generate image video 3d',
   'video.production':
     '剪辑 成片 字幕 配音 台词 对白 语音合成 配乐 时间线 video edit subtitle voiceover tts speech render',
@@ -296,52 +182,6 @@ interface Entry {
   length: number
 }
 
-/**
- * `ue.content` 拆成三组。2026-09-21 加。
- *
- * 整组 41,099 字节是全表第二大，而实测「一次检索摊给几个工具」只有 **1.6**
- * （`docs/常驻工具集选定-2026-09-17.md` §5.3）—— 每个真正用上的工具要摊 25.7 KB，
- * 是全表最差的一组。这一摊本来就不是一件活：导入外部文件、清理工程、查依赖体积，
- * 三件事之间没有共用的上下文，凑在一起纯粹因为它们都由内容浏览器实现。
- *
- * 切在 `toolSearchGroup` 而不是改 `namespace`：命名空间是**用户可见**的分类
- * （`src/shared/toolCategories.ts` 按它折叠设置页，还有对应的 i18n 文案），
- * 而这里要改的只是加载粒度。改 `namespace` 会让设置页凭空多两个分组头。
- *
- * 新加的 `ue.content` 工具落回 `ue.content` 本身，由 `toolSearchCatalog.test.ts`
- * 的一条门禁把它拦下来，逼着加进这张表 —— 无声落进一个没有技能引用的组，
- * 表现是「模型永远搜不到它」，那种缺陷不该靠人眼发现。
- */
-const UE_CONTENT_SUBGROUPS: Record<string, string> = {
-  /*
-   * 导入单独一组，哪怕它只有一个成员 —— 单成员组按 §5.3 是最差的形状（摊薄 1.0）。
-   * 这里认的是另一笔账：`ue_content_import` 被 6 个技能引用（图片生成、素材库、
-   * 三维资产生产…），那些技能要的只是「把文件放进工程」。跟整理并成一组的话，
-   * 用户让它生成一张图，`ue_content_delete` 和 `ue_fixup_redirectors` 会跟着进来。
-   */
-  ue_content_import: 'ue.content.import',
-  // 搬迁那一摊：改名、移动、迁出、回滚、删除，外加两个配套的（搬完查断链、
-  // 搬之前查命名）。它们在同一次任务里连着用，分开就是白多一次往返
-  ue_content_move: 'ue.content.organize',
-  ue_content_migrate: 'ue.content.organize',
-  ue_content_rollback: 'ue.content.organize',
-  ue_content_delete: 'ue.content.organize',
-  ue_fixup_redirectors: 'ue.content.organize',
-  ue_project_path_refs: 'ue.content.organize',
-  ue_content_naming_audit: 'ue.content.organize',
-  // 改资产自身的设置（细节面板那些）：单独一组。导入、材质、几何、体检四类技能都要它，
-  // 跟任何一组并在一起，都会把那组不相干的工具一起带进来
-  ue_content_set_properties: 'ue.content.edit',
-  // 只读的查看一摊：找资产、看资产、查依赖和体积、读报错
-  ue_content_search: 'ue.content.audit',
-  ue_content_describe: 'ue.content.audit',
-  ue_content_dependencies: 'ue.content.audit',
-  ue_content_audit_optimization: 'ue.content.audit',
-  ue_project_asset_ranking: 'ue.content.audit',
-  ue_asset_size_map: 'ue.content.audit',
-  ue_message_log: 'ue.content.audit'
-}
-
 /** 分组只看名字和命名空间，不必造一个完整工具 */
 export interface GroupedTool {
   name: string
@@ -389,25 +229,6 @@ function pickGroups(
  * 以及落盘的 `details.toolSearch` 恢复路径。
  */
 export function toolSearchGroup(tool: GroupedTool): string {
-  if (tool.name === 'ue_screenshot' || tool.name === 'ue_focus_viewport') return 'ue.actor'
-  // 实验性、说明又长（约 5 KB），不跟 ue.editor 整组常驻，要用时 search_tools 按名加载
-  if (tool.name === 'ue_autoplay') return 'ue.editor.autoplay'
-  // 只在导入了带「资产指南」的资产、或编辑器弹「缺失项目设置」时才用；导入回执会点名让模型加载
-  if (tool.name === 'ue_asset_guidelines') return 'ue.editor.guidelines'
-  // 要关编辑器的完整重编，一个会话用不上几次；add_class / compile 的回执和 C++ 技能会点名它
-  if (tool.name === 'cpp_full_rebuild') return 'ue.cpp.rebuild'
-  // 加按键映射是改工程的低频动作，说明又长；不跟 ue.input 整组常驻，ue_input_map 的说明会点名它
-  if (tool.name === 'ue_input_add_mapping') return 'ue.input.edit'
-  // 灯光普查只在排查渲染线程 / GPU 瓶颈时用；不跟 ue.level 整组走，项目体检技能会点名它
-  if (tool.name === 'ue_light_census') return 'ue.level.lights'
-  // 生成 LOD / 碰撞是写操作、说明又长；ue.mesh 整组常驻而常驻预算已满，单拆按需加载。
-  // 几何编辑和导入整理两个技能会点名它
-  if (tool.name === 'mesh_optimize') return 'ue.mesh.optimize'
-  // 「哪些蓝图用了这个名字」：改 UFUNCTION / UPROPERTY 前查波及面。单拆按需子组，按「谁在用」
-  // 搜到时不必连带二十多个写图工具；C++ 和蓝图编辑两个技能点名它
-  if (tool.name === 'blueprint_find_usages') return 'ue.blueprint.usages'
-  if (tool.unrealBox.namespace === 'ue.content' && Object.hasOwn(UE_CONTENT_SUBGROUPS, tool.name))
-    return UE_CONTENT_SUBGROUPS[tool.name]
   return tool.unrealBox.namespace
 }
 
@@ -601,14 +422,13 @@ export function createToolSearch(
       }
 
       /*
-       * 目录名就是组名，父目录（`ue.content`）也认 —— 模型手里可能是拆组之前的
-       * 那份记忆，或者它本来就只想说「内容浏览器那一摊」。
+       * 目录名就是组名，父目录（`godot`）也认 —— 模型可能只想说「Godot 那一摊」。
        *
        * 认的是**真实存在的命名空间**，不是任意字符串前缀。`startsWith` 会让
-       * `namespace: 'ue'` 一口咬住全部 UE 工具：那条路径没有打分，按名字排完
+       * `namespace: 'go'` 一口咬住全部 Godot 工具：那条路径没有打分，按名字排完
        * `slice(0, limit)` 取到的是字母序最靠前的几个，于是**整组整组地**加载
        * 模型压根没要的东西 —— 一次三份前缀重写，正是这套改动要省的那笔钱。
-       * 拆组之前 `'ue'` 精确匹配不到任何命名空间，返回的是一句无害的未命中。
+       * `'go'` 精确匹配不到任何命名空间，返回的是一句无害的未命中。
        */
       let candidates = allowed.filter(
         (entry) =>

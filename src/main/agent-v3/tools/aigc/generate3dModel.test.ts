@@ -191,7 +191,7 @@ describe('参数与前置检查', () => {
  * 于是解出几个垃圾字节、一句报错都没有、照常提交。
  *
  * 而这条路是**主路**：skill 教的四视图流程、用户在对话里贴的附件、
- * `ue_screenshot` 拍的白盒，给的全是本地路径。
+ * `godot_screenshot` 拍的白盒，给的全是本地路径。
  */
 describe('参考图先读成图片内容', () => {
   const dataUriOf = (text: string): string =>
@@ -242,7 +242,7 @@ describe('参考图先读成图片内容', () => {
     expect(generateModel3d).not.toHaveBeenCalled()
   })
 
-  it('相对路径明确报错并指路 ue_screenshot 的 path，不闷头猜工作目录', async () => {
+  it('相对路径明确报错并指路 截图路径，不闷头猜工作目录', async () => {
     await expect(run({ reference_images: ['shots/axe.png'] })).rejects.toThrow(/不是绝对路径/)
     expect(generateModel3d).not.toHaveBeenCalled()
   })

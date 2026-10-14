@@ -59,15 +59,10 @@ import { DEFAULT_GOAL_MAX_ROUNDS } from '../../../shared/goalRounds'
  */
 export const AUDITOR_HARD_JUDGES: readonly string[] = [
   /*
-   * 这三个是 `mutating`（编译会把资产改脏、试玩会跑游戏），按只读筛不出来 ——
-   * 而它们恰恰是唯一真正算数的裁判，只能按名字点。
-   *
-   * `cpp_compile` 不在这里：一次要几分钟、吃满 CPU，用户同机还在干活，
-   * 复核又是他没发起的动作。C++ 目标审计员能用 `cpp_probe` 回读，编译交给 worker 自己做
+   * 按只读筛不出来、但又是真裁判的工具，只能按名字点。Godot 这边的裁判
+   * （godot_check / godot_run / godot_screenshot）本来就是 safe，按只读就筛进来了，
+   * 所以这里暂时是空的。
    */
-  'blueprint_compile',
-  'material_compile',
-  'ue_playtest'
 ]
 
 /**
@@ -83,9 +78,12 @@ const AUDITOR_EXCLUDED_NAMESPACES = new Set(['browser', 'web', 'mcp', 'core', 'h
 /**
  * 标着 safe 但要花钱或很重的：审计员每轮都跑、又不过审批，不能自己拿。
  * `aigc` 整个命名空间也排掉（analyze_video 这类按次计费的看图看视频）。
- * 真要用就由调用方在 `judges` 里点名
+ * 真要用就由调用方在 `judges` 里点名。
+ *
+ * 眼下是空的：`godot_check` / `godot_run` / `godot_screenshot` 也起一个 Godot
+ * 进程，但它们正是审计员该拿的裁判，不能排掉。
  */
-const AUDITOR_EXCLUDED_TOOLS = new Set(['ue_insights_trace', 'ue_capture_perf_trace'])
+const AUDITOR_EXCLUDED_TOOLS: ReadonlySet<string> = new Set<string>()
 
 /** 审计员（以及工作室的验收员）拿不拿这个工具，`judges` 是额外点名的裁判 */
 export function isAuditorTool(

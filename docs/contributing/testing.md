@@ -1,7 +1,7 @@
 # 测试指南
 
 > **English TL;DR** — Vitest 5 + happy-dom. Tests live in `tests/**`, next to the source as
-> `*.test.ts`, or in `packages/*/src` (the `uebox` CLI); all are collected. Run
+> `*.test.ts`, or in `packages/*/src` (the `gdbox` CLI); all are collected. Run
 > `pnpm exec vitest run <file>` while iterating, `pnpm verify:changed` when a feature is done, and
 > the full `pnpm verify` once before the batch is published. Coverage thresholds (80%) apply to
 > `src/renderer/**` only. Both `better-sqlite3` ABIs are cached side by side, so you can run the
@@ -32,7 +32,7 @@
   —— 适合单个模块的纯逻辑测试，改代码时一眼能看到测试在旁边。
 - **放 `tests/` 下**：`tests/components/HelloWorld.test.ts`、`tests/manual/eval-case-integrity.test.ts`
   —— 适合跨模块、跨层的集成型测试。
-- **`packages/*/src` 下**：`uebox` 命令行（`packages/cli`）的测试，同样会被收集。
+- **`packages/*/src` 下**：`gdbox` 命令行（`packages/cli`）的测试，同样会被收集。
 
 文件名一律 `<被测对象>.test.ts`。新功能优先贴着源码放。
 

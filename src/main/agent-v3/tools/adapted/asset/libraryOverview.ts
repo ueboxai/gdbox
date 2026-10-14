@@ -157,7 +157,7 @@ export function createLibraryOverviewTool(): V2Tool {
       assetType: z
         .union([z.string(), z.array(z.string())])
         .optional()
-        .describe('只统计这些虚幻资产类型，如 StaticMesh、Texture2D'),
+        .describe('只统计这些资源类型，如 Texture2D、PackedScene、AudioStreamWAV'),
       largest: z
         .number()
         .optional()

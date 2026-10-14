@@ -4,16 +4,7 @@
  *
  * ## 为什么不做成 GitHub Actions
  *
- * 出包只能在本地：`pnpm build:win` 第一步就是
- * `plugin:build:all`，要八个引擎各编一遍；GitHub 托管的 runner 装不下，UE 的
- * 授权也不允许在公共 CI 上分发引擎。退一步说，就算跳过编插件，
- * `resources/plugins/*.zip` 根本没进 git（只有 ualink-config.json 进了），
- * runner 检出的工作区里没有这些包，`plugin:check:all` 当场就拦下来。
- *
- * 自托管 runner 能编，但公开仓库挂自托管 runner 等于任何人提个 PR 就能在维护者
- * 机器上跑代码。为省一步上传引入这个面，不划算。
- *
- * 所以出包天生是本地的，这个脚本只把「上传」那一步自动化。
+ * 出包在维护者本机做（签名证书在本机）。这个脚本只把「上传」那一步自动化。
  *
  * ## 为什么三个文件缺一不可
  *

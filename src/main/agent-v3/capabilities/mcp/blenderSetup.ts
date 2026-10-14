@@ -135,11 +135,11 @@ export function blenderInstallRoot(
 ): string {
   const folder = BLENDER_MCP_REVISION.slice(0, 8)
   if (platform === 'darwin') {
-    return posix.join(home, 'Library', 'Application Support', 'UnrealBox', 'BlenderMcp', folder)
+    return posix.join(home, 'Library', 'Application Support', 'GDBox', 'BlenderMcp', folder)
   }
   // 脚本用的是 $env:LOCALAPPDATA，取不到时退回 home 下的同一段路径
   const localAppData = env.LOCALAPPDATA?.trim() || win32.join(home, 'AppData', 'Local')
-  return win32.join(localAppData, 'UnrealBox', 'BlenderMcp', folder)
+  return win32.join(localAppData, 'GDBox', 'BlenderMcp', folder)
 }
 
 /** 装出来的那条配置落在哪。安装脚本写的就是这个文件 */
