@@ -57,6 +57,7 @@ import { fileLockForCall, needsEditorKey } from './godotLocks'
 import { acquire, describeConflicts, getLockOwner, releasePaths, sameTeam, teamRootOf } from '../core/assetLock'
 import { editorKeyActive, withEditorKey } from '../core/team/editorKey'
 import { effectiveConnectionId } from '../core/projectTargetContext'
+import { UPDATE_PLAN_TOOL_NAME, WRAP_UP_TOOL_NAME } from '../../../shared/agentTurnReport'
 
 // ── V2 工具工厂 ──────────────────────────────────────────────────────────
 import * as noteTools from '../../agent-v3/tools/adapted/note'
@@ -124,6 +125,9 @@ export function allToolNames(): Set<string> {
   // 名字不在这儿的话，第一个把这套流程写进 SKILL.md 的人会被体检告知
   // 「引用了不存在的工具」，然后把唯一正确的那句删掉
   names.add(SET_SESSION_PROJECT_TOOL_NAME)
+  // 任务清单、收尾提问同理
+  names.add(UPDATE_PLAN_TOOL_NAME)
+  names.add(WRAP_UP_TOOL_NAME)
   return names
 }
 
