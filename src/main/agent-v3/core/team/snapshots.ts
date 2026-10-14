@@ -3,18 +3,18 @@
  *
  * ## 用 git，但不用工程自己的 git
  *
- * 快照仓库放在 `<工程>/Saved/UEBoxSnapshots/.git`，工作区指向工程根目录
+ * 快照仓库放在 `<工程>/.gdbox/snapshots/.git`，工作区指向工程根目录
  * （`--git-dir` + `--work-tree`）。这样：
- * - 工程本来就在 git / Perforce 里的话，一个字节都不碰用户的仓库；
- * - `Saved/` 本来就是 UE 的临时目录，删了也不影响工程。
+ * - 工程本来就在 git 里的话，一个字节都不碰用户的仓库；
+ * - `.gdbox/` 是点开头的目录，Godot 的文件系统面板不扫它，删了也不影响工程。
  *
- * 只收工程的「源」：`Content/`、`Config/`、`Source/`、`.uproject` 这些。
- * `Binaries/`、`Intermediate/`、`DerivedDataCache/`、`Saved/` 都是生成的，
- * 进快照只会让仓库暴涨、回滚时还把缓存退成旧的。
+ * 只收工程的「源」：`project.godot`、场景、脚本、资源、`.import` 旁注文件这些。
+ * `.godot/` 是编辑器的导入缓存，会重新生成 —— 进快照只会让仓库暴涨、
+ * 回滚时还把缓存退成旧的（AGENTS.md 第 12 条：`.godot/` 下的东西一律不碰）。
  *
- * 回滚不在这里做完整流程 —— 编辑器开着的时候改磁盘上的资产，编辑器要么占着文件、
- * 要么下次保存把旧的写回来。关编辑器、回滚文件、再打开，那一串在宿主层
- * （`ipc/teamSnapshots.ts`）。这里只管 git 这一半。
+ * 回滚不在这里做完整流程 —— 编辑器开着的时候改磁盘上的文件，编辑器要么提示重新加载、
+ * 要么下次保存把旧的写回来。关编辑器、回滚文件、再打开，那一串在宿主层。
+ * 这里只管 git 这一半。
  */
 
 import { promises as fs } from 'fs'
@@ -22,23 +22,15 @@ import { join } from 'path'
 
 import { contentInventory, formatCounts } from './inventory'
 
-/** 不进快照的东西：UE 生成的目录、IDE 文件、快照仓库自己 */
+/** 不进快照的东西：Godot 的导入缓存、盒子的临时目录、IDE 文件、快照仓库自己 */
 export const SNAPSHOT_EXCLUDES = [
-  '/Binaries/',
-  '/Intermediate/',
-  '/DerivedDataCache/',
-  '/Saved/',
-  '/Build/',
-  '/Plugins/*/Binaries/',
-  '/Plugins/*/Intermediate/',
+  '/.godot/',
+  '/.import/',
+  '/.gdbox/snapshots/',
+  '/.gdbox/tmp/',
   '.vs/',
   '.idea/',
-  '*.sln',
-  '*.suo',
-  '*.opensdf',
-  '*.sdf',
-  '*.VC.db',
-  '*.VC.opendb'
+  '*.tmp'
 ]
 
 export interface GitResult {
@@ -57,8 +49,8 @@ export interface Snapshot {
 }
 
 /**
- * 工作室工具看到的快照能力：存、列、回滚。回滚要关编辑器、再打开，由宿主实现
- * （`ipc/teamSnapshots.ts`）。
+ * 工作室工具看到的快照能力：存、列、回滚。宿主在 `ipc/teamSnapshots.ts`：
+ * 退回之后让编辑器重扫、重新加载开着的场景。
  */
 export interface TeamSnapshots {
   /** 存一份。这一轮还没有工程、或者没变化，给 null */
@@ -109,14 +101,14 @@ export function snapshotMessage(who: string, what: string): string {
 }
 
 export function createSnapshotStore(projectDir: string, git: GitRunner): SnapshotStore {
-  const gitDir = join(projectDir, 'Saved', 'UEBoxSnapshots', '.git')
+  const gitDir = join(projectDir, '.gdbox', 'snapshots', '.git')
   const base = [
     `--git-dir=${gitDir}`,
     `--work-tree=${projectDir}`,
     '-c',
     'user.name=GDBox',
     '-c',
-    'user.email=team@unrealbox.local',
+    'user.email=team@gdbox.local',
     '-c',
     'core.autocrlf=false',
     '-c',
@@ -165,8 +157,9 @@ export function createSnapshotStore(projectDir: string, git: GitRunner): Snapsho
     // 标签要说「这一份里是什么」，不只是「谁触发的」—— 回滚时是照着它选的。
     // 2026-09-26 真机反馈：标签只有队员留言的开头，看到编号完全不知道那一份里有什么
     const changes = summarizeChanges(await run(['diff', '--cached', '--name-status']))
+    // 资产清点还只认得虚幻的 Content/（见 inventory.ts）；数不出东西就不写「共 0」误导人
     const inventory = await contentInventory(projectDir, 0).catch(() => null)
-    const subject = [message, changes, inventory ? formatCounts(inventory) : '']
+    const subject = [message, changes, inventory?.total ? formatCounts(inventory) : '']
       .filter(Boolean)
       .join('｜')
     await run(['commit', '--quiet', '--allow-empty', '-m', subject])
@@ -210,11 +203,11 @@ export function createSnapshotStore(projectDir: string, git: GitRunner): Snapsho
         // 就从 list() 里消失、再也退不回去。这里只把工作区换成那一份的内容，再提交成新的一份
         try {
           await run(['read-tree', '-u', '--reset', full])
-          // 那一份之后新建、还没进过快照的源文件也删掉，不然退回去的工程里还躺着新资产的
-          // 半截引用。不带 -x：被排除的缓存、Saved 原样留着
+          // 那一份之后新建、还没进过快照的源文件也删掉，不然退回去的工程里还躺着新资源的
+          // 半截引用。不带 -x：被排除的 .godot/ 缓存原样留着
           await run(['clean', '-fd', '--quiet'])
         } catch (error) {
-          // 中途失败（文件被 ShaderCompileWorker 之类占着）会留下半新半旧的工作区，下一次
+          // 中途失败（文件被编辑器之类占着）会留下半新半旧的工作区，下一次
           // 自动快照还会把它当正常状态存下。退回最新那一份（回滚前刚存的），能退多少退多少
           await run(['read-tree', '-u', '--reset', 'HEAD']).catch(() => undefined)
           const reason = error instanceof Error ? error.message : String(error)

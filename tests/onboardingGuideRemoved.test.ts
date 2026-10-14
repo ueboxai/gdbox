@@ -34,10 +34,7 @@ describe('首次打开的新手引导已移除', () => {
     const sources = [
       read('src/renderer/src/i18n/locales/zh-CN.ts'),
       read('src/renderer/src/i18n/locales/en-US.ts'),
-      read('scripts/local-storage.baseline.json'),
-      read('tests/manual/verify-chat-resume.mjs'),
-      read('tests/manual/verify-chat-v3-features.mjs'),
-      read('tests/manual/verify-preferences-panels.mjs')
+      read('scripts/local-storage.baseline.json')
     ]
 
     for (const source of sources) {

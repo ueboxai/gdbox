@@ -60,8 +60,6 @@ describe('installer file selection', () => {
     'out/main/index.js',
     'out/renderer/index.html',
     'resources/icon.ico',
-    'resources/plugins/UnrealAgentLink55.zip',
-    'resources/plugins/ualink-config.json',
     'LICENSE',
     'THIRD-PARTY-NOTICES.md',
     'licenses/EPL-2.0.txt'

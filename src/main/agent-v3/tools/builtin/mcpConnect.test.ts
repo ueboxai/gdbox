@@ -109,19 +109,19 @@ describe('接一台 server', () => {
   })
 
   /**
-   * 引擎发现的、插件带的 server 不在 mcp.json 里，原来的同名检查看不见它们：撞名会把正在用的
-   * 那台断掉，写进 mcp.json 还会永久盖住引擎发现。overwrite 也不行
+   * 插件带的 server 不在 mcp.json 里，原来的同名检查看不见它们：撞名会把正在用的
+   * 那台断掉，写进 mcp.json 还会永久盖住它。overwrite 也不行
    */
-  it('撞上引擎 / 插件自带的 server 名：不连不写，overwrite 也不行', async () => {
+  it('撞上插件自带的 server 名：不连不写，overwrite 也不行', async () => {
     const connect = vi.fn()
-    for (const id of ['ue-official', 'blender_tools']) {
-      const outcome = await runConnect(
-        { id, url: '9876', overwrite: true },
-        deps({ reservedIds: async () => ['blender_tools'], connect })
-      )
-      expect(outcome.isError).toBe(true)
-    }
+    const persist = vi.fn()
+    const outcome = await runConnect(
+      { id: 'blender_tools', url: '9876', overwrite: true },
+      deps({ reservedIds: async () => ['blender_tools'], connect, persist })
+    )
+    expect(outcome.isError).toBe(true)
     expect(connect).not.toHaveBeenCalled()
+    expect(persist).not.toHaveBeenCalled()
   })
 
   // 工具检索开着时第三方组不常驻，下一条消息靠这份名单把它们装回来

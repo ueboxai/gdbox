@@ -7,7 +7,7 @@ import { unexpectedPackagedFiles } from '../../scripts/check-packaged-content.mj
 describe('packaged application layout', () => {
   it('retains the Windows executable and resource paths', () => {
     expect(packagedAppPaths('/project', 'win32', 'x64')).toEqual({
-      exe: join('/project', 'dist/win-unpacked/unreal-agent.exe'),
+      exe: join('/project', 'dist/win-unpacked/gdbox.exe'),
       asar: join('/project', 'dist/win-unpacked/resources/app.asar')
     })
   })
@@ -16,20 +16,17 @@ describe('packaged application layout', () => {
     ['arm64', 'mac-arm64']
   ])('finds the %s Mac bundle', (arch, directory) => {
     const paths = packagedAppPaths('/project', 'darwin', arch)
-    expect(paths.exe).toBe(
-      join('/project', 'dist', directory, '虚幻盒子.app/Contents/MacOS/虚幻盒子')
-    )
+    expect(paths.exe).toBe(join('/project', 'dist', directory, 'GDBox.app/Contents/MacOS/GDBox'))
     expect(paths.asar).toBe(
-      join('/project', 'dist', directory, '虚幻盒子.app/Contents/Resources/app.asar')
+      join('/project', 'dist', directory, 'GDBox.app/Contents/Resources/app.asar')
     )
   })
-  it('allows platform plugin packages while still rejecting unrelated archives', () => {
-    expect(
-      unexpectedPackagedFiles([
-        'resources/plugins/UnrealAgentLink55.zip',
-        'resources/plugins/UnrealAgentLink55-Mac.zip',
-        'resources/plugins/unrelated.zip'
-      ])
-    ).toEqual(['resources/plugins/unrelated.zip'])
+  it('rejects archives under resources/ — the Godot addon ships via extraResources, not app.asar', () => {
+    const entries = [
+      'resources/plugins/UnrealAgentLink55.zip',
+      'resources/godot/addons/gdbox_link.zip',
+      'resources/plugins/unrelated.zip'
+    ]
+    expect(unexpectedPackagedFiles(entries)).toEqual(entries)
   })
 })

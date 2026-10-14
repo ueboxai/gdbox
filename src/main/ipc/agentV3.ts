@@ -56,6 +56,7 @@ import {
 import { getPublicDatabase } from '../sqliteDataBase'
 import { getAllProjects } from '../sqliteDataBase/models/project'
 import { projectManager } from '../services/project/projectManager'
+import { createTeamSnapshots } from './teamSnapshots'
 import { collectToolDiagnostics } from '../agent-v3/toolDiagnostics'
 import { isShellAvailable } from '../agent-v3/tools/builtin/localShell'
 import { effectiveRisk, type ToolMeta, type ToolRisk } from '../agent-v3/tools/defineTool'
@@ -618,6 +619,8 @@ async function prepareTeam(
     objective: team.objective,
     store,
     live,
+    // 队员交回改动时存一份工程快照，制作人用 team_snapshot 列出来、退回
+    snapshots: createTeamSnapshots(),
     onVerdict: async (verdict) => {
       options.team = applyVerdict(options.team ?? team, verdict)
       await saveExecutionOptions(ctx.sessionId, options)

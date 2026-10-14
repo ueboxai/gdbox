@@ -49,11 +49,11 @@ describe('loadNamingRulesConfig', () => {
   })
 
   it('逐条合并：文件里没有的条目由出厂值补上，后续版本新增的才到得了老用户', () => {
-    writeConfig({ assetPrefixes: { StaticMesh: 'MESH_' } })
+    writeConfig({ assetTypeToDirectory: { Model: 'res://art/meshes' } })
 
-    const prefixes = loadNamingRulesConfig().assetPrefixes
-    expect(prefixes.StaticMesh).toBe('MESH_') // 用户改的赢
-    expect(prefixes.Texture).toBe(DEFAULT_NAMING_RULES_CONFIG.assetPrefixes.Texture) // 出厂垫底
+    const dirs = loadNamingRulesConfig().assetTypeToDirectory
+    expect(dirs.Model).toBe('res://art/meshes') // 用户改的赢
+    expect(dirs.Texture).toBe('res://assets/textures') // 出厂垫底
   })
 
   it('交出来的表是新对象，不是模块级默认值本身', () => {
@@ -73,12 +73,14 @@ describe('loadNamingRulesConfig', () => {
     )
 
     // 改一下加载回来的配置，不该污染下一次读取。
-    // 右边写死 'SM_'：拿 DEFAULT_NAMING_RULES_CONFIG.assetPrefixes.StaticMesh 去比的话，
-    // 真的污染了两边会一起变成 'POLLUTED_'，这条断言永远绿
-    cfg.assetPrefixes.StaticMesh = 'POLLUTED_'
+    // 右边写死出厂值：拿 DEFAULT_NAMING_RULES_CONFIG 里的字段去比的话，
+    // 真的污染了两边会一起变成 POLLUTED，这条断言永远绿
+    cfg.assetPrefixes.Model = 'POLLUTED_'
+    cfg.assetTypeToDirectory.Model = 'res://POLLUTED'
     cfg.textureSuffixPatterns[0].suffix = '_POLLUTED'
-    expect(loadNamingRulesConfig().assetPrefixes.StaticMesh).toBe('SM_')
-    expect(loadNamingRulesConfig().textureSuffixPatterns[0].suffix).toBe('_D')
+    expect(loadNamingRulesConfig().assetPrefixes).not.toHaveProperty('Model')
+    expect(loadNamingRulesConfig().assetTypeToDirectory.Model).toBe('res://assets/models')
+    expect(loadNamingRulesConfig().textureSuffixPatterns[0].suffix).toBe('_albedo')
   })
 
   /**
@@ -93,8 +95,10 @@ describe('loadNamingRulesConfig', () => {
       DEFAULT_NAMING_RULES_CONFIG.textureSuffixPatterns[0]
     )
 
-    cfg.assetPrefixes.StaticMesh = 'POLLUTED_'
-    expect(loadNamingRulesConfig().assetPrefixes.StaticMesh).toBe('SM_')
+    cfg.assetTypeToDirectory.Model = 'res://POLLUTED'
+    cfg.textureSuffixPatterns[0].suffix = '_POLLUTED'
+    expect(loadNamingRulesConfig().assetTypeToDirectory.Model).toBe('res://assets/models')
+    expect(loadNamingRulesConfig().textureSuffixPatterns[0].suffix).toBe('_albedo')
   })
 
   it('读盘失败（文件是坏 JSON）时也不交出默认对象本身', () => {
@@ -102,7 +106,8 @@ describe('loadNamingRulesConfig', () => {
 
     const cfg = loadNamingRulesConfig()
     expect(cfg.assetPrefixes).not.toBe(DEFAULT_NAMING_RULES_CONFIG.assetPrefixes)
-    expect(cfg.assetPrefixes.StaticMesh).toBe('SM_')
+    expect(cfg.assetTypeToDirectory).not.toBe(DEFAULT_NAMING_RULES_CONFIG.assetTypeToDirectory)
+    expect(cfg.assetTypeToDirectory.Model).toBe('res://assets/models')
   })
 
   it('整个字段缺失（老版本配置）仍然回落到出厂值', () => {
@@ -194,11 +199,11 @@ describe('saveNamingRulesConfig', () => {
   it('用户改过的值存得住，读回来还是他那个', () => {
     saveNamingRulesConfig({
       ...DEFAULT_NAMING_RULES_CONFIG,
-      assetPrefixes: { ...DEFAULT_NAMING_RULES_CONFIG.assetPrefixes, StaticMesh: 'MESH_' }
+      assetPrefixes: { ...DEFAULT_NAMING_RULES_CONFIG.assetPrefixes, Model: 'MESH_' }
     })
 
     expect(existsSync(join(userDataDir, CONFIG_FILE))).toBe(true)
-    expect(loadNamingRulesConfig().assetPrefixes.StaticMesh).toBe('MESH_')
+    expect(loadNamingRulesConfig().assetPrefixes.Model).toBe('MESH_')
   })
 
   /**
@@ -207,11 +212,11 @@ describe('saveNamingRulesConfig', () => {
    * 「稀疏覆盖 + 显式删除列表」，见 mergeWithDefaults 的注释。
    */
   it('已知限制：删掉出厂那一行不会持久化', () => {
-    const withoutSoundWave = { ...DEFAULT_NAMING_RULES_CONFIG.assetPrefixes }
-    delete (withoutSoundWave as Record<string, string>).SoundWave
+    const withoutAudio = { ...DEFAULT_NAMING_RULES_CONFIG.assetTypeToDirectory }
+    delete (withoutAudio as Record<string, string>).Audio
 
-    saveNamingRulesConfig({ ...DEFAULT_NAMING_RULES_CONFIG, assetPrefixes: withoutSoundWave })
+    saveNamingRulesConfig({ ...DEFAULT_NAMING_RULES_CONFIG, assetTypeToDirectory: withoutAudio })
 
-    expect(loadNamingRulesConfig().assetPrefixes).toHaveProperty('SoundWave')
+    expect(loadNamingRulesConfig().assetTypeToDirectory).toHaveProperty('Audio')
   })
 })

@@ -1,6 +1,6 @@
 {
   "name": "gdbox",
-  "version": "1.0.8",
+  "version": "0.1.0",
   "description": "GDBox",
   "main": "./out/main/index.js",
   "author": "虚幻盒子科技有限公司",

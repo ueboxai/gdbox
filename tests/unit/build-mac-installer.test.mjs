@@ -77,8 +77,8 @@ describe('Mac installer update feed', () => {
     const mac = config.split('\nmac:\n')[1].split('\nlinux:\n')[0]
     expect(mac).toContain('    - zip')
     expect(mac).toContain('    - dmg')
-    // 文件名前缀写死 uebox，不用 ${name}：${name} 同时决定 userData 目录，不能跟着改。
-    expect(mac).toContain('uebox-${version}-${arch}-mac.${ext}')
+    // 文件名前缀写死 gdbox，不用 ${name}：${name} 同时决定 userData 目录，不能跟着改。
+    expect(mac).toContain('gdbox-${version}-${arch}-mac.${ext}')
     const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
     expect(pkg.scripts['build:mac']).toContain('node scripts/build-mac-installer.mjs')
     expect(pkg.scripts['build:win']).toContain('node scripts/build-win-installer.js')

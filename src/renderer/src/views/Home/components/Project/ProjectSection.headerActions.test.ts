@@ -8,10 +8,10 @@ const source = readFileSync(
 )
 
 describe('ProjectSection header actions', () => {
-  it('uses a storefront icon for the template market action', () => {
-    expect(source).toMatch(
-      /:title="t\('page\.home\.project\.createFromTemplate'\)"[\s\S]*?@click="handleClickCreateProject"[\s\S]*?<PhStorefront\s*\/>/
-    )
+  // GDBox 没有模板市场：表头只留导入和刷新，不再有「从模板新建」入口
+  it('has no template-market action in the header', () => {
+    expect(source).not.toContain('createFromTemplate')
+    expect(source).not.toContain('PhStorefront')
   })
 
   it('uses a plus icon for importing an existing project', () => {

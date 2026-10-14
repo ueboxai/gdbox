@@ -104,8 +104,8 @@ it('keeps old images when a disk record cannot be decoded, without failing the s
 it('does not rewrite an unchanged screenshot, even after restart or a timestamp-only change', async () => {
   const changed = vi.fn()
   const projectDir = join(directory, 'game')
-  await mkdir(join(projectDir, 'Saved'), { recursive: true })
-  const source = join(projectDir, 'Saved', 'AutoScreenshot.png')
+  await mkdir(projectDir, { recursive: true })
+  const source = join(projectDir, 'icon.png')
   const png = await sharp({ create: { width: 2, height: 2, channels: 3, background: 'red' } })
     .png()
     .toBuffer()
@@ -125,11 +125,11 @@ it('rebuilds a missing automatic cover without a source change or service restar
   const changed = vi.fn()
   covers = new ProjectCoverService(db, directory, changed)
   const projectDir = join(directory, 'game')
-  await mkdir(join(projectDir, 'Saved'), { recursive: true })
+  await mkdir(projectDir, { recursive: true })
   const png = await sharp({ create: { width: 2, height: 2, channels: 3, background: 'red' } })
     .png()
     .toBuffer()
-  await writeFile(join(projectDir, 'Saved', 'AutoScreenshot.png'), png)
+  await writeFile(join(projectDir, 'icon.png'), png)
   createProject(db, { projectKey: 'one', projectPath: projectDir })
   await covers.sync()
   const original = getProjectByKey(db, 'one')?.image || ''
@@ -355,8 +355,8 @@ afterEach(async () => {
 it('syncs immediately at startup and keeps checking without a renderer or plugin connection', async () => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
   const projectDir = join(directory, 'game')
-  await mkdir(join(projectDir, 'Saved'), { recursive: true })
-  const source = join(projectDir, 'Saved', 'AutoScreenshot.png')
+  await mkdir(projectDir, { recursive: true })
+  const source = join(projectDir, 'icon.png')
   const png = await sharp({ create: { width: 2, height: 2, channels: 3, background: 'red' } })
     .png()
     .toBuffer()
@@ -381,14 +381,14 @@ it.each(['success', 'failure'] as const)(
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     const slowDir = join(directory, 'slow')
     const localDir = join(directory, 'local')
-    const slowSource = join(slowDir, 'Saved', 'AutoScreenshot.png')
-    const localSource = join(localDir, 'Saved', 'AutoScreenshot.png')
+    const slowSource = join(slowDir, 'icon.png')
+    const localSource = join(localDir, 'icon.png')
     let png = await sharp({ create: { width: 2, height: 2, channels: 3, background: 'red' } })
       .png()
       .toBuffer()
     for (const projectDir of [slowDir, localDir]) {
-      await mkdir(join(projectDir, 'Saved'), { recursive: true })
-      await writeFile(join(projectDir, 'Saved', 'AutoScreenshot.png'), png)
+      await mkdir(projectDir, { recursive: true })
+      await writeFile(join(projectDir, 'icon.png'), png)
     }
     createProject(db, { projectKey: 'slow', projectPath: slowDir })
     createProject(db, { projectKey: 'local', projectPath: localDir })
@@ -449,8 +449,8 @@ it('bounds concurrent screenshot reads and releases a slot after a read failure'
   const sources: string[] = []
   for (let index = 0; index < 6; index++) {
     const projectDir = join(directory, `game-${index}`)
-    const source = join(projectDir, 'Saved', 'AutoScreenshot.png')
-    await mkdir(join(projectDir, 'Saved'), { recursive: true })
+    const source = join(projectDir, 'icon.png')
+    await mkdir(projectDir, { recursive: true })
     await writeFile(source, png)
     createProject(db, { projectKey: `project-${index}`, projectPath: projectDir })
     sources.push(source)
@@ -592,13 +592,13 @@ it('keeps an old image that another project still uses', async () => {
 
 it('keeps a changed screenshot from replacing a custom cover', async () => {
   const projectDir = join(directory, 'game')
-  await mkdir(join(projectDir, 'Saved'), { recursive: true })
+  await mkdir(projectDir, { recursive: true })
   const screenshot = await sharp({
     create: { width: 2, height: 2, channels: 3, background: 'red' }
   })
     .png()
     .toBuffer()
-  await writeFile(join(projectDir, 'Saved', 'AutoScreenshot.png'), screenshot)
+  await writeFile(join(projectDir, 'icon.png'), screenshot)
   createProject(db, { projectKey: 'one', projectPath: projectDir })
 
   await covers.sync()
@@ -607,64 +607,65 @@ it('keeps a changed screenshot from replacing a custom cover', async () => {
   expect(getProjectByKey(db, 'one')?.coverMode).toBe('auto')
 
   await covers.save('one', Buffer.from('my custom cover'))
-  await writeFile(
-    join(projectDir, 'Saved', 'AutoScreenshot.png'),
-    await sharp(screenshot).negate().png().toBuffer()
-  )
+  await writeFile(join(projectDir, 'icon.png'), await sharp(screenshot).negate().png().toBuffer())
   await covers.sync()
   const custom = getProjectByKey(db, 'one')
   expect(custom?.coverMode).toBe('custom')
   expect(await readFile(join(directory, custom?.image || ''), 'utf8')).toBe('my custom cover')
 })
 
-it('prefers <Name>.png over AutoScreenshot.png, like the UE project browser', async () => {
+/** Godot 新建工程的样子：project.godot 的 config/icon 指向自定义图标，根目录另有默认 icon.png */
+async function godotProject(projectDir: string, iconBytes: Buffer): Promise<string> {
+  await mkdir(join(projectDir, 'art'), { recursive: true })
+  await writeFile(join(projectDir, 'art', 'cover.png'), iconBytes)
+  const projectFile = join(projectDir, 'project.godot')
+  await writeFile(
+    projectFile,
+    [
+      'config_version=5',
+      '',
+      '[application]',
+      '',
+      'config/name="MyGame"',
+      'config/icon="res://art/cover.png"',
+      ''
+    ].join('\n')
+  )
+  return projectFile
+}
+
+it('prefers the config/icon from project.godot over the default icon.png', async () => {
   const projectDir = join(directory, 'game')
-  await mkdir(join(projectDir, 'Saved'), { recursive: true })
   const thumbnail = await sharp({ create: { width: 2, height: 2, channels: 3, background: 'red' } })
     .png()
     .toBuffer()
-  const screenshot = await sharp(thumbnail).negate().png().toBuffer()
-  await writeFile(join(projectDir, 'MyGame.png'), thumbnail)
-  await writeFile(join(projectDir, 'Saved', 'AutoScreenshot.png'), screenshot)
-  createProject(db, {
-    projectKey: 'one',
-    projectPath: projectDir,
-    originPath: join(projectDir, 'MyGame.uproject')
-  })
+  const fallback = await sharp(thumbnail).negate().png().toBuffer()
+  const originPath = await godotProject(projectDir, thumbnail)
+  await writeFile(join(projectDir, 'icon.png'), fallback)
+  createProject(db, { projectKey: 'one', projectPath: projectDir, originPath })
 
   await covers.sync()
   expect(await readFile(join(directory, getProjectByKey(db, 'one')?.image || ''))).toEqual(
     thumbnail
   )
 
-  // Without an explicit thumbnail the editor's screenshot takes over.
-  await rm(join(projectDir, 'MyGame.png'))
+  // Without the configured icon the default icon.png takes over.
+  await rm(join(projectDir, 'art', 'cover.png'))
   await covers.sync()
-  expect(await readFile(join(directory, getProjectByKey(db, 'one')?.image || ''))).toEqual(
-    screenshot
-  )
+  expect(await readFile(join(directory, getProjectByKey(db, 'one')?.image || ''))).toEqual(fallback)
 })
 
-it('keeps a legacy <Name>.png cover when an AutoScreenshot.png also exists', async () => {
+it('keeps a legacy config/icon cover when a default icon.png also exists', async () => {
   const projectDir = join(directory, 'game')
-  await mkdir(join(projectDir, 'Saved'), { recursive: true })
   const thumbnail = await sharp({ create: { width: 2, height: 2, channels: 3, background: 'red' } })
     .png()
     .toBuffer()
-  await writeFile(join(projectDir, 'MyGame.png'), thumbnail)
-  await writeFile(
-    join(projectDir, 'Saved', 'AutoScreenshot.png'),
-    await sharp(thumbnail).negate().png().toBuffer()
-  )
-  // Imported before cover modes existed: a copy of <Name>.png under a generated name.
+  const originPath = await godotProject(projectDir, thumbnail)
+  await writeFile(join(projectDir, 'icon.png'), await sharp(thumbnail).negate().png().toBuffer())
+  // Imported before cover modes existed: a copy of the icon under a generated name.
   const legacy = 'thumbnail-12345678-1234-1234-1234-123456789abc.png'
   await writeFile(join(directory, legacy), thumbnail)
-  createProject(db, {
-    projectKey: 'one',
-    projectPath: projectDir,
-    originPath: join(projectDir, 'MyGame.uproject'),
-    image: legacy
-  })
+  createProject(db, { projectKey: 'one', projectPath: projectDir, originPath, image: legacy })
 
   await covers.sync()
   expect(getProjectByKey(db, 'one')).toMatchObject({ image: legacy, coverMode: 'auto' })
@@ -674,33 +675,26 @@ it('keeps a legacy <Name>.png cover when an AutoScreenshot.png also exists', asy
 it.each([
   ['empty', async () => Buffer.alloc(0)],
   ['undecodable', async () => Buffer.from('not a png')]
-] as const)('falls back to AutoScreenshot.png when <Name>.png is %s', async (_, thumbnail) => {
+] as const)('falls back to icon.png when the config/icon file is %s', async (_, thumbnail) => {
   const projectDir = join(directory, 'game')
-  await mkdir(join(projectDir, 'Saved'), { recursive: true })
-  const screenshot = await sharp({
+  const fallback = await sharp({
     create: { width: 2, height: 2, channels: 3, background: 'red' }
   })
     .png()
     .toBuffer()
-  await writeFile(join(projectDir, 'MyGame.png'), await thumbnail())
-  await writeFile(join(projectDir, 'Saved', 'AutoScreenshot.png'), screenshot)
-  createProject(db, {
-    projectKey: 'one',
-    projectPath: projectDir,
-    originPath: join(projectDir, 'MyGame.uproject')
-  })
+  const originPath = await godotProject(projectDir, await thumbnail())
+  await writeFile(join(projectDir, 'icon.png'), fallback)
+  createProject(db, { projectKey: 'one', projectPath: projectDir, originPath })
 
   await covers.sync()
   await covers.sync()
-  expect(await readFile(join(directory, getProjectByKey(db, 'one')?.image || ''))).toEqual(
-    screenshot
-  )
+  expect(await readFile(join(directory, getProjectByKey(db, 'one')?.image || ''))).toEqual(fallback)
 })
 
 it('does not reread an undecodable screenshot until the file changes', async () => {
   const projectDir = join(directory, 'game')
-  const source = join(projectDir, 'Saved', 'AutoScreenshot.png')
-  await mkdir(join(projectDir, 'Saved'), { recursive: true })
+  const source = join(projectDir, 'icon.png')
+  await mkdir(projectDir, { recursive: true })
   await writeFile(source, 'not a png')
   createProject(db, { projectKey: 'one', projectPath: projectDir })
   const readSpy = vi.spyOn(fs, 'readFile')
@@ -731,8 +725,8 @@ it('restoring automatic mode retains the custom image until a valid screenshot i
   const custom = await covers.save('one', Buffer.from('custom'))
   await covers.restoreAutomatic('one')
   expect(getProjectByKey(db, 'one')).toMatchObject({ image: custom, coverMode: 'auto' })
-  await mkdir(join(projectDir, 'Saved'), { recursive: true })
-  const source = join(projectDir, 'Saved', 'AutoScreenshot.png')
+  await mkdir(projectDir, { recursive: true })
+  const source = join(projectDir, 'icon.png')
   await writeFile(source, 'incomplete PNG')
   await covers.sync()
   expect(getProjectByKey(db, 'one')?.image).toBe(custom)

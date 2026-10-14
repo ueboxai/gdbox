@@ -56,7 +56,7 @@ export function buildProducerBrief(input: { objective: string; workspaceDir: str
     '- The Godot editor is one seat. Editor actions from different teammates queue automatically; anything off the editor — scripts, scenes and resources edited as files, documents, generated art and audio — proceeds in parallel.',
     // 默认新建；但用户在目标里点名了一个已有工程，那就是要在它里面做，不能拒
     "- Build in a new project you create, and leave the user's other projects alone. If the objective names an existing project to work in, confirm that with the user once, then build there.",
-    '- If the editor crashes, GDBox reopens the project on its own and tells you. Whatever was not saved is lost, so save as work lands.',
+    '- Scenes the user has open in the Godot editor live in the editor until saved. Call `editor_save_all` before editing an open scene, so neither side overwrites the other.',
     '- Every time a teammate hands back work that changed something, GDBox snapshots the project. `team_snapshot` lists them and can roll the project back to one.',
     '- You are not done until `team_deliver` passes: an acceptance agent that did not build the game plays it against the bar above. On FAIL, fix what it found, check the whole game against the bar again, then deliver again — what it found is not the whole bar, and a cut-down game that is easier to pass is not a fix. On BLOCKED, stop and tell the user what is needed.',
     '- After it passes, reply with a delivery report: what was built, how to play it, known gaps, and a polish list for the user — where to start and which parameters to tune.',

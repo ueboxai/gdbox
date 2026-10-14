@@ -129,7 +129,7 @@ describe('Beta 工具搜索', () => {
   })
 
   it('常驻清单不会被搜索加载挤掉', async () => {
-    const resident = tool('ue_save', 'ue.editor', '完整常驻说明'.repeat(5000))
+    const resident = tool('editor_save_all', 'godot.editor', '完整常驻说明'.repeat(5000))
     const a = tool('a', 'ue.material', 'a'.repeat(35000))
     const b = tool('b', 'ue.blueprint', 'b'.repeat(35000))
     const catalog = [resident, a, b]
@@ -163,15 +163,15 @@ describe('Beta 工具搜索', () => {
     expect(controller.getTools().at(-1)).toBe(catalog[0])
   })
 
-  it('截图和聚焦随场景组加载，权限排除的成员不会被带回', async () => {
+  it('点名一个工具带回整组，权限排除的成员不会被带回', async () => {
     const catalog = [
-      tool('ue_get_actor', 'ue.actor'),
-      tool('ue_screenshot', 'ue.editor'),
-      tool('ue_focus_viewport', 'ue.editor')
+      tool('gen_sprite', 'godot.asset'),
+      tool('gen_tileset', 'godot.asset'),
+      tool('gen_music', 'godot.asset')
     ]
     const allowed = catalog.slice(0, 2)
     const controller = createToolSearch(allowed, () => allowed)
-    await search(controller, { names: ['ue_get_actor'] })
+    await search(controller, { names: ['gen_sprite'] })
     expect(controller.getTools().slice(1)).toEqual(allowed)
   })
 
@@ -181,24 +181,22 @@ describe('Beta 工具搜索', () => {
    * 第二个组还要再搜一次。实测真实轮次里 44% 需要 ≥2 个组。
    */
   describe('query 按组分页', () => {
+    // 两个组都没有领域词、描述相同，同分时按工具名排 —— 先后是确定的
     const catalog = [
-      tool('material_a', 'ue.material', '材质 颜色'),
-      tool('material_b', 'ue.material', '材质 颜色'),
-      tool('blueprint_a', 'ue.blueprint', '材质 颜色'),
-      tool('blueprint_b', 'ue.blueprint', '材质 颜色')
+      tool('alpha_a', 'mcp.alpha', '材质 颜色'),
+      tool('alpha_b', 'mcp.alpha', '材质 颜色'),
+      tool('beta_a', 'mcp.beta', '材质 颜色'),
+      tool('beta_b', 'mcp.beta', '材质 颜色')
     ]
 
     it('limit 数的是组不是工具，一页给整组、翻页换下一组', async () => {
       const controller = createToolSearch(catalog, () => catalog)
       const first = await search(controller, { query: '材质 颜色', limit: 1 })
       // 一个组的两个成员一起到手，而不是两个组各给一个
-      expect(first.loaded?.map((entry) => entry.name).sort()).toEqual(['material_a', 'material_b'])
+      expect(first.loaded?.map((entry) => entry.name).sort()).toEqual(['alpha_a', 'alpha_b'])
       expect(first.nextOffset).toBe(1)
       const second = await search(controller, { query: '材质 颜色', offset: 1, limit: 1 })
-      expect(second.loaded?.map((entry) => entry.name).sort()).toEqual([
-        'blueprint_a',
-        'blueprint_b'
-      ])
+      expect(second.loaded?.map((entry) => entry.name).sort()).toEqual(['beta_a', 'beta_b'])
       expect(second.nextOffset).toBe(null)
     })
 
@@ -231,28 +229,28 @@ describe('Beta 工具搜索', () => {
      * 于是模型再搜一次，正是要消灭的那种连发。
      */
     it('命中的常驻工具不占名额、不当分母，但仍然回在 loaded 里', async () => {
-      // `ue_save` 在内置常驻清单里；描述写得比折叠组更贴题，足以当头名
+      // `godot.editor` 整组常驻；描述写得比折叠组更贴题，足以当头名
       const withResident = [
-        tool('ue_save', 'ue.editor', '整理 整理 整理 资产 资产 资产'),
-        tool('content_organize', 'ue.content', '整理 资产')
+        tool('editor_save_all', 'godot.editor', '整理 整理 整理 资产 资产 资产'),
+        tool('asset_organize', 'asset', '整理 资产')
       ]
       const controller = createToolSearch(withResident, () => withResident, {
-        content_organize: false
+        asset_organize: false
       })
       const page = await search(controller, { query: '整理资产', limit: 1 })
-      // 唯一那个名额给了折叠组，没被常驻的 ue_save 吃掉；也没被它拉高的地板筛没
-      expect(page.loadedGroups).toEqual(['ue.content'])
-      expect(page.addedToolNames).toEqual(['content_organize'])
-      // 但「你已经有 ue_save 了」这件事仍然告诉模型
-      expect(page.loaded?.map((entry) => entry.name)).toContain('ue_save')
+      // 唯一那个名额给了折叠组，没被常驻的 editor_save_all 吃掉；也没被它拉高的地板筛没
+      expect(page.loadedGroups).toEqual(['asset'])
+      expect(page.addedToolNames).toEqual(['asset_organize'])
+      // 但「你已经有 editor_save_all 了」这件事仍然告诉模型
+      expect(page.loaded?.map((entry) => entry.name)).toContain('editor_save_all')
     })
 
     it('只命中常驻工具时说清楚是「已经有了」，不说未命中', async () => {
-      const onlyResident = [tool('ue_save', 'ue.editor', '保存 存盘')]
+      const onlyResident = [tool('editor_save_all', 'godot.editor', '保存 存盘')]
       const controller = createToolSearch(onlyResident, () => onlyResident)
       const page = await search(controller, { query: '保存' })
       expect(page.addedToolNames).toEqual([])
-      expect(page.loaded?.map((entry) => entry.name)).toEqual(['ue_save'])
+      expect(page.loaded?.map((entry) => entry.name)).toEqual(['editor_save_all'])
       expect(page.hint).toContain('已经在你的清单里')
     })
   })
@@ -276,70 +274,66 @@ describe('Beta 工具搜索', () => {
    */
   describe('整组常驻', () => {
     it('组在名单里就首发，哪怕工具本身没被点名', () => {
-      const catalog = [tool('ue_restart_editor', 'ue.editor'), tool('material_write')]
+      const catalog = [tool('editor_stop', 'godot.editor'), tool('material_write')]
       const controller = createToolSearch(catalog, () => catalog)
       expect(controller.getTools().map((entry) => entry.name)).toEqual([
         'search_tools',
-        'ue_restart_editor'
+        'editor_stop'
       ])
     })
 
     it('整组常驻仍然让位给用户的差量', () => {
-      const catalog = [tool('ue_restart_editor', 'ue.editor')]
-      const controller = createToolSearch(catalog, () => catalog, { ue_restart_editor: false })
+      const catalog = [tool('editor_stop', 'godot.editor')]
+      const controller = createToolSearch(catalog, () => catalog, { editor_stop: false })
       expect(controller.getTools().map((entry) => entry.name)).toEqual(['search_tools'])
     })
   })
 
   /*
-   * `ue.content` 整组 41,099 字节、摊薄只有 1.6，是全表最差的一组。拆成
-   * 导入 / 整理 / 体检三组之后，图片生成那类只想「把文件放进工程」的技能
-   * 不会再把删除和重定向修复一起拖进来。
+   * 组就是命名空间（`toolSearchGroup` 原样返回 namespace），没有按工具拆的子组：
+   * 点名一个就带回同组的全部，别的组不跟着进来。
    */
-  it('ue.content 按子组加载，导入不会带来删除', async () => {
+  it('按名字加载带回整个命名空间，别的组不跟着进来', async () => {
     const catalog = [
-      tool('ue_content_import', 'ue.content', '导入'),
-      tool('ue_content_delete', 'ue.content', '删除'),
-      tool('ue_content_describe', 'ue.content', '查看')
+      tool('gen_sprite', 'godot.asset', '精灵'),
+      tool('gen_sfx', 'godot.asset', '音效'),
+      tool('generate_image', 'aigc', '图片')
     ]
     const controller = createToolSearch(catalog, () => catalog)
-    const result = await search(controller, { names: ['ue_content_import'] })
-    expect(result.addedToolNames).toEqual(['ue_content_import'])
-    expect(result.loadedGroups).toEqual(['ue.content.import'])
-    expect(controller.getTools().map((entry) => entry.name)).not.toContain('ue_content_delete')
+    const result = await search(controller, { names: ['gen_sprite'] })
+    expect(result.addedToolNames?.sort()).toEqual(['gen_sfx', 'gen_sprite'])
+    expect(result.loadedGroups).toEqual(['godot.asset'])
+    expect(controller.getTools().map((entry) => entry.name)).not.toContain('generate_image')
   })
 
-  it('目录列的是工具组，父目录名也能浏览', async () => {
+  it('目录列的是命名空间，按目录名浏览加载那一组', async () => {
     const catalog = [
-      tool('ue_content_import', 'ue.content', '导入'),
-      tool('ue_content_delete', 'ue.content', '删除')
+      tool('gen_sprite', 'godot.asset', '精灵'),
+      tool('gen_sfx', 'godot.asset', '音效'),
+      tool('generate_image', 'aigc', '图片')
     ]
     const controller = createToolSearch(catalog, () => catalog)
     expect((await search(controller, {})).directories?.map((d) => d.namespace)).toEqual([
-      'ue.content.import',
-      'ue.content.organize'
+      'aigc',
+      'godot.asset'
     ])
-    // 模型手里可能是拆组之前的那份记忆，或者它本来就只想说「内容浏览器那一摊」
-    const parent = await search(controller, { namespace: 'ue.content' })
-    expect(parent.loaded?.map((entry) => entry.name).sort()).toEqual([
-      'ue_content_delete',
-      'ue_content_import'
-    ])
+    const page = await search(controller, { namespace: 'godot.asset' })
+    expect(page.loaded?.map((entry) => entry.name).sort()).toEqual(['gen_sfx', 'gen_sprite'])
   })
 
   /*
    * 父目录认的是**真实存在的命名空间**，不是任意字符串前缀。按前缀匹配的话
-   * `namespace: 'ue'` 会一口咬住全部 UE 工具，而这条路径没有打分 —— 按名字排完
+   * `namespace: 'go'` 会一口咬住全部 Godot 工具，而这条路径没有打分 —— 按名字排完
    * 取头几个，等于整组整组地加载模型压根没要的东西，一次三份前缀重写。
    */
   it('namespace 只认真实目录，半截前缀不会扫走一整摊', async () => {
     const catalog = [
-      tool('ue_content_import', 'ue.content', '导入'),
-      tool('material_set', 'ue.material', '材质'),
-      tool('blueprint_add', 'ue.blueprint', '蓝图')
+      tool('gen_sprite', 'godot.asset', '精灵'),
+      tool('art_style', 'godot.style', '画风'),
+      tool('generate_image', 'aigc', '图片')
     ]
     const controller = createToolSearch(catalog, () => catalog)
-    const half = await search(controller, { namespace: 'ue' })
+    const half = await search(controller, { namespace: 'go' })
     expect(half.loaded).toEqual([])
     expect(half.addedToolNames).toEqual([])
     expect(controller.getTools().map((entry) => entry.name)).toEqual(['search_tools'])
@@ -361,21 +355,24 @@ describe('Beta 工具搜索', () => {
    */
   describe('用户改过的常驻清单', () => {
     it('改成常驻的一起首发，不必再被搜出来', async () => {
-      const catalog = [tool('material_write'), tool('ue_save', 'ue.editor')]
+      const catalog = [tool('material_write'), tool('editor_save_all', 'godot.editor')]
       const controller = createToolSearch(catalog, () => catalog, { material_write: true })
       expect(controller.getTools().map((entry) => entry.name)).toEqual([
         'search_tools',
         'material_write',
-        'ue_save'
+        'editor_save_all'
       ])
     })
 
     it('改成搜索加载的就不首发了，但仍然搜得回来', async () => {
-      const catalog = [tool('ue_save', 'ue.editor'), tool('ue_undo', 'ue.editor')]
-      const controller = createToolSearch(catalog, () => catalog, { ue_save: false })
-      expect(controller.getTools().map((entry) => entry.name)).toEqual(['search_tools', 'ue_undo'])
-      await search(controller, { names: ['ue_save'] })
-      expect(controller.getTools().map((entry) => entry.name)).toContain('ue_save')
+      const catalog = [tool('editor_save_all', 'godot.editor'), tool('editor_stop', 'godot.editor')]
+      const controller = createToolSearch(catalog, () => catalog, { editor_save_all: false })
+      expect(controller.getTools().map((entry) => entry.name)).toEqual([
+        'search_tools',
+        'editor_stop'
+      ])
+      await search(controller, { names: ['editor_save_all'] })
+      expect(controller.getTools().map((entry) => entry.name)).toContain('editor_save_all')
     })
 
     it('加载入口关不掉 —— 关掉之后就没人能再加载任何工具了', () => {
@@ -391,9 +388,12 @@ describe('Beta 工具搜索', () => {
     })
 
     it('没写差量的照旧按内置清单走', () => {
-      const catalog = [tool('ue_save', 'ue.editor'), tool('material_write')]
+      const catalog = [tool('editor_save_all', 'godot.editor'), tool('material_write')]
       const controller = createToolSearch(catalog, () => catalog)
-      expect(controller.getTools().map((entry) => entry.name)).toEqual(['search_tools', 'ue_save'])
+      expect(controller.getTools().map((entry) => entry.name)).toEqual([
+        'search_tools',
+        'editor_save_all'
+      ])
     })
   })
 })

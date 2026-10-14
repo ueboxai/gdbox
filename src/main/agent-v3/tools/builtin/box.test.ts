@@ -20,14 +20,14 @@ const skills = vi.hoisted(() => ({
 const mcpStore = vi.hoisted(() => ({ readMcpSettings: vi.fn(), removeMcpServer: vi.fn() }))
 const mcpIndex = vi.hoisted(() => ({ currentStatuses: vi.fn(), reconnectMcp: vi.fn() }))
 const resume = vi.hoisted(() => ({ resumeImport: vi.fn(), abandonImport: vi.fn() }))
-const detector = vi.hoisted(() => ({ getRunningProjects: vi.fn() }))
+const projects = vi.hoisted(() => ({ getInteractiveProjects: vi.fn() }))
 
 vi.mock('../../core/transcriptStore', () => transcripts)
 vi.mock('../../capabilities/skills', () => skills)
 vi.mock('../../capabilities/mcp/store', () => mcpStore)
 vi.mock('../../capabilities/mcp/index', () => mcpIndex)
 vi.mock('../../../services/asset/ResumeImportService', () => resume)
-vi.mock('../../../utils/UnrealProcessDetector', () => ({ default: detector }))
+vi.mock('../../../services/project/projectManager', () => ({ projectManager: projects }))
 
 const {
   createBoxManageTool,
@@ -156,7 +156,9 @@ describe('box_status', () => {
   })
 
   it('一块读不出来不连累别的块', async () => {
-    detector.getRunningProjects.mockRejectedValue(new Error('tasklist 挂了'))
+    projects.getInteractiveProjects.mockImplementation(() => {
+      throw new Error('编辑器连接表挂了')
+    })
     mcpStore.readMcpSettings.mockResolvedValue({ version: 1, mcpServers: { fs: {}, gh: {} } })
     mcpIndex.currentStatuses.mockReturnValue([
       { id: 'fs', connected: true, toolCount: 5 },
@@ -165,7 +167,7 @@ describe('box_status', () => {
 
     const out = await text(tool, { sections: ['editors', 'mcp'] })
 
-    expect(out).toContain('读不出来：tasklist 挂了')
+    expect(out).toContain('读不出来：编辑器连接表挂了')
     expect(out).toContain('fs｜已连接，5 个工具')
     expect(out).toContain('gh｜连不上：token 失效')
   })

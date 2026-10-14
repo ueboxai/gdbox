@@ -42,7 +42,7 @@ export interface SoftPathResolverOptions {
 }
 
 export class SoftPathResolver {
-  private readonly cache = new Map<string, string | null>()
+  private readonly cache = new Map<string, string>()
   private readonly enableCache: boolean
 
   constructor(options: SoftPathResolverOptions = {}) {
@@ -50,7 +50,10 @@ export class SoftPathResolver {
   }
 
   /**
-   * 把主资源引用的 `res://` 路径换成磁盘路径。文件不在就返回 null。
+   * 把主资源引用的 `res://` 路径换成磁盘路径。不是 `res://` 路径（`uid://` 等）返回 null。
+   *
+   * 文件不在也照样返回换算出的路径：存在与否交给调用方 `fs.access` 判断 ——
+   * AssetDependencyResolver 靠那一步把缺失的硬引用报出来，这里吞成 null 就成了静默丢依赖。
    *
    * @param _mainSoftPath 主资源的 `res://` 路径（换算用不上，保留是为了接口和调用方对齐）
    * @param subSoftPath 被引用的 `res://` 路径
@@ -66,9 +69,8 @@ export class SoftPathResolver {
     const key = `${root}|${subSoftPath}`
     if (this.enableCache && this.cache.has(key)) return this.cache.get(key)!
     const candidate = path.join(root, subSoftPath.slice('res://'.length))
-    const resolved = existsSync(candidate) ? candidate : null
-    if (this.enableCache) this.cache.set(key, resolved)
-    return resolved
+    if (this.enableCache) this.cache.set(key, candidate)
+    return candidate
   }
 
   clear(): void {

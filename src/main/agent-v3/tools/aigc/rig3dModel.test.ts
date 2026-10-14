@@ -62,7 +62,8 @@ describe('rig_3d_model', () => {
 
     expect(rigModel3d.mock.calls[0][0]).toMatchObject({
       sourceJobToken: 'tripo:task_gen~image-to-model',
-      rigType: 'quadruped'
+      rigType: 'quadruped',
+      format: 'glb'
     })
   })
 
@@ -77,7 +78,8 @@ describe('rig_3d_model', () => {
       rig_type: 'biped',
       cost: 30
     })
-    expect(textOf(result)).toMatch(/复制进工程文件夹/)
+    expect(textOf(result)).toContain('import_to_project')
+    expect(textOf(result)).toContain('BoneMap')
   })
 
   it('指定类型与推荐不同时说出来', async () => {

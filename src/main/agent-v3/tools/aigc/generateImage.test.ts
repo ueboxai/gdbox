@@ -85,7 +85,7 @@ describe('元数据', () => {
   it('描述里写清白盒出图那条流程，否则模型不会想到先截图', () => {
     expect(tool.description).toContain('godot_screenshot')
     expect(tool.description).toContain('reference_images')
-    expect(tool.description).toContain('复制进工程文件夹')
+    expect(tool.description).toContain('import_to_project')
   })
 
   // 「把这个场景渲染成成品」两边都通：要么是 AI 概念图，要么是游戏里真实跑出来的画面。

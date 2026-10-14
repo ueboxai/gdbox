@@ -1727,9 +1727,6 @@ export class VaultManager {
       'CREATE INDEX IF NOT EXISTS idx_folder_tags_tagId ON folder_tags(tagId)'
     ]
 
-    indexes.forEach((sql) => vaultDb.exec(sql))
-    this.ensureQueryPlannerStats(vaultDb)
-
     // 迁移：为 assetData 表添加缺失的新列
     const assetDataMigrations = [
       { name: 'note', type: 'TEXT' },
@@ -1796,6 +1793,12 @@ export class VaultManager {
 
     migrateColumns('assetData', assetDataMigrations)
     migrateColumns('assetFolder', assetFolderMigrations)
+
+    // 索引必须在补列之后建：`idx_assetData_deleted` 用到 deletedAt，而新建的保管库
+    // 建表语句里没有这一列，要靠上面的 ALTER 补。先建索引的话全新安装第一次启动
+    // 就抛 `no such column: deletedAt`，系统保管库建不出来
+    indexes.forEach((sql) => vaultDb.exec(sql))
+    this.ensureQueryPlannerStats(vaultDb)
 
     // 资产/文件夹的详细说明。跟着保管库走，所以建在这儿而不是公共库
     try {
