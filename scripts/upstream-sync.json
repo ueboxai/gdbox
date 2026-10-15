@@ -90,6 +90,11 @@
       "status": "ported",
       "note": "GDBox 分叉时已在 registry.ts 按 Godot 文件锁自己实现了同样的逻辑"
     },
+    "ad6ee127": {
+      "status": "ported",
+      "local": "8e3d8e4",
+      "note": "冲突 2 处手工合：GDBox 没有 project_manage，制作人只留绑工程，提示词改成工程也由队员建"
+    },
     "bc25d769": {
       "status": "ported",
       "note": "本仓已有同样的改动"
