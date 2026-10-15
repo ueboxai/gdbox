@@ -26,8 +26,9 @@
       "note": "UE Python API 执行前检查设计稿，GDBox 没有 Python 执行工具"
     },
     "23f1c9ea": {
-      "status": "todo",
-      "note": "P1 经验系统去掉每工具 5 条上限、没出过场的不再排在淘汰最前——通用。API 事实那一层是为 ue_run_python_script，GDBox 用不上；手工只搬通用部分"
+      "status": "ported",
+      "local": "767971f3",
+      "note": "只搬通用部分：去每工具 5 条上限、未出场的不排淘汰最前、退休记原因、修被挤掉的旧账、升通用带 symbol/avoid；API 事实那层（UE Python 专用）没搬"
     },
     "2aedf1ab": {
       "status": "ported",
@@ -38,8 +39,8 @@
       "note": "本仓已有同样的改动"
     },
     "3327e56b": {
-      "status": "todo",
-      "note": "P1 快照标签用交回报告的第一句。teamTools 小冲突"
+      "status": "ported",
+      "note": "本仓已有：分叉时带进了这处未提交改动（teamTools 标签取交回报告首句、team.test 断言都在），cherry-pick 为空已跳过"
     },
     "361d2ebd": {
       "status": "todo",
@@ -74,7 +75,8 @@
       "note": "主进程分叉时已删，本次删 preload 和类型声明"
     },
     "7732f361": {
-      "status": "todo",
+      "status": "ported",
+      "local": "0f95bc83",
       "note": "P1 全部权限下 ask_user 到点按推荐项继续；设置里对话/Agent 合成一个主模型。干净"
     },
     "91ed7990": {
@@ -90,8 +92,9 @@
       "note": "P2 Blender 缺 Git/Python 一键 winget 安装。agentV3.ts 冲突"
     },
     "ce7149d0": {
-      "status": "todo",
-      "note": "P1 排队消息挪到输入框顶上（现在插话/撤回重新编辑/删除）。InputComposer.vue 冲突，上游那次带了大面积重排，手工合"
+      "status": "ported",
+      "local": "2bba675b",
+      "note": "InputComposer 冲突：本仓相对上游基线只差一处注释（UE→引擎），取上游新版再改回该行"
     },
     "e4b85d02": {
       "status": "ported",
