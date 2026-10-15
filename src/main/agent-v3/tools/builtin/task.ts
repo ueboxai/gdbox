@@ -121,7 +121,7 @@ export function formatWriteAudit(result: SubAgentResult): string {
         .sort((a, b) => b[1] - a[1])
         .map(([name, count]) => `${name} ×${count}`)
         .join('、')
-  return `【本次子任务的写操作】${list}。这些改动**已经发生**，需要的话自己回读确认，或用 ue_undo 回滚。`
+  return `【本次子任务的写操作】${list}。这些改动**已经发生**，需要的话自己回读确认；工作室模式里要整体退回就用 team_snapshot。`
 }
 
 export interface TaskToolDeps {
