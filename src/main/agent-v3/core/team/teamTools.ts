@@ -39,7 +39,7 @@ import {
   type TeamStore
 } from './teamStore'
 import { sameTeamModel } from '../../../../shared/agentTeam'
-import { getTargetProjectPath } from '../projectTargetContext'
+import { getWorkingProjectPath } from '../projectTargetContext'
 import { withoutSystemMessages } from '../systemMessages'
 import { checkupPassed } from './modelCheckups'
 import {
@@ -473,7 +473,7 @@ function createSendTool(
           writes: result.writes ? summarizeDoneWrites(result.writes) : '',
           ...(route.used ? { model: route.used } : {}),
           // 用户以后在任务板上打回这件活时，履历要记到同一个工程上
-          ...(getTargetProjectPath() ? { project: getTargetProjectPath() } : {})
+          ...(getWorkingProjectPath() ? { project: getWorkingProjectPath() } : {})
         })
         .catch(() => undefined)
       const snapshot = await autoSnapshot(deps, member.name, message, result)

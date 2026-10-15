@@ -1748,8 +1748,8 @@ export default {
           openSln: 'Open VS Solution',
           changeCover: 'Custom Cover',
           restoreAutoCover: 'Restore Automatic Cover',
-          ualinkInstall: 'Install Bridge Plugin',
-          ualinkRemove: 'Remove Bridge Plugin',
+          editorLinkInstall: 'Install Bridge Plugin',
+          editorLinkRemove: 'Remove Bridge Plugin',
           pin: 'Pin Project',
           unpin: 'Unpin Project',
           remove: 'Remove Project',
@@ -1760,7 +1760,7 @@ export default {
           createCollection: 'Create group',
           refresh: 'Refresh'
         },
-        ualink: {
+        editorLink: {
           removeTitle: 'Remove the GDBox addon from this project?',
           removeContent:
             "This deletes the GDBox addon from the project's addons folder and disables it in Project Settings. GDBox will stop installing it for this project automatically; you can reinstall it from the context menu.",
@@ -3135,9 +3135,9 @@ export default {
       // how to ask the user to open it up, and decides whether to pass that on
       fileAccessScope: 'File access scope',
 
-      fileAccessScopeUeOnly: 'Game development only',
+      fileAccessScopeProjectOnly: 'Game development only',
       fileAccessScopeFull: 'Whole computer',
-      fileAccessScopeUeOnlyHint:
+      fileAccessScopeProjectOnlyHint:
         'Allow installed engines, imported projects, and asset libraries, excluding protected sensitive folders.',
       fileAccessScopeFullHint:
         'Allow access to local files, excluding protected sensitive folders.',
@@ -5346,8 +5346,8 @@ export default {
         'Create, modify and delete nodes, scripts, resources and assets in scenes',
       confirmFile: 'Files and asset library',
       confirmFileDesc: 'Read, write, move or delete files in your asset library',
-      confirmCommand: 'Engine commands and scripts',
-      confirmCommandDesc: 'Run console commands and Python scripts, enable or disable plugins',
+      confirmCommand: 'Commands and runs',
+      confirmCommandDesc: 'Run shell commands on this computer, run the game, open or save scenes in the editor',
       confirmRisk:
         'This risks assets being deleted by mistake or the project being broken. You can turn it off at any time.',
       confirmOk: 'Confirm',

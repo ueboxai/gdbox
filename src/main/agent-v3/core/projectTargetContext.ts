@@ -281,6 +281,16 @@ export function isOutOfSessionScope(projectPath: string | null | undefined): boo
   return !isSameProjectPath(bound.projectPath, projectPath)
 }
 
+/**
+ * 这一轮在干的工程：编辑器连着就是它，没连就是对话归属的那个。
+ *
+ * Godot 的大多数活不需要编辑器（改文件、无头检查和试玩），所以「在干哪个工程」不能只看连接 ——
+ * 工作室模式的快照、`team_status` 的清点都按它算。
+ */
+export function getWorkingProjectPath(): string | undefined {
+  return getTargetProjectPath() || getSessionProjectPath()
+}
+
 /** 这条对话钉着的工程路径，报错时告诉用户「你这条对话属于谁」 */
 export function getSessionProjectPath(): string | undefined {
   return boundProject()?.projectPath

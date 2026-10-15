@@ -199,8 +199,8 @@ export function createLocalWriteTools(options: LocalWriteOptions = {}): UnrealAg
         '在用户电脑上创建一个新文件，或**整个覆盖**一个已有文件。\n\n' +
         '【什么时候用】新建 GDScript 脚本、场景（.tscn）、资源（.tres）、着色器（.gdshader），' +
         '生成清单/报告、创建配置文件。不要写 .godot/ 目录（编辑器缓存）和 *.import 旁挂文件。\n' +
-        '【建 Godot 工程】一个文件夹里放一个 project.godot 就是一个工程。建完告诉用户在' +
-        '「我的项目」里导入它，否则盒子里看不到。\n' +
+        '【建 Godot 工程】一个文件夹里放一个 project.godot 就是一个工程。建完用 set_session_project ' +
+        '给工程目录的绝对路径，把这条对话挂过去（会顺带登记进「我的项目」）。\n' +
         '【什么时候不用】只改文件里的几行 —— 那要用 edit_local_file。' +
         '用 write 会把这个文件的其余内容**全部丢掉**，包括你没读过的部分。\n' +
         '【动手之前】覆盖已有文件前先 read_local_file 看一眼，' +

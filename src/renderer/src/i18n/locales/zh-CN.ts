@@ -1706,8 +1706,8 @@ export default {
           openSln: '打开 C++ 工程',
           changeCover: '自定义封面',
           restoreAutoCover: '恢复自动封面',
-          ualinkInstall: '安装桥接插件',
-          ualinkRemove: '移除桥接插件',
+          editorLinkInstall: '安装桥接插件',
+          editorLinkRemove: '移除桥接插件',
           pin: '置顶项目',
           unpin: '取消置顶',
           remove: '移除项目',
@@ -1718,7 +1718,7 @@ export default {
           createCollection: '创建分组',
           refresh: '刷新'
         },
-        ualink: {
+        editorLink: {
           removeTitle: '从此项目移除 GDBox 插件？',
           removeContent:
             '将删除项目 addons 目录中的 GDBox 插件，并在项目设置中停用该插件。此后 GDBox 不再为此项目自动安装该插件，如有需要可通过右键菜单重新安装。',
@@ -3018,9 +3018,9 @@ export default {
       // 挡下时 AI 会拿到「怎么请用户放开」，由它决定要不要转达
       fileAccessScope: '文件访问范围',
 
-      fileAccessScopeUeOnly: '仅游戏开发相关',
+      fileAccessScopeProjectOnly: '仅游戏开发相关',
       fileAccessScopeFull: '整台电脑',
-      fileAccessScopeUeOnlyHint: '仅限已安装引擎、已导入项目及素材库；受保护的敏感目录除外。',
+      fileAccessScopeProjectOnlyHint: '仅限已安装引擎、已导入项目及素材库；受保护的敏感目录除外。',
       fileAccessScopeFullHint: '允许访问本机文件，不含受保护的敏感目录。',
       editorScreenshot: '允许编辑器截图',
       editorScreenshotDesc: '允许获取 Godot 编辑器画面。',
@@ -5179,8 +5179,8 @@ export default {
       confirmProjectDesc: '创建、修改、删除场景中的节点、脚本、资源与资产',
       confirmFile: '文件和资产库',
       confirmFileDesc: '读取、写入、移动或删除资产库中的文件',
-      confirmCommand: '引擎命令与脚本',
-      confirmCommandDesc: '执行控制台命令、运行 Python 脚本、启用或停用插件',
+      confirmCommand: '命令与运行',
+      confirmCommandDesc: '在本机运行命令行、运行游戏、在编辑器里打开或保存场景',
       confirmRisk: '可能导致资产被误删或工程被损坏。此设置可随时改回。',
       confirmOk: '确认',
       confirmCancel: '取消'

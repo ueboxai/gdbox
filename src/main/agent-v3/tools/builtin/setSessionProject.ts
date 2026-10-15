@@ -29,6 +29,7 @@
  */
 
 import { z } from 'zod'
+import { existsSync } from 'fs'
 import path from 'path'
 
 import { defineTool, type UnrealAgentTool } from '../defineTool'
@@ -52,6 +53,23 @@ export interface SetSessionProjectDeps {
   listProjects: () => SessionProjectCandidate[]
   /** 把新归属送到渲染层。`null` = 解除归属 */
   onChange: (project: SessionProjectCandidate | null) => void
+  /**
+   * 把一个还没进项目库的 Godot 工程目录登记进去。不传就用项目库的登记入口
+   * （`registerProjectByUproject`，和用户在首页导入走同一条路）。
+   */
+  registerProject?: (projectDir: string) => Promise<SessionProjectCandidate | null>
+}
+
+async function registerViaLibrary(projectDir: string): Promise<SessionProjectCandidate | null> {
+  const { registerProjectByUproject } = await import('../../../sqliteDataBase/ipc/project')
+  const result = await registerProjectByUproject(projectDir)
+  const record = result.data as { projectName?: string; projectPath?: string; EngineAssociation?: string } | undefined
+  if (!record?.projectPath) return null
+  return {
+    projectName: record.projectName || path.basename(record.projectPath),
+    projectPath: record.projectPath,
+    ...(record.EngineAssociation ? { engineVersion: record.EngineAssociation } : {})
+  }
 }
 
 const input = z.object({
@@ -59,7 +77,7 @@ const input = z.object({
     .string()
     .optional()
     .describe(
-      '要挂到哪个工程下。工程名或工程路径都认（用 project_list 的 list_projects 查）。' +
+      '要挂到哪个工程下。工程名或工程目录的绝对路径都认（已登记的用 project_list 查；新建的给目录路径）。' +
         '省略并且 clear 为 true 时解除归属'
     ),
   clear: z
@@ -74,24 +92,22 @@ const input = z.object({
     )
 })
 
-const DESCRIPTION = `把**当前这条对话**改挂到另一个 UE 工程下。
+const DESCRIPTION = `把**当前这条对话**挂到一个 Godot 工程下。
 
 【什么时候该用】
-- 你在这条对话里新建了一个工程，接下来的活都在新工程里干 —— 直接换过去，
-  不要请用户去界面上改
+- 你在这条对话里新建了一个工程（写好了 project.godot），接下来的活都在新工程里干 —— 直接用
+  工程目录的绝对路径挂过去。还没进「我的项目」的工程会顺带登记进去，用户在项目库里就看得到
 - 用户明说「接下来在 XXX 工程里做」，而这条对话现在挂在别的工程下
-- open_project 回了 session-scoped（对话归属挡住了切换），而用户要的确实是新工程
 
 【什么时候不该用】
-- 只是想读一眼别的工程 —— 那不需要换归属，也换不来：引擎命令本来就只发给归属工程
+- 只是想读一眼别的工程 —— 那不需要换归属，读文件给路径就行
 - 用户没表达过要换。归属会改变侧边栏里这条对话的位置，那是用户的组织方式，
   换之前得有依据。拿不准就用 ask_user 问一句，别自己替他决定
 
 【换完会怎样】
 - 侧边栏分组、顶栏工程胶囊当场就变
-- 新工程已经开着的话，这一轮剩下的引擎命令立刻改发给它，不用等下一条消息
-- 新工程没开着的话，这条对话这一轮就没有引擎能力了（引擎工具是按归属工程给的）——
-  所以要在新工程里干活，先 open_project 把它打开`
+- godot_check / godot_run / godot_screenshot 不给 project_path 时默认用它；工作室模式的快照和 team_status 也按它算
+- 编辑器工具只发给这个工程的编辑器；它没开着的话编辑器工具用不了，无头的检查、试玩、截图照常能用`
 
 export function createSetSessionProjectTool(
   deps: SetSessionProjectDeps
@@ -135,7 +151,15 @@ export function createSetSessionProjectTool(
       }
 
       const projects = deps.listProjects()
-      const match = matchProject(projects, wanted)
+      let match = matchProject(projects, wanted)
+      /*
+       * 点名的是一个还没登记的工程目录（模型自己刚建的那种）：先登记进项目库再挂。
+       * 以前这一步要请用户去首页导入 —— 工作室模式里制作人建完工程就卡在这儿，
+       * 快照和 team_status 都不知道该看哪个工程。
+       */
+      if (!match && path.isAbsolute(wanted) && existsSync(path.join(wanted, 'project.godot'))) {
+        match = (await (deps.registerProject ?? registerViaLibrary)(wanted).catch(() => null)) ?? undefined
+      }
       if (!match) {
         const known = projects.map((item) => item.projectName).filter(Boolean)
         return {
@@ -143,8 +167,8 @@ export function createSetSessionProjectTool(
             `盒子里没有叫 "${wanted}" 的工程。` +
             (known.length > 0
               ? `已知的有：${known.slice(0, 12).join('、')}${known.length > 12 ? ' 等' : ''}。`
-              : '项目库是空的 —— 先用 project_manage 的 create_project 建一个，或让用户在首页导入。') +
-            '用 project_list 的 list_projects 拿准确的名字。',
+              : '项目库是空的。新建的工程直接给工程目录的绝对路径（目录里要有 project.godot）。') +
+            '用 project_list 拿准确的名字。',
           isError: true
         }
       }
@@ -161,7 +185,7 @@ export function createSetSessionProjectTool(
         return {
           text:
             `项目库里「${match.projectName}」这条记录没有工程路径，改不了归属 ——` +
-            '没有路径就没法保证后面的引擎命令只落在这个工程上。' +
+            '没有路径就没法保证后面的命令只落在这个工程上。' +
             '让用户在首页重新导入一次这个工程，或者用 projectPath 直接点名它的目录。',
           isError: true
         }
@@ -190,10 +214,10 @@ export function createSetSessionProjectTool(
         text: [
           `已把这条对话改挂到「${match.projectName}」下（${args.reason}）。`,
           switchedTarget
-            ? '这一轮剩下的引擎命令已经改发给它，直接接着干。'
+            ? '它的编辑器连着，这一轮剩下的编辑器命令已经改发给它，直接接着干。'
             : match.connected
-              ? '它已经连着，下一步就能用引擎工具。'
-              : '它现在没开着 —— 要在里面干活，先用 project_manage 的 open_project 打开它。',
+              ? '它的编辑器已经连着，下一步就能用编辑器工具。'
+              : '它的编辑器现在没开着：编辑器工具用不了，godot_check / godot_run / godot_screenshot 照常能用。',
           '侧边栏分组和顶栏的工程胶囊已经跟着变了。'
         ].join(''),
         details: {

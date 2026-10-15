@@ -22,7 +22,7 @@ import {
   type TrackRecordEntry
 } from '../../../../shared/agentTeam'
 import type { AiProviderSettings } from '../../../ai/types'
-import { getTargetProjectPath } from '../projectTargetContext'
+import { getWorkingProjectPath } from '../projectTargetContext'
 import { checkupPassed, loadModelCheckups } from './modelCheckups'
 import type { TeamStore } from './teamStore'
 import { createTrackRecord, summarizeTrackRecord } from './trackRecord'
@@ -204,7 +204,7 @@ export async function loadTeamModels(producer?: TeamModel): Promise<TeamModels |
     const checkups = await loadModelCheckups(join(session.teamModelsDir(), 'model-checkups.json'))
     const trackRecord = createTrackRecord(session.trackRecordFile())
     const entries = await trackRecord.all()
-    const project = getTargetProjectPath()
+    const project = getWorkingProjectPath()
     const records: Record<string, string> = {}
     for (const c of candidates) {
       const line = summarizeTrackRecord(entries, c, project)
@@ -229,7 +229,7 @@ export async function loadTeamModels(producer?: TeamModel): Promise<TeamModels |
       knownCheckup: checkups.known,
       records,
       record: (entry) => {
-        const where = getTargetProjectPath()
+        const where = getWorkingProjectPath()
         return trackRecord.add({ ...entry, at: Date.now(), ...(where ? { project: where } : {}) })
       }
     }

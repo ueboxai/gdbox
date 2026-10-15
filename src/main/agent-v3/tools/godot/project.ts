@@ -11,7 +11,7 @@ import { join } from 'path'
 
 import { appSettingsManager } from '../../../appSettingsManager'
 import { locateGodot, type GodotInfo } from '../../../godot/locate'
-import { getSessionProjectPath, getTargetProjectPath } from '../../core/projectTargetContext'
+import { getWorkingProjectPath } from '../../core/projectTargetContext'
 
 export const NO_GODOT =
   '没有找到 Godot 4。请用户在「设置 → 项目」里指定 Godot 编辑器的位置，然后再试。'
@@ -35,7 +35,7 @@ export function resetGodotCacheForTest(): void {
 
 /** 取这一轮的工程目录。给的路径不是 Godot 工程就直接报错，不往下跑 */
 export function resolveProjectDir(explicit?: string): string {
-  const dir = explicit?.trim() || getTargetProjectPath() || getSessionProjectPath()
+  const dir = explicit?.trim() || getWorkingProjectPath()
   if (!dir) {
     throw new Error(
       '不知道要操作哪个工程：这条对话还没有归属工程，参数里也没给 project_path。' +

@@ -165,7 +165,47 @@ describe('set_session_project', () => {
       }
     )
 
-    expect(textOf(result)).toContain('先用 project_manage 的 open_project 打开它')
+    expect(textOf(result)).toContain('godot_check / godot_run / godot_screenshot 照常能用')
+  })
+
+  /**
+   * 模型自己刚建的工程（写好了 project.godot）还不在项目库里：先登记再挂。
+   * 以前这一步要请用户去首页导入，工作室模式里制作人建完工程就卡在这儿。
+   */
+  it('点名一个没登记的 Godot 工程目录：登记进项目库再挂上', async () => {
+    const { mkdtempSync, writeFileSync, rmSync } = await import('node:fs')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const dir = mkdtempSync(join(tmpdir(), 'gdbox-newproj-'))
+    writeFileSync(join(dir, 'project.godot'), 'config_version=5')
+    const registered: string[] = []
+    try {
+      const tool = createSetSessionProjectTool({
+        sessionId: SCOPED_SESSION,
+        listProjects: () => LIBRARY,
+        onChange: () => {},
+        registerProject: async (projectDir) => {
+          registered.push(projectDir)
+          return { projectName: 'CoinCatch', projectPath: projectDir }
+        }
+      })
+      const result = await runWithTargetConnectionId({ sessionId: SCOPED_SESSION }, () =>
+        run(tool, { projectName: dir, reason: '刚建的新工程' })
+      )
+      expect(registered).toEqual([dir])
+      expect(textOf(result)).toContain('已把这条对话改挂到「CoinCatch」下')
+
+      // 不是 Godot 工程的目录不登记，照旧报「没有这个工程」
+      const plain = mkdtempSync(join(tmpdir(), 'gdbox-plain-'))
+      const failed = await runWithTargetConnectionId({ sessionId: SCOPED_SESSION }, () =>
+        runExpectingFailure(tool, { projectName: plain, reason: 'x' })
+      )
+      expect(registered).toHaveLength(1)
+      expect(failed).toContain('盒子里没有叫')
+      rmSync(plain, { recursive: true, force: true })
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   it('认不出工程时报错并把已知的工程列出来，不静默改成别的', async () => {

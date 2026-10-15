@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const target = vi.hoisted(() => ({ path: undefined as string | undefined }))
-vi.mock('../projectTargetContext', () => ({ getTargetProjectPath: () => target.path }))
+vi.mock('../projectTargetContext', () => ({ getWorkingProjectPath: () => target.path }))
 
 import { acquire, forceReleaseAll } from '../assetLock'
 import { categorize, contentInventory, formatCounts } from './inventory'
@@ -124,7 +124,7 @@ describe('team_status', () => {
 
   it('没连工程也能出，说清没有工程', async () => {
     const text = await buildTeamStatus({ store, sessionId: 's1' })
-    expect(text).toContain('这一轮还没有连着的工程')
+    expect(text).toContain('这条对话还没有归属工程')
     expect(text).toContain('团队里没人占着文件')
   })
 

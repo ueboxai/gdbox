@@ -10,7 +10,7 @@
 
 import { execFile } from 'child_process'
 
-import { getTargetProjectPath } from '../agent-v3/core/projectTargetContext'
+import { getWorkingProjectPath } from '../agent-v3/core/projectTargetContext'
 import {
   createSnapshotStore,
   type GitRunner,
@@ -57,14 +57,14 @@ export function createTeamSnapshots(): TeamSnapshots {
     return store
   }
   const currentProject = (): string => {
-    const dir = getTargetProjectPath()
+    const dir = getWorkingProjectPath()
     if (!dir) throw new Error('这一轮没有归属工程，没法存快照')
     return dir
   }
 
   return {
     async save(message) {
-      const dir = getTargetProjectPath()
+      const dir = getWorkingProjectPath()
       return dir ? storeFor(dir).save(message) : null
     },
     list: (limit) => storeFor(currentProject()).list(limit),

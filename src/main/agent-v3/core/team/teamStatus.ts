@@ -22,7 +22,7 @@ import { z } from 'zod'
 
 import { defineTool, type UnrealAgentTool } from '../../tools/defineTool'
 import { describeLockPath, holderLabel, listLocks, teamRootOf } from '../assetLock'
-import { getTargetProjectPath } from '../projectTargetContext'
+import { getWorkingProjectPath } from '../projectTargetContext'
 import { contentInventory, formatCounts } from './inventory'
 import type { TeamSnapshots } from './snapshots'
 import type { TeamLive } from './teamLive'
@@ -61,7 +61,7 @@ export async function buildTeamStatus(deps: TeamStatusDeps): Promise<string> {
   const sections: string[] = []
 
   // ── 磁盘 ──
-  const projectDir = getTargetProjectPath()
+  const projectDir = getWorkingProjectPath()
   if (projectDir) {
     const inventory = await contentInventory(projectDir).catch(() => null)
     if (inventory) {
@@ -82,7 +82,7 @@ export async function buildTeamStatus(deps: TeamStatusDeps): Promise<string> {
       )
     }
   } else {
-    sections.push('【工程现状】这一轮还没有连着的工程。')
+    sections.push('【工程现状】这条对话还没有归属工程（新建的工程用 set_session_project 挂上）。')
   }
 
   // ── 谁在干什么 ──
