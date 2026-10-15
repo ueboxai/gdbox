@@ -293,6 +293,7 @@
           :model-choices="teamBoard.modelChoices.value"
           :models-loaded="teamBoard.modelsLoaded.value"
           @reopen="teamBoard.reopen"
+          @reopen-job="teamBoard.reopenJob"
           @end="teamBoard.end"
           @open-models="teamBoard.loadModels"
           @set-model="teamBoard.setMemberModel"
