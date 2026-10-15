@@ -11,6 +11,8 @@
         主进程，也就从来没有真的把引擎工具指向那个工程。留着两套的结果是
         用户以为绑了、模型那边毫无变化。
       -->
+      <!-- 这条对话的工程能直接运行：改完一句话点一下就玩到新版本 -->
+      <PlayGameButton :chat-sid="chatSid" />
       <SessionProjectChip
         v-if="!hideProjectChip"
         :chat-sid="chatSid"
@@ -52,6 +54,7 @@ import AppMenu from '@renderer/components/AppMenu.vue'
 import AppMenuItem from '@renderer/components/AppMenuItem.vue'
 import { PhDotsThree } from '@phosphor-icons/vue'
 import { useI18n } from 'vue-i18n'
+import PlayGameButton from './PlayGameButton.vue'
 import SessionProjectChip from './SessionProjectChip.vue'
 
 /**

@@ -123,6 +123,17 @@
                 <span class="label">LINK</span>
               </span>
               <img :src="getProjectImage(item)" alt="thumb" />
+              <!-- 悬停出现：不开编辑器，直接把游戏开在窗口里玩 -->
+              <button
+                type="button"
+                class="play-game-btn"
+                :title="t('page.home.project.menu.playGame')"
+                :aria-label="t('page.home.project.menu.playGame')"
+                @click.stop="handlePlayGame(item)"
+                @dblclick.stop
+              >
+                <PhPlay weight="fill" />
+              </button>
               <div class="project-meta">
                 <div
                   class="project-title"
@@ -249,6 +260,8 @@ import {
   PhImage,
   PhPencilSimple,
   PhPlayCircle,
+  PhPlay,
+  PhGameController,
   PhPlugs,
   PhPlus,
   PhSelectionSlash,
@@ -1247,7 +1260,8 @@ const buildMenuItems = (
 ): MenuItem[] => {
   const items: MenuItem[] = [
     // === 第一区：高频启动与访问 ===
-    { key: 'open-project', label: t('page.home.project.menu.open'), icon: PhPlayCircle }
+    { key: 'open-project', label: t('page.home.project.menu.open'), icon: PhPlayCircle },
+    { key: 'play-game', label: t('page.home.project.menu.playGame'), icon: PhGameController }
   ]
 
   // 如果是 C++ 工程（存在 sln 文件），添加"打开 sln"菜单项
@@ -1573,6 +1587,17 @@ const handleEditorLinkInstall = async (project: ProjectRecord): Promise<void> =>
   }
 }
 
+/** 不开编辑器，直接运行游戏（见 main/ipc/playGame.ts）。已经开着的那一局会被重开 */
+const handlePlayGame = async (item: {
+  projectPath?: string | null
+  originPath?: string | null
+}): Promise<void> => {
+  const target = item.projectPath || item.originPath
+  if (!target) return
+  const res = (await window.api.invoke('game:play', target)) as { success: boolean; error?: string }
+  if (!res?.success) message.error(res?.error || t('page.home.project.messages.openFailed'))
+}
+
 const handleMenuClick = async (key: string) => {
   if (!activeProject.value) return
   if (key === 'rename') {
@@ -1580,6 +1605,8 @@ const handleMenuClick = async (key: string) => {
     renameVisible.value = true
   } else if (key === 'open-project') {
     await handleOpenProject(activeProject.value)
+  } else if (key === 'play-game') {
+    await handlePlayGame(activeProject.value)
   } else if (key === 'open-sln') {
     // 打开 sln 工程（C++ 项目）
     if (!activeSlnPath.value) {
@@ -2082,6 +2109,35 @@ const doOpenProject = async (projectKey: string, target: string) => {
 }
 
 /* 已连接标识样式 - LIVE Badge */
+.play-game-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-accent-solid);
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.9);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+
+  .project-card:hover &,
+  &:focus-visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .connected-badge {
   position: absolute;
   top: 7px;

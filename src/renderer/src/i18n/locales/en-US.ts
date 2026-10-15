@@ -1743,6 +1743,7 @@ export default {
         unnamedProject: 'Unnamed Project',
         menu: {
           open: 'Open Project',
+          playGame: 'Play game',
           rename: 'Rename',
           openLocation: 'Open Location',
           openSln: 'Open VS Solution',
@@ -2448,6 +2449,16 @@ export default {
      * with the *work* in another direction and leaves a new chat behind; a side
      * question is for understanding what is *going on* and leaves nothing behind.
      */
+    playGame: {
+      play: 'Play',
+      restart: 'Restart',
+      starting: 'Starting…',
+      stop: 'Stop game',
+      playTip: "Run this project's game in a window",
+      restartTip: 'Close the running game and start again from the latest files',
+      crashed: 'The game quit unexpectedly',
+      crashedWith: 'The game quit unexpectedly: {error}'
+    },
     sideQuestion: {
       open: 'Ask a side question (with context)',
       noContext: 'This chat has no context to hand over yet',

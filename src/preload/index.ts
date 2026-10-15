@@ -83,6 +83,7 @@ const GENERIC_INVOKE_CHANNELS = new Set(
 dialog:showOpenDialog file:execute fs:copyDir fs:ensureDir fs:exists fs:writeFile
 networkVault:connect networkVault:saveCredentials networkVault:testAccess
 networkVaultV2:batch networkVaultV2:connectRemoteVault networkVaultV2:createRemoteVault networkVaultV2:deleteAsset networkVaultV2:deleteFolder networkVaultV2:deleteRemoteVault networkVaultV2:getConnectionStatus networkVaultV2:getDeletedAssets networkVaultV2:getRole networkVaultV2:getServerAccess networkVaultV2:getThumbnailBackupStatus networkVaultV2:listRemoteRoots networkVaultV2:listRemoteVaults networkVaultV2:pullSync networkVaultV2:purgeAsset networkVaultV2:restoreAsset networkVaultV2:restoreThumbnailBackup networkVaultV2:rotateServerAccess networkVaultV2:scan networkVaultV2:setRemoteVaultApiKey networkVaultV2:setShareWritePublish networkVaultV2:syncThumbnailBackup
+game:play game:status game:stop
 shell:openPath shell:openSkillsDir shell:openProject shell:showItemInFolder
 vault:cleanThumbnailCache vault:create vault:delete vault:getAll vault:getCurrentPath vault:getStats vault:move vault:rename vault:switch vault:updateBrowsePath vault:updateIcon vault:updateNetworkPath vault:validatePath`
     .trim()
@@ -97,6 +98,8 @@ const GENERIC_EVENT_CHANNELS = new Set([
   TRAY_ACTION_CHANNEL,
   // agent-v3 的事件全部走 window.api.on（见 renderer/src/api/agentV3.ts），
   // 所以要登记在这里而不是 RAW_EVENT_CHANNELS —— 后者是 electron.ipcRenderer.on 用的。
+  // 「运行游戏」开了、关了、崩了（见 main/ipc/playGame.ts）
+  'game:status',
   'agent-v3:approval-required',
   // 审批在别处（语音口头批的）落定了，界面上那个确认框要跟着收掉
   'agent-v3:approval-settled',

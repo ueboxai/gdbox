@@ -295,11 +295,49 @@ export function createGodotScreenshotTool(
   })
 }
 
+/**
+ * godot_play：把游戏开在真窗口里给用户玩（见 `godot/playGame.ts`）。
+ * 用户说「打开我玩一下」「我试试」时用；自己验证行为用 godot_run。
+ */
+export function createGodotPlayTool(): UnrealAgentTool<unknown> {
+  return defineTool({
+    name: 'godot_play',
+    namespace: 'godot',
+    risk: 'safe',
+    concurrency: 'sequential',
+    description:
+      'Open the game in a window for the user to play themselves (when they ask to try it). Relaunching replaces the running one. ' +
+      'Reports errors from the first seconds; the full log keeps updating in .gdbox/tmp/play.log while they play. To verify behaviour yourself use godot_run.',
+    input: z.object({
+      project_path: projectPathInput,
+      scene: z.string().optional().describe('res:// scene; default the main scene')
+    }),
+    async execute(args, { signal }) {
+      const godot = (await requireGodot()).path
+      const dir = resolveProjectDir(args.project_path)
+      const { playGame, gameLog, isGameRunning, errorsInLog } = await import('../../../godot/playGame')
+      await playGame(godot, dir, { ...(args.scene ? { scene: args.scene } : {}), ...(signal ? { signal } : {}) })
+      // 等几秒：脚本解析错、主场景缺失这类问题一启动就报，现在告诉用户比让他对着黑屏强
+      await new Promise((resolve) => setTimeout(resolve, 4_000))
+      const errors = errorsInLog(gameLog(dir))
+      const running = isGameRunning(dir)
+      const lines = [
+        running
+          ? "The game window is open on the user's screen."
+          : 'The game exited within a few seconds of starting.',
+        ...(errors.length ? ['Errors so far:', ...errors.map((e) => `- ${e}`)] : running ? ['No errors so far.'] : [])
+      ]
+      return { text: lines.join('\n'), details: { running, errors }, ...(running ? {} : { isError: true }) }
+    }
+  })
+}
+
 export function godotRuntimeTools(): UnrealAgentTool<never>[] {
   return [
     createGodotCheckTool(),
     createGodotRunTool(),
     createGodotScreenshotTool(),
+    createGodotPlayTool(),
     createImportToProjectTool()
   ] as unknown as UnrealAgentTool<never>[]
 }

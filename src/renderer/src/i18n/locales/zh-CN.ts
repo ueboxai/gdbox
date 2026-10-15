@@ -1701,6 +1701,7 @@ export default {
         unnamedProject: '未命名项目',
         menu: {
           open: '打开项目',
+          playGame: '运行游戏',
           rename: '重命名',
           openLocation: '打开目录',
           openSln: '打开 C++ 工程',
@@ -2380,6 +2381,17 @@ export default {
      * 和「分支」的区别要在文案上说清楚：分支是换个方向接着**干活**，会留下一条
      * 新对话；侧边是弄明白**现在什么情况**，问完关掉，主对话一个字都不知道。
      */
+    // 对话顶栏的「运行游戏」（PlayGameButton）
+    playGame: {
+      play: '运行',
+      restart: '重开',
+      starting: '正在启动…',
+      stop: '停止游戏',
+      playTip: '在窗口里运行这个工程的游戏',
+      restartTip: '关掉正在运行的这一局，按最新的文件重新开始',
+      crashed: '游戏意外退出',
+      crashedWith: '游戏意外退出：{error}'
+    },
     sideQuestion: {
       open: '侧边问一句（带上下文）',
       noContext: '暂无可带入的上下文',

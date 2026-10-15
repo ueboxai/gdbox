@@ -40,6 +40,7 @@ import { registerDiagnosticsIPC } from './diagnostics'
 import './assetImport'
 import './projectArchiveUpload'
 import { registerContextMenuIPC } from './contextMenu'
+import { registerPlayGameIPC } from './playGame'
 
 /**
  * 注册所有IPC处理函数
@@ -65,6 +66,7 @@ export function registerAllIPC(setAppIconTheme: SetAppIconTheme): void {
 
   // 注册 shell 相关IPC
   registerShellIPC()
+  registerPlayGameIPC()
 
   // 注册路径相关IPC
   registerPathIPC()
