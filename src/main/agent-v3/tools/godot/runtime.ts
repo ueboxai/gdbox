@@ -7,14 +7,25 @@
  * 三个都串行：同时起两个 Godot 导入同一个工程会互相踩 `.godot/` 缓存。
  */
 
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, copyFileSync } from 'fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+  copyFileSync,
+  type Dirent
+} from 'fs'
+import { readdir, stat } from 'fs/promises'
 import { tmpdir } from 'os'
-import { join } from 'path'
+import { basename, join } from 'path'
 import { app } from 'electron'
 import { z } from 'zod'
 
 import { defineTool, type UnrealAgentTool } from '../defineTool'
-import { digestGodotLog, runGodot } from '../../../godot/run'
+import { digestGodotLog, runGodot, type LogDigest } from '../../../godot/run'
 import { ensureImported, runImport } from '../../../godot/importState'
 import { godotResourcesDir } from '../../../godot/editorLinkAddon'
 import { requireGodot, resolveProjectDir } from './project'
@@ -53,14 +64,167 @@ export function summarizeWatch(lines: string[], maxRows = 60): string {
   return `time | ${keys.join(' | ')}\n${shown.join('\n')}`
 }
 
-export function createGodotCheckTool(): UnrealAgentTool<unknown> {
+/** 不进加载检查的目录：引擎缓存、GDBox 自己的东西、版本库 */
+const SKIP_DIRS = new Set(['.godot', '.gdbox', '.git', 'node_modules'])
+
+export interface ProjectScript {
+  /** res:// 路径 */
+  path: string
+  /** 修改时间和大小，用来判断这批脚本自上次检查以来动没动过 */
+  stamp: string
+}
+
+/**
+ * 工程里所有要检查的 .gd。带 .gdignore 的目录引擎不认，跳过；
+ * 顶层 addons/ 下带 plugin.cfg 的是装进来的编辑器插件，不是游戏代码，也跳过 ——
+ * 自己写在 addons/ 下、没有 plugin.cfg 的代码照样检查。
+ * 读不了的目录（被别的进程锁着、没权限）跳过，不让整个检查失败。
+ */
+export async function collectProjectScripts(dir: string, rel = ''): Promise<ProjectScript[]> {
+  const here = join(dir, rel)
+  if (rel && existsSync(join(here, '.gdignore'))) return []
+  if (
+    rel.startsWith('addons/') &&
+    !rel.includes('/', 'addons/'.length) &&
+    existsSync(join(here, 'plugin.cfg'))
+  ) {
+    return []
+  }
+  let entries: Dirent[]
+  try {
+    entries = await readdir(here, { withFileTypes: true })
+  } catch {
+    return []
+  }
+  const out: ProjectScript[] = []
+  for (const e of entries) {
+    const child = rel ? `${rel}/${e.name}` : e.name
+    if (e.isDirectory()) {
+      if (!SKIP_DIRS.has(e.name)) out.push(...(await collectProjectScripts(dir, child)))
+    } else if (e.name.endsWith('.gd')) {
+      const st = await stat(join(here, e.name)).catch(() => null)
+      out.push({ path: `res://${child}`, stamp: st ? `${st.mtimeMs}:${st.size}` : '' })
+    }
+  }
+  return out.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
+}
+
+export interface LoadCheckResult {
+  /** 检查器没跑完（没打出汇总行）时为 null */
+  checked: number | null
+  failed: string[]
+  errors: string[]
+}
+
+/**
+ * 解析 gdbox_load_check.gd 的输出。引擎给每条错误挂的回溯指向检查器自己，删掉；
+ * 「Failed to load script "X" … Parse error」在 X 已经有一条 SCRIPT ERROR 时说的是同一件事，删掉；
+ * 没有的话（缺依赖、extends 路径错）它就是唯一的原因，留着。
+ */
+export function summarizeLoadCheck(output: string): LoadCheckResult {
+  const lines = output.split(/\r?\n/)
+  const failed = lines
+    .filter((l) => l.startsWith('GDBOX_LOADFAIL '))
+    .map((l) => l.slice('GDBOX_LOADFAIL '.length).trim())
+  const total = lines.find((l) => l.startsWith('GDBOX_LOADCHECK '))
+  const all = digestGodotLog(output).errors.map((e) =>
+    e
+      .split('\n')
+      .filter((l) => !l.includes('gdbox_load_check.gd') && !l.startsWith('GDScript backtrace'))
+      .join('\n')
+  )
+  const errors = all.filter((e) => {
+    const path = /^ERROR: Failed to load script "([^"]+)"/.exec(e)?.[1]
+    return !path || !all.some((o) => o.startsWith('SCRIPT ERROR') && o.includes(`(${path}:`))
+  })
+  return { checked: total ? Number(total.split(' ')[1]) : null, failed, errors }
+}
+
+/** 错误的身份：消息加上 `at:` 那一行。消息本身不带文件路径，只看第一行会把别的脚本的同名错误当成重复 */
+function errorKey(e: string): string {
+  return e.split('\n').slice(0, 2).join('\n')
+}
+
+interface ExitInfo {
+  code: number | null
+  timedOut: boolean
+}
+
+/** godot_check 的汇报：把加载检查和场景试跑的结果合成一段，纯函数，方便单测 */
+export function buildCheckReport(input: {
+  loaded: LoadCheckResult
+  imported: ExitInfo
+  ran: ExitInfo
+  digest: LogDigest
+  frames: number
+  scene?: string
+}): { text: string; errors: string[] } {
+  const { loaded, imported, ran, digest, frames, scene } = input
+  // 场景用到的坏脚本两边都会报，去重，加载检查那条在前（它不带场景回溯，更干净）
+  const seen = new Set(loaded.errors.map(errorKey))
+  const errors = [...loaded.errors, ...digest.errors.filter((e) => !seen.has(errorKey(e)))]
+  const lines: string[] = []
+  // 检查没跑完和崩溃一样处理：最后一行不能说「No errors」
+  let abnormal = false
+  if (loaded.checked === null) {
+    abnormal = true
+    lines.push(
+      'The script load check did not finish, so scripts the scene does not use were NOT checked.'
+    )
+  } else if (loaded.failed.length) {
+    lines.push(
+      `${loaded.failed.length} of ${loaded.checked} script(s) fail to load: ${loaded.failed.join(', ')}. ` +
+        'They break as soon as anything uses them, even if the scene run below looks clean.'
+    )
+  }
+  if (ran.timedOut) {
+    lines.push(
+      'The run did not exit in time and was stopped (possible infinite loop or blocking dialog).'
+    )
+  }
+  // Godot 崩溃时可能一个字都不打；只看日志会误报「没有错误」，所以退出码也要看
+  for (const [step, r] of [
+    ['import', imported],
+    ['run', ran]
+  ] as const) {
+    if (!r.timedOut && r.code !== 0 && r.code !== null) {
+      abnormal = true
+      lines.push(
+        `Godot exited abnormally during ${step} (exit code ${r.code}). This can be a crash; run godot_check again to confirm before concluding.`
+      )
+    }
+  }
+  lines.push(
+    errors.length === 0
+      ? abnormal
+        ? 'No error messages were printed.'
+        : `No errors. Loaded ${loaded.checked} script(s), ran ${frames} frames${scene ? ` of ${scene}` : ''}.`
+      : `${errors.length} error(s):\n\n${errors.slice(0, 30).join('\n\n')}`
+  )
+  if (digest.warnings.length) {
+    lines.push(
+      `${digest.warnings.length} warning(s):\n\n${digest.warnings.slice(0, 15).join('\n\n')}`
+    )
+  }
+  if (digest.exitLeakNotices) {
+    lines.push(
+      `(${digest.exitLeakNotices} exit-time leak notice(s) from the engine were omitted; they are not caused by the project.)`
+    )
+  }
+  return { text: lines.join('\n\n'), errors }
+}
+
+export function createGodotCheckTool(
+  checkerPath = (): string => join(godotResourcesDir(), 'gdbox_load_check.gd')
+): UnrealAgentTool<unknown> {
   return defineTool({
     name: 'godot_check',
     namespace: 'godot',
     risk: 'safe',
     concurrency: 'sequential',
     description:
-      'Import the Godot project and run it headless for some frames, then report script and engine errors. ' +
+      'Import the Godot project, load every script in it to catch errors in scripts the scene does not use yet, ' +
+      'then run it headless for some frames and report script and engine errors. ' +
       'Run it after every script or scene change and fix every error before saying you are done.',
     input: z.object({
       project_path: projectPathInput,
@@ -72,49 +236,97 @@ export function createGodotCheckTool(): UnrealAgentTool<unknown> {
       const dir = resolveProjectDir(args.project_path)
       const frames = args.frames ?? 120
       const imported = await runImport(godot, dir, signal)
+      const loaded = await checkScriptsLoad(godot, dir, checkerPath(), signal)
       const runArgs = ['--headless', '--path', dir, '--fixed-fps', '60', '--quit-after', String(frames)]
       if (args.scene) runArgs.push(args.scene)
       const ran = await runGodot(godot, runArgs, { timeoutMs: 120_000, signal })
 
       const digest = digestGodotLog(`${imported.output}\n${ran.output}`)
-      const lines: string[] = []
-      if (ran.timedOut) {
-        lines.push('The run did not exit in time and was stopped (possible infinite loop or blocking dialog).')
-      }
-      // Godot 崩溃时可能一个字都不打；只看日志会误报「没有错误」，所以退出码也要看
-      let abnormal = false
-      for (const [step, r] of [
-        ['import', imported],
-        ['run', ran]
-      ] as const) {
-        if (!r.timedOut && r.code !== 0 && r.code !== null) {
-          abnormal = true
-          lines.push(
-            `Godot exited abnormally during ${step} (exit code ${r.code}). This can be a crash; run godot_check again to confirm before concluding.`
-          )
-        }
-      }
-      lines.push(
-        digest.errors.length === 0
-          ? abnormal
-            ? 'No error messages were printed.'
-            : `No errors. Ran ${frames} frames${args.scene ? ` of ${args.scene}` : ''}.`
-          : `${digest.errors.length} error(s):\n\n${digest.errors.slice(0, 30).join('\n\n')}`
-      )
-      if (digest.warnings.length) {
-        lines.push(`${digest.warnings.length} warning(s):\n\n${digest.warnings.slice(0, 15).join('\n\n')}`)
-      }
-      if (digest.exitLeakNotices) {
-        lines.push(
-          `(${digest.exitLeakNotices} exit-time leak notice(s) from the engine were omitted; they are not caused by the project.)`
-        )
-      }
+      const report = buildCheckReport({
+        loaded,
+        imported,
+        ran,
+        digest,
+        frames,
+        ...(args.scene ? { scene: args.scene } : {})
+      })
       return {
-        text: lines.join('\n\n'),
-        details: { errors: digest.errors, warnings: digest.warnings, timedOut: ran.timedOut }
+        text: report.text,
+        details: {
+          errors: report.errors,
+          warnings: digest.warnings,
+          timedOut: ran.timedOut,
+          scriptsChecked: loaded.checked,
+          scriptsFailed: loaded.failed
+        }
       }
     }
   })
+}
+
+/**
+ * 往工程的 .gdbox/tmp 放一个运行器脚本（目录带 .gdignore，Godot 不会把它当工程资源导入）。
+ * 返回它的 res:// 路径和这次的临时目录；用完调 cleanup。
+ */
+function prepareProjectRunner(
+  dir: string,
+  prefix: string,
+  runnerFile: string
+): { tmp: string; script: string; cleanup: () => void } {
+  const meta = join(dir, '.gdbox')
+  const runId = `${prefix}-${Date.now()}`
+  const tmp = join(meta, 'tmp', runId)
+  mkdirSync(tmp, { recursive: true })
+  const cleanup = (): void => rmSync(tmp, { recursive: true, force: true })
+  try {
+    if (!existsSync(join(meta, '.gdignore'))) writeFileSync(join(meta, '.gdignore'), '')
+    const name = basename(runnerFile)
+    writeFileSync(join(tmp, name), readFileSync(runnerFile))
+    return { tmp, script: `res://.gdbox/tmp/${runId}/${name}`, cleanup }
+  } catch (err) {
+    cleanup()
+    throw err
+  }
+}
+
+/**
+ * 上次干净跑完的加载检查，按工程记。脚本和 project.godot（autoload 在里面）都没动过就直接复用，
+ * 只改了美术、音频时不用再起一个 Godot。
+ */
+const loadCheckCache = new Map<string, { signature: string; result: LoadCheckResult }>()
+
+/** 起一个无头 Godot 把工程里每个脚本 load 一遍 */
+async function checkScriptsLoad(
+  godot: string,
+  dir: string,
+  checker: string,
+  signal?: AbortSignal
+): Promise<LoadCheckResult> {
+  const scripts = await collectProjectScripts(dir)
+  if (!scripts.length) return { checked: 0, failed: [], errors: [] }
+  const projectStat = await stat(join(dir, 'project.godot')).catch(() => null)
+  const signature = [
+    `project.godot:${projectStat?.mtimeMs ?? ''}`,
+    ...scripts.map((s) => `${s.path}:${s.stamp}`)
+  ].join('\n')
+  const cached = loadCheckCache.get(dir)
+  if (cached?.signature === signature) return cached.result
+
+  const runner = prepareProjectRunner(dir, 'check', checker)
+  try {
+    const listPath = join(runner.tmp, 'scripts.txt')
+    writeFileSync(listPath, scripts.map((s) => s.path).join('\n'))
+    const ran = await runGodot(
+      godot,
+      ['--headless', '--path', dir, '-s', runner.script, '--', `--gdbox-list=${listPath}`],
+      { timeoutMs: 60_000, signal }
+    )
+    const result = summarizeLoadCheck(ran.output)
+    if (result.checked !== null) loadCheckCache.set(dir, { signature, result })
+    return result
+  } finally {
+    runner.cleanup()
+  }
 }
 
 export function createGodotRunTool(
@@ -151,15 +363,10 @@ export function createGodotRunTool(
     async execute(args, { signal }) {
       const godot = (await requireGodot()).path
       const dir = resolveProjectDir(args.project_path)
-      // 运行器和配置放在 .gdbox/tmp（带 .gdignore，Godot 不会把它当工程资源导入），跑完删掉
-      const meta = join(dir, '.gdbox')
-      const runId = `run-${Date.now()}`
-      const tmp = join(meta, 'tmp', runId)
-      mkdirSync(tmp, { recursive: true })
-      if (!existsSync(join(meta, '.gdignore'))) writeFileSync(join(meta, '.gdignore'), '')
+      // 运行器和配置放在 .gdbox/tmp，跑完删掉
+      const runner = prepareProjectRunner(dir, 'run', runnerPath())
       const shotsDir = mkdtempSync(join(tmpdir(), 'gdbox-run-'))
       try {
-        writeFileSync(join(tmp, 'gdbox_run.gd'), readFileSync(runnerPath()))
         // 用户关掉了「允许编辑器截图」：照样试玩、照样回数值，只是不截图，并说一声
         const shotsAllowed = editorScreenshotAllowed()
         const shots = (shotsAllowed ? (args.screenshots ?? []) : []).map((at, i) => ({
@@ -174,7 +381,7 @@ export function createGodotRunTool(
           sample_interval: args.sample_interval ?? 0.1,
           screenshots: shots
         }
-        const configPath = join(tmp, 'config.json')
+        const configPath = join(runner.tmp, 'config.json')
         writeFileSync(configPath, JSON.stringify(config))
         // 只有要截图才开窗口（放到屏幕外），否则 headless
         const runArgs = [
@@ -184,7 +391,7 @@ export function createGodotRunTool(
           '--fixed-fps',
           '60',
           '-s',
-          `res://.gdbox/tmp/${runId}/gdbox_run.gd`,
+          runner.script,
           '--',
           `--gdbox-config=${configPath}`
         ]
@@ -224,7 +431,7 @@ export function createGodotRunTool(
           details: { errors: digest.errors, timedOut: ran.timedOut }
         }
       } finally {
-        rmSync(tmp, { recursive: true, force: true })
+        runner.cleanup()
         rmSync(shotsDir, { recursive: true, force: true })
       }
     }
