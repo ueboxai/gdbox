@@ -762,6 +762,13 @@ declare global {
         pluginFailure?: string
         error?: string
       }>
+      /** 在一个空文件夹（或不存在的文件夹）里建一个空的 Godot 工程，并登记进库 */
+      createEmpty: (projectDir: string) => Promise<{
+        success: boolean
+        data?: ProjectRecord
+        pluginFailure?: string
+        error?: string
+      }>
       scanDirectory: (
         startPath: string
       ) => Promise<{ success: boolean; data?: string[]; error?: string }>

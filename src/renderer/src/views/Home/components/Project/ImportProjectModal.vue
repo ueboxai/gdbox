@@ -140,6 +140,10 @@
         <!-- 列表只认引擎最近打开过的工程；不在里面的，得有地方自己选路径 -->
         <footer class="panel-foot">
           <span class="foot-hint">{{ t('page.home.project.importProjectModal.dropHint') }}</span>
+          <button type="button" class="pick-file-btn" :disabled="picking" @click="handleCreateEmpty">
+            <PhFolderPlus aria-hidden="true" />
+            {{ t('page.home.project.importProjectModal.createEmpty') }}
+          </button>
           <button type="button" class="pick-file-btn" :disabled="picking" @click="handlePickFile">
             <PhFolderOpen aria-hidden="true" />
             {{ t('page.home.project.importProjectModal.pickFile') }}
@@ -168,7 +172,7 @@ import { toLocalResourceUrl } from '@renderer/utils/localResource'
 import { notifyPluginInstallFailure } from '@renderer/hooks/usePluginInstallNotice'
 
 /**
- * 把本机已有的 UE 工程收进工程库。
+ * 把本机已有的 Godot 工程收进工程库，或新建一个空工程。
  *
  * 这件事从「新建工程」弹窗里搬了出来：那个弹窗管的是「用模板造一个新工程」，
  * 而这里是「打开我已经有的工程」，两件事放在一个窗口里，用户找起来才乱。
@@ -348,6 +352,36 @@ const handlePickFile = async (): Promise<void> => {
     }
   } catch (err) {
     console.error('选择工程文件导入失败:', err)
+    message.error(t('page.home.project.importProjectModal.importError'))
+  } finally {
+    picking.value = false
+  }
+}
+
+/**
+ * 新建空工程：挑（或当场新建）一个空文件夹，盒子往里放一份 project.godot 并登记进库。
+ * 工程名取文件夹名，和 Godot 项目管理器一样；模板、渲染器这些交给用户进编辑器再定。
+ */
+const handleCreateEmpty = async (): Promise<void> => {
+  picking.value = true
+  try {
+    const ret = await window.api.dialog.showOpenDialog({
+      title: t('page.home.project.importProjectModal.createEmptyDialog'),
+      properties: ['openDirectory', 'createDirectory', 'promptToCreate']
+    })
+    const dir = ret?.filePaths?.[0]
+    if (ret?.canceled || !dir) return
+    const result = await window.api.database.project.createEmpty(dir)
+    if (result?.success) {
+      message.success(t('page.home.project.importProjectModal.createEmptyOk'))
+      notifyPluginInstallFailure(result)
+      emit('success', keysOf(result.data))
+      emit('update:open', false)
+    } else {
+      message.error(result?.error || t('page.home.project.importProjectModal.importFailed'))
+    }
+  } catch (err) {
+    console.error('新建空工程失败:', err)
     message.error(t('page.home.project.importProjectModal.importError'))
   } finally {
     picking.value = false

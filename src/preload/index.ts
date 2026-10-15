@@ -642,6 +642,7 @@ const api = {
         ipcRenderer.invoke('db:project:restoreAutomaticCover', projectKey),
       importByFilePath: (filePath: string) =>
         ipcRenderer.invoke('db:project:importByFilePath', filePath),
+      createEmpty: (projectDir: string) => ipcRenderer.invoke('db:project:createEmpty', projectDir),
       scanDirectory: (startPath: string) =>
         ipcRenderer.invoke('db:project:scanDirectory', startPath),
       importByDirectory: (startPath: string) =>

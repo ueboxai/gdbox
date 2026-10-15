@@ -270,6 +270,29 @@ export const registerProjectIPC = (): void => {
     }
   })
 
+  // 新建一个空工程（文件夹里放一份 project.godot），建好就和导入一样登记进库
+  ipcMain.handle('db:project:createEmpty', async (_, projectDir: string) => {
+    void _
+    try {
+      const [{ createEmptyProject }, { locateGodot }] = await Promise.all([
+        import('../../godot/newProject'),
+        import('../../godot/locate')
+      ])
+      const godot = await locateGodot(appSettingsManager.getGodotPath() || undefined)
+      const created = createEmptyProject(projectDir, godot?.version)
+      if (!created.ok) return { success: false, error: created.error }
+      const result = await registerProjectByUproject(created.projectDir)
+      return {
+        success: result.success,
+        error: result.error,
+        data: result.data,
+        ...(result.pluginFailure ? { pluginFailure: result.pluginFailure } : {})
+      }
+    } catch (error) {
+      return { success: false, error: (error as Error).message }
+    }
+  })
+
   // 扫描目录中的 project.godot（仅扫描，不导入）
   ipcMain.handle('db:project:scanDirectory', async (_, startPath: string) => {
     void _

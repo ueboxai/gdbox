@@ -1669,7 +1669,7 @@ export default {
         import: '导入项目',
         create: '创建项目',
         createFromTemplate: '用模板新建工程',
-        importExisting: '导入已有工程',
+        importExisting: '导入或新建工程',
         refresh: '刷新',
         open: '打开项目',
         openFolder: '打开目录',
@@ -1995,10 +1995,13 @@ export default {
         },
         // 导入本机已有工程
         importProjectModal: {
-          title: '导入已有工程',
+          title: '导入或新建工程',
           subtitle: '从本地引擎最近打开的工程中选择，选中即可加入工程库',
           subtitleIntoCollection: '从本地引擎最近打开的工程中选择，导入后加入「{name}」分组',
           pickFile: '选择 project.godot 文件',
+          createEmpty: '新建空工程',
+          createEmptyDialog: '选择一个空文件夹存放新工程',
+          createEmptyOk: '工程已创建',
           dropHint: '列表中没有？可手动选择文件，或将 project.godot 直接拖入项目库',
           searchPlaceholder: '搜索工程名称...',
           allVersions: '全部版本',

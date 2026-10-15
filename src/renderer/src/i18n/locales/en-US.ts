@@ -1711,7 +1711,7 @@ export default {
         import: 'Import Project',
         create: 'Create Project',
         createFromTemplate: 'New project from template',
-        importExisting: 'Import existing project',
+        importExisting: 'Import or create a project',
         refresh: 'Refresh',
         open: 'Open Project',
         openFolder: 'Open Folder',
@@ -2046,11 +2046,14 @@ export default {
         },
         // Import an existing project from this machine
         importProjectModal: {
-          title: 'Import existing project',
+          title: 'Import or create a project',
           subtitle: 'Pick from projects your local engines opened recently',
           subtitleIntoCollection:
             'Pick from projects your local engines opened recently. Imports go into "{name}"',
           pickFile: 'Choose project.godot file',
+          createEmpty: 'New empty project',
+          createEmptyDialog: 'Choose an empty folder for the new project',
+          createEmptyOk: 'Project created',
           dropHint:
             'Not listed? Choose the file yourself, or drag a project.godot onto the project library',
           searchPlaceholder: 'Search project name...',
