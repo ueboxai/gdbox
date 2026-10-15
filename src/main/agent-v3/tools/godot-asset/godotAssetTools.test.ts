@@ -145,13 +145,14 @@ beforeEach(() => {
 })
 
 describe('元数据', () => {
-  it('七个工具，命名空间和风险等级按约定', () => {
+  it('八个工具，命名空间和风险等级按约定', () => {
     expect(tools.map((t) => t.name).sort()).toEqual(
       [
         'art_style',
         'gen_music',
         'gen_sfx',
         'gen_sprite',
+        'gen_sprite_video',
         'gen_tileset',
         'gen_voice',
         'inspect_audio'

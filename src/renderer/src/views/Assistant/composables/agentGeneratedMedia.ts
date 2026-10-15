@@ -121,7 +121,11 @@ export function collectGeneratedMediaFromAgentArtifacts(args: {
 
   const collect = (toolName: string | undefined, result: unknown): void => {
     if (toolName === 'generate_image') collectImagesFromResult(result, images)
-    if (toolName === 'generate_video' || toolName === 'render_task_video')
+    if (
+      toolName === 'generate_video' ||
+      toolName === 'render_task_video' ||
+      toolName === 'gen_sprite_video'
+    )
       collectVideoFromResult(result, videos)
     if (toolName === 'generate_3d_model') collectModelFromResult(result, 'model_path', models)
     // V2 的生成工具，早就不存在了。老对话记录里还有这种结果

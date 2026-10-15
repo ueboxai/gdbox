@@ -91,7 +91,8 @@ describe('collectGeneratedMediaFromAgentArtifacts', () => {
    * 视频此前只在过程日志里能播 —— 那个框可以收起来，收起来正文里就什么都没有。
    * 按秒计费跑几分钟出来的东西不该藏在可折叠的框里。
    */
-  it.each(['generate_video', 'render_task_video'])('%s 成片显示在会话正文中', (toolName) => {
+  const videoTools = ['generate_video', 'render_task_video', 'gen_sprite_video']
+  it.each(videoTools)('%s 成片显示在会话正文中', (toolName) => {
     const media = collectGeneratedMediaFromAgentArtifacts({
       toolResults: [
         {

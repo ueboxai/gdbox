@@ -1,6 +1,6 @@
 ---
 name: image-generation
-description: Generates and edits raster assets with generate_image while preserving the user's exact requirements. Use when the user asks for 生图、改图、换背景、角色概念图、贴图、海报、UI 草图 or multiple image variants. Do not use for in-game sprites with animation frames or for tilesets in a Godot project (gen_sprite / gen_tileset make those, see godot-2d-character and godot-tilemap-level), for screenshots of the actual game, video, 3D mesh generation or edits to existing SVG/vector source.
+description: Generates and edits raster assets with generate_image while preserving the user's exact requirements. Use when the user asks for 生图、改图、换背景、角色概念图、贴图、海报、UI 草图 or multiple image variants. Do not use for in-game sprites with animation frames or for tilesets in a Godot project (gen_sprite / gen_tileset / gen_sprite_video make those, see godot-2d-character, video-sprite-animation and godot-tilemap-level), for screenshots of the actual game, video, 3D mesh generation or edits to existing SVG/vector source.
 ---
 
 # Image generation and editing
@@ -21,6 +21,7 @@ into a Godot game, the Godot generators are better and cheaper to get right:
 | The user wants | Use | Why |
 | --- | --- | --- |
 | An animated character or object for the game | `gen_sprite` | Writes a transparent, frame-aligned sheet plus SpriteFrames into the project |
+| Smooth many-frame character animation or a VFX sequence | `gen_sprite_video` (skill `video-sprite-animation`) | Animates an approved green-screen still with the video model, then keys and packs the frames |
 | Tiles for a level | `gen_tileset` | Writes a seamless atlas plus TileSet with collision |
 | Concept art, key art, a poster, a UI mock, a background painting, a reference for 3D | `generate_image` | This skill |
 

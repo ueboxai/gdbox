@@ -1,5 +1,5 @@
 /**
- * Godot 资产生成工具集：精灵、瓦片、音效、音乐、配音、听音频、美术风格。
+ * Godot 资产生成工具集：精灵、视频序列帧精灵、瓦片、音效、音乐、配音、听音频、美术风格。
  *
  * 产物一律写进工程的 res://assets/gen/<类别>/，同名重出覆盖并把旧文件备份到 .gdbox/history/，
  * 每次生成在 .gdbox/generations.jsonl 记一行（见 `godot/aigc/projectAssets.ts`）。
@@ -11,6 +11,7 @@ import { createArtStyleTool } from './artStyle'
 import { createGenMusicTool } from './genMusic'
 import { createGenSfxTool } from './genSfx'
 import { createGenSpriteTool } from './genSprite'
+import { createGenSpriteVideoTool } from './genSpriteVideo'
 import { createGenTilesetTool } from './genTileset'
 import { createGenVoiceTool } from './genVoice'
 import { createInspectAudioTool } from './inspectAudio'
@@ -22,6 +23,7 @@ export function godotAssetTools(
   const presetsDir = options.presetsDir ?? defaultPresetsDir
   return [
     createGenSpriteTool(presetsDir),
+    createGenSpriteVideoTool(presetsDir),
     createGenTilesetTool(presetsDir),
     createGenSfxTool(),
     createGenMusicTool(),

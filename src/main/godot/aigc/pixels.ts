@@ -75,9 +75,10 @@ export function hasTransparentBorder(img: Rgba): boolean {
  * 只抠连通区域，所以角色身上和背景同色的地方不会被挖洞。
  * 抠完再把紧挨着透明区、带背景色调的边缘像素去色（去绿边/去品红边）。
  */
-export function removeBackground(img: Rgba, tolerance = 60): Rgba {
+export function removeBackground(img: Rgba, tolerance = 60, key?: [number, number, number]): Rgba {
   if (hasTransparentBorder(img)) return img
-  const [br, bg, bb] = borderColor(img)
+  // 视频逐帧抠时由调用方给定同一个键色：每帧各自从边框估，估出来的颜色帧间会抖，抠出的边就跟着闪
+  const [br, bg, bb] = key ?? borderColor(img)
   const out: Rgba = { width: img.width, height: img.height, data: img.data.slice() }
   const d = out.data
   const { width: w, height: h } = out
