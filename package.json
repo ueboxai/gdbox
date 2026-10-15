@@ -1,5 +1,6 @@
 {
   "name": "gdbox",
+  "productName": "GODOT BOX",
   "version": "0.1.0",
   "description": "GDBox",
   "main": "./out/main/index.js",

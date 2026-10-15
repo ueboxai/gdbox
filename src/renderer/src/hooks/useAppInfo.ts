@@ -13,13 +13,8 @@ export function useAppInfo() {
   const appAuthor = ref(packageJson.author)
   const appHomepage = ref(packageJson.homepage)
 
-  // 格式化的应用名称（首字母大写，去掉连字符）
-  const formattedAppName = computed(() => {
-    return appName.value
-      .split('-')
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ')
-  })
+  // 对外显示的应用名（GODOT BOX）；name 是内部包名 gdbox
+  const formattedAppName = computed(() => packageJson.productName)
 
   // 完整的应用标题
   const appTitle = computed(() => {

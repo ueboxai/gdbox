@@ -3,7 +3,7 @@
     <div class="gate-card">
       <div class="brand">
         <BrandMark class="brand-logo" />
-        <h1 class="brand-name">GDBox</h1>
+        <h1 class="brand-name">GODOT BOX</h1>
       </div>
 
       <p class="gate-hint">

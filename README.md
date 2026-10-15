@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="build/icon.png" width="96" alt="GDBox">
+  <img src="build/icon.png" width="96" alt="GODOT BOX">
 </p>
 
-<h1 align="center">GDBox</h1>
+<h1 align="center">GODOT BOX</h1>
 
 <p align="center">
   <b>给 Godot 开发者的开源 AI 工作台：写代码之外的那些活</b>

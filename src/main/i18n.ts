@@ -39,8 +39,8 @@ type Lang = 'zh-CN' | 'en-US'
 /** 主进程自己拥有的那些字符串。键名按归属分组，别往里塞渲染层能显示的东西 */
 const STRINGS: Record<Lang, Record<string, string>> = {
   'zh-CN': {
-    'tray.tooltip': 'GDBox',
-    'tray.open': '打开 GDBox',
+    'tray.tooltip': 'GODOT BOX',
+    'tray.open': '打开 GODOT BOX',
     // 和侧边栏按钮同一个叫法（渲染层 `menu.newChat`）
     'tray.newChat': '新对话',
     'tray.recentChats': '最近对话',
@@ -65,7 +65,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'tray.pluginFailedTitle': '项目已打开，AI 连接失败',
     'tray.pluginFailedBody': 'GDBox Link 插件安装失败，点击查看原因',
 
-    'startup.failedTitle': 'GDBox 启动失败',
+    'startup.failedTitle': 'GODOT BOX 启动失败',
     // {reason} 是原始异常，{logDir} 是日志目录 —— 这两样是用户唯一能拿去求助的东西
     'startup.failedBody':
       '启动时发生错误，应用无法继续运行。\n\n原因：{reason}\n\n日志目录：{logDir}',
@@ -97,8 +97,8 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'spotlight.askAiDesc': '发送此消息给 AI 助手'
   },
   'en-US': {
-    'tray.tooltip': 'GDBox',
-    'tray.open': 'Open GDBox',
+    'tray.tooltip': 'GODOT BOX',
+    'tray.open': 'Open GODOT BOX',
     'tray.newChat': 'New chat',
     'tray.recentChats': 'Recent chats',
     'tray.untitledChat': 'Untitled chat',
@@ -119,7 +119,7 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     'tray.pluginFailedTitle': 'Project opened, but the AI could not connect',
     'tray.pluginFailedBody': 'The GDBox Link plugin failed to install. Click to view details.',
 
-    'startup.failedTitle': 'GDBox failed to start',
+    'startup.failedTitle': 'GODOT BOX failed to start',
     'startup.failedBody':
       'An error occurred during startup and the app cannot continue.\n\nReason: {reason}\n\nLog directory: {logDir}',
 

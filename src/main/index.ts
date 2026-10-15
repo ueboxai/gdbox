@@ -1,3 +1,4 @@
+import './userDataPath'
 import { execSync } from 'child_process'
 
 // 🛡️ Windows 控制台 UTF-8 编码修复（必须在任何日志输出之前）

@@ -17,7 +17,7 @@ describe('main window title', () => {
     titleListener?.(event, 'AI 创作', true)
     titleListener?.(event, '资产库', true)
 
-    expect(MAIN_WINDOW_TITLE).toBe('GDBox')
+    expect(MAIN_WINDOW_TITLE).toBe('GODOT BOX')
     expect(event.preventDefault).toHaveBeenCalledTimes(2)
   })
 })

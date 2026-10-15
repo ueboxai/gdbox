@@ -1,5 +1,5 @@
 appId: com.gdbox.app
-productName: GDBox
+productName: GODOT BOX
 copyright: Copyright © 2026 虚幻盒子科技有限公司
 directories:
   buildResources: build
@@ -73,7 +73,7 @@ win:
     - from: build/gdbox.cmd
       to: gdbox.cmd
   icon: build/icon.ico
-  legalTrademarks: GDBox
+  legalTrademarks: GODOT BOX
   requestedExecutionLevel: asInvoker
 nsis:
   # 安装包文件名单独写，不跟 package.json 的 name（那个值决定 userData 目录）。

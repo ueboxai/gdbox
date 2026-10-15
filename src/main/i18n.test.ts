@@ -42,17 +42,17 @@ describe('主进程文案表', () => {
   })
 
   it('跟着推进来的语言走', () => {
-    expect(mt('tray.open')).toBe('打开 GDBox')
-    expect(mt('tray.tooltip')).toBe('GDBox')
+    expect(mt('tray.open')).toBe('打开 GODOT BOX')
+    expect(mt('tray.tooltip')).toBe('GODOT BOX')
     setMainLanguage('en-US')
-    expect(mt('tray.open')).toBe('Open GDBox')
-    expect(mt('tray.tooltip')).toBe('GDBox')
+    expect(mt('tray.open')).toBe('Open GODOT BOX')
+    expect(mt('tray.tooltip')).toBe('GODOT BOX')
     expect(mt('dialog.save')).toBe('Save file')
   })
 
   it('没人推过就是中文 —— 启动失败那条路上设置可能根本读不出来', () => {
     expect(currentMainLanguage()).toBe('zh-CN')
-    expect(mt('startup.failedTitle')).toBe('GDBox 启动失败')
+    expect(mt('startup.failedTitle')).toBe('GODOT BOX 启动失败')
   })
 
   it('认不出的语言当中文 —— 设置文件是可以被手改坏的', () => {
@@ -82,7 +82,7 @@ describe('主进程文案表', () => {
     // 同一个语言再推一次不该再重建一次
     setMainLanguage('en-US')
 
-    expect(seen).toEqual(['Open GDBox'])
+    expect(seen).toEqual(['Open GODOT BOX'])
   })
 
   it('一个订阅者抛错不拖累别的', () => {

@@ -1,9 +1,9 @@
 export default {
   mediaPermissions: {
     macScreenDenied:
-      '屏幕录制权限被拒绝。请在「系统设置 → 隐私与安全性 → 屏幕录制（或屏幕与系统音频录制）」中允许 GDBox，然后重启应用。',
+      '屏幕录制权限被拒绝。请在「系统设置 → 隐私与安全性 → 屏幕录制（或屏幕与系统音频录制）」中允许 GODOT BOX，然后重启应用。',
     macMicrophoneDenied:
-      '麦克风权限被拒绝。请在「系统设置 → 隐私与安全性 → 麦克风」中允许 GDBox，然后重启应用。',
+      '麦克风权限被拒绝。请在「系统设置 → 隐私与安全性 → 麦克风」中允许 GODOT BOX，然后重启应用。',
     sourcesFailed: '获取屏幕源失败：{error}',
     previewFailed: '无法预览屏幕：{error}'
   },
@@ -29,7 +29,7 @@ export default {
     model3dStudio: '3D 工作室',
     aigcStudio: 'AI 创作',
     serverManagement: '服务器管理',
-    appName: 'GDBox'
+    appName: 'GODOT BOX'
   },
   // 侧边栏工具定制：常驻名单与「更多」分组
   sidebarTools: {
@@ -1614,7 +1614,7 @@ export default {
     settings: '设置',
     language: '语言',
     // 托盘「退出」时还有 Agent session 的操作没收摊。数的是 session 操作，不是全部后台任务
-    trayQuitTitle: '退出 GDBox？',
+    trayQuitTitle: '退出 GODOT BOX？',
     trayQuitContent: 'AI 仍有 {count} 项操作正在进行，退出将中断这些操作。',
     trayQuitOk: '仍然退出',
     // 同一个框，安装更新时换标题和按钮
@@ -3632,12 +3632,12 @@ export default {
     about: {
       contributors: '由 GDBox 贡献者共同打造',
       title: '关于',
-      appName: 'GDBox',
+      appName: 'GODOT BOX',
       version: '版本',
       description: '专为 Godot 开发者设计的 AI 助手桌面应用',
       website: '官方网站',
       github: 'GitHub',
-      copyright: '© GDBox. All rights reserved.',
+      copyright: '© GODOT BOX. All rights reserved.',
       checkUpdate: '检查更新',
       termsOfService: '服务条款',
       // 更新相关

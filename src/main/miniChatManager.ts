@@ -224,7 +224,7 @@ class MiniChatWindowManager {
       fullscreenable: false,
       skipTaskbar: false,
       alwaysOnTop: true,
-      title: 'GDBox AI',
+      title: 'GODOT BOX AI',
       icon: join(__dirname, '../../resources/icon.ico'),
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),

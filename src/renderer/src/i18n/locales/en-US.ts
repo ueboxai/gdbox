@@ -1,9 +1,9 @@
 export default {
   mediaPermissions: {
     macScreenDenied:
-      'Screen recording access is blocked. In System Settings → Privacy & Security → Screen Recording (or Screen & System Audio Recording), allow GDBox, then restart the app.',
+      'Screen recording access is blocked. In System Settings → Privacy & Security → Screen Recording (or Screen & System Audio Recording), allow GODOT BOX, then restart the app.',
     macMicrophoneDenied:
-      'Microphone access is blocked. In System Settings → Privacy & Security → Microphone, allow GDBox, then restart the app.',
+      'Microphone access is blocked. In System Settings → Privacy & Security → Microphone, allow GODOT BOX, then restart the app.',
     sourcesFailed: 'Could not load screen sources: {error}',
     previewFailed: 'Could not preview the screen: {error}'
   },
@@ -29,7 +29,7 @@ export default {
     model3dStudio: '3D Studio',
     aigcStudio: 'AIGC Studio',
     serverManagement: 'Server Management',
-    appName: 'GDBox'
+    appName: 'GODOT BOX'
   },
   // Sidebar tool customization: pinned list and the "More" group
   sidebarTools: {
@@ -1658,7 +1658,7 @@ export default {
     userInfo: 'User Info',
     settings: 'Settings',
     language: 'Language',
-    trayQuitTitle: 'Quit GDBox?',
+    trayQuitTitle: 'Quit GODOT BOX?',
     trayQuitContent:
       'The AI still has {count} operation(s) in progress — quitting will interrupt them.',
     trayQuitOk: 'Quit anyway',
@@ -3773,12 +3773,12 @@ export default {
     about: {
       contributors: 'Built by GDBox contributors',
       title: 'About',
-      appName: 'GDBox',
+      appName: 'GODOT BOX',
       version: 'Version',
       description: 'AI-powered desktop assistant for Godot developers',
       website: 'Official Website',
       github: 'GitHub',
-      copyright: '© GDBox. All rights reserved.',
+      copyright: '© GODOT BOX. All rights reserved.',
       checkUpdate: 'Check for Updates',
       termsOfService: 'Terms of Service',
       // Update related
