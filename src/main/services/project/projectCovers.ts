@@ -254,9 +254,14 @@ export class ProjectCoverService {
         }
       }
       await this.withScreenshotSlot(async () => {
-        const data = await fs.readFile(source)
+        const raw = await fs.readFile(source)
         // Decode completely: a half-written PNG may have valid headers but no complete pixels.
         const sharp = await getSharp()
+        // Godot 工程的图标多半是 icon.svg。缓存文件按 .png 存、按图片显示，SVG 原样存进去
+        // 浏览器解不出来，卡片上就是一张裂图 —— 先栅格化成 PNG
+        const data = /\.svg$/i.test(source)
+          ? await sharp(raw, { density: 384 }).resize(256, 256, { fit: 'inside' }).png().toBuffer()
+          : raw
         try {
           await sharp(data, { failOn: 'warning', limitInputPixels: 16 * 1024 * 1024 })
             .raw()

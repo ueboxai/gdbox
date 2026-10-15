@@ -739,3 +739,19 @@ it('restoring automatic mode retains the custom image until a valid screenshot i
   expect(await readFile(join(directory, image))).toEqual(png)
   await expect(readFile(join(directory, custom))).rejects.toMatchObject({ code: 'ENOENT' })
 })
+
+it('rasterizes an SVG project icon to PNG instead of storing SVG bytes under a .png name', async () => {
+  const projectDir = join(directory, 'svg-game')
+  await mkdir(projectDir, { recursive: true })
+  await writeFile(
+    join(projectDir, 'icon.svg'),
+    '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><rect width="128" height="128" fill="#478cbf"/></svg>'
+  )
+  createProject(db, { projectKey: 'svg', projectPath: projectDir })
+  await covers.sync()
+  const image = getProjectByKey(db, 'svg')?.image
+  expect(image).toBeTruthy()
+  const stored = await readFile(join(directory, image!))
+  expect(stored.subarray(0, 4).toString('latin1')).toBe('\x89PNG')
+  expect((await sharp(stored).metadata()).width).toBe(256)
+})
