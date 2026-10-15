@@ -39,7 +39,14 @@ import { randomBytes } from 'crypto'
 import { basename } from 'path'
 
 import type { SkillLearningMode } from '../capabilities/skills'
-import { admit, covered, MAX_ACTIVE_PER_LAYER, patternCovered, weakest } from './admission'
+import {
+  admit,
+  covered,
+  MAX_ACTIVE_PER_LAYER,
+  patternCovered,
+  retireAs,
+  weakest
+} from './admission'
 import { engineMinor, type ExperienceEntry } from './experienceFile'
 import { GODOT_EDIT_TOOLS, VERIFY_TOOLS } from './godotTools'
 import { avoidPattern } from './precheck'
@@ -55,6 +62,7 @@ import {
 } from './specificity'
 import { ExperienceStore, experienceDir } from './store'
 import type { TrailCall, TrailHeader } from './trail'
+import { repairLayer } from './upkeep'
 
 /** 成功要在失败后几步之内出现，才算「后来这样过的」 */
 export const PAIR_WINDOW = 6
@@ -491,19 +499,18 @@ async function writeInto(
   layer: ExperienceLayer,
   entry: ExperienceEntry
 ): Promise<boolean> {
-  const ledger = await store.readLedger()
   const all = await store.readAll()
   if (all.filter((e) => e.status !== 'retired').length >= MAX_ACTIVE_PER_LAYER[layer]) {
-    const victim = weakest(all, ledger)
+    const victim = weakest(all, await store.readLedger())
     if (!victim || victim.pinned) return false
     await store.updateTool(victim.tool, (list) =>
-      list.map((e) => (e.id === victim.id ? { ...e, status: 'retired' as const } : e))
+      list.map((e) => (e.id === victim.id ? retireAs(e, 'capacity') : e))
     )
   }
   let added = false
   await store.updateTool(entry.tool, (list) => {
     if (patternCovered(list, entry.tool, entry.errorPattern)) return undefined
-    const next = admit(list, entry, ledger)
+    const next = admit(list, entry)
     if (next) added = true
     return next
   })
@@ -519,6 +526,10 @@ export async function curateSession(deps: CurateDeps): Promise<CurateResult> {
 
   const project = new ExperienceStore(dir)
   const global = deps.globalDir ? new ExperienceStore(deps.globalDir) : undefined
+
+  // 先修旧账（见 upkeep.ts），不花钱
+  for (const store of [project, ...(global ? [global] : [])]) await repairLayer(store)
+
   const existing = [...(await project.readAll()), ...(global ? await global.readAll() : [])]
   const candidates = findLessonCandidates(deps.calls, existing)
   if (candidates.length === 0) return nothing
@@ -585,7 +596,7 @@ export async function curateSession(deps: CurateDeps): Promise<CurateResult> {
     // 界面就会给出一次「撤销」，点了会把这之后运行时记下的转正和计数一起退回去
     const list = await store.readTool(entry.tool)
     if (patternCovered(list, entry.tool, entry.errorPattern)) continue
-    if (!admit(list, entry, await store.readLedger())) continue
+    if (!admit(list, entry)) continue
     if (!snapshotted.has(layer)) {
       await store.snapshot(now)
       snapshotted.add(layer)

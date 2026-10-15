@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
-import { applyOutcome, emptyStats, lift, type EntryStats, type Outcome } from './lifecycle'
+import type { ExperienceEntry } from './experienceFile'
+import {
+  applyOutcome,
+  emptyStats,
+  evictionScore,
+  lift,
+  type EntryStats,
+  type Outcome
+} from './lifecycle'
 
 const shown = (adopted: boolean, ok: boolean | undefined): Outcome => ({
   arm: 'shown',
@@ -66,5 +74,35 @@ describe('lifecycle', () => {
       ...Array.from({ length: 5 }, () => shown(true, undefined))
     ]
     expect(run(outcomes).status).toBe('retired')
+  })
+
+  it('退休时说得出原因', () => {
+    const once = (before: EntryStats, outcome: Outcome): string | undefined =>
+      applyOutcome({ status: 'trial' }, before, outcome).retiredBecause
+    expect(once({ ...emptyStats(), adoptedFail: 1 }, shown(true, false))).toBe('failed')
+    expect(once({ ...emptyStats(), ignoredStreak: 4 }, shown(false, undefined))).toBe('ignored')
+    expect(once(emptyStats(), shown(true, true))).toBeUndefined()
+  })
+})
+
+describe('淘汰顺序', () => {
+  const entry = (status: 'trial' | 'proven'): ExperienceEntry => ({
+    id: 'e',
+    title: 't',
+    tool: 'godot_check',
+    errorPattern: 'p',
+    advice: 'a',
+    expect: {},
+    source: '',
+    status
+  })
+
+  it('没出过场的试用排在「出过场却没成」的后面、「成过」的前面', () => {
+    const untested = evictionScore(entry('trial'), emptyStats())
+    const failedOnce = evictionScore(entry('trial'), { ...emptyStats(), shown: 1 })
+    const workedOnce = evictionScore(entry('trial'), { ...emptyStats(), shown: 1, adoptedOk: 1 })
+    expect(failedOnce).toBeLessThan(untested)
+    expect(untested).toBeLessThan(workedOnce)
+    expect(workedOnce).toBeLessThan(evictionScore(entry('proven'), emptyStats()))
   })
 })

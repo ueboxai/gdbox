@@ -3702,6 +3702,8 @@ declare global {
     source: string
     verified?: { date: string; engine?: string }
     status: 'trial' | 'proven' | 'retired'
+    /** 退休的才有；这个字段出现之前退休的旧经验没有 */
+    retiredBecause?: 'capacity' | 'failed' | 'ignored' | 'no-lift'
     pinned?: boolean
     engines?: string[]
     notFor?: string[]

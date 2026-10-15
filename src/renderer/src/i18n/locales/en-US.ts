@@ -3388,8 +3388,15 @@ export default {
         effectValue: 'Shown {shown}x, followed {adopted}x, worked {ok}x',
         lift: 'Success {without}% without it, {with}% with it',
         liftUnknown: 'Not enough comparison data yet',
+        retiredBecause: 'Retired because',
         source: 'Source',
         pin: 'Keep pinned, never auto-retire'
+      },
+      retireReason: {
+        capacity: 'The limit was reached and this one ranked lowest',
+        failed: 'The same error came back after following it',
+        ignored: 'Shown several times in a row without being followed',
+        'no-lift': 'Comparison showed no gain in success rate',
       },
       deleteTitle: 'Delete this experience?',
       deleteContent:

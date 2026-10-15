@@ -1,13 +1,21 @@
 /**
  * 一条新经验能不能进门、进门时挤掉谁。整理员写新经验、以及工程经验升为通用时共用。
+ *
+ * ## 为什么不按工具限条数
+ *
+ * 早先每个工具最多 5 条，理由是防稀释：召回时几条互相挤占。可稀释是召回那一侧的事，
+ * 召回早已按工具名、报错片段、API 钥匙精确对上（`recall.ts`）—— 存得多不会让一次报错
+ * 带上不相干的。按工具限条数防不了稀释，只会把不相干的知识挤在同一排座位上：
+ * 同一个工具下所有 API 的坑抢 5 个位置，再加上没出过场的 0 分排最前，
+ * 实际效果是「只留最近 5 条」（虚幻盒子 2026-10-15 发现，上游 23f1c9ea）。
+ *
+ * 现在只按层限总量，防的是文件无限长。
  */
 
-import type { ExperienceEntry } from './experienceFile'
+import type { ExperienceEntry, RetireReason } from './experienceFile'
 import { emptyStats, evictionScore, type EntryStats } from './lifecycle'
 import { patternProblem } from './specificity'
 
-/** 每个工具最多几条在用的。多了召回时互相挤占，研究里叫稀释 */
-export const MAX_ACTIVE_PER_TOOL = 5
 /** 每一层（一个工程、或通用层）最多几条在用的 */
 export const MAX_ACTIVE_PER_LAYER: Record<'project' | 'global', number> = {
   project: 60,
@@ -15,6 +23,10 @@ export const MAX_ACTIVE_PER_LAYER: Record<'project' | 'global', number> = {
 }
 /** 每个文件留几条已退休的，给用户看「它曾经这么以为过」 */
 export const MAX_RETIRED_PER_TOOL = 10
+
+export function retireAs(entry: ExperienceEntry, reason: RetireReason): ExperienceEntry {
+  return { ...entry, status: 'retired', retiredBecause: reason }
+}
 
 /**
  * 这个报错是不是已经有在用的经验对得上。
@@ -58,21 +70,14 @@ export function weakest(
 }
 
 /**
- * 把新经验放进一个工具的条目里：满了挤掉最该走的；
- * 最该走的是钉住的（全满且全钉住）就不放，回 undefined。
+ * 把新经验放进一个工具的条目里，顺带只留最近几条已退休的。
+ * 不在这里限条数（见文件头），总量由整理员按层管（`curator.ts`）。
  */
 export function admit(
   entries: ExperienceEntry[],
-  incoming: ExperienceEntry,
-  ledger: Record<string, EntryStats>
+  incoming: ExperienceEntry
 ): ExperienceEntry[] | undefined {
-  let next = [...entries]
-  if (entries.filter((e) => e.status !== 'retired').length >= MAX_ACTIVE_PER_TOOL) {
-    const victim = weakest(entries, ledger)
-    if (!victim || victim.pinned) return undefined
-    next = next.map((e) => (e.id === victim.id ? { ...e, status: 'retired' as const } : e))
-  }
-  next.push(incoming)
+  const next = [...entries, incoming]
   const retired = next.filter((e) => e.status === 'retired')
   const drop = new Set(
     retired.slice(0, Math.max(0, retired.length - MAX_RETIRED_PER_TOOL)).map((e) => e.id)
