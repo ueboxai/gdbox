@@ -54,7 +54,7 @@ import {
 } from './toolNames'
 import { effectiveRisk, type ToolRisk, type UnrealAgentTool } from './defineTool'
 import { fileLockForCall, needsEditorKey } from './godotLocks'
-import { acquire, describeConflicts, getLockOwner, sameTeam } from '../core/assetLock'
+import { acquire, describeConflicts, getLockOwner, releasePaths, sameTeam, teamRootOf } from '../core/assetLock'
 import { editorKeyActive, withEditorKey } from '../core/team/editorKey'
 import { effectiveConnectionId } from '../core/projectTargetContext'
 
@@ -535,7 +535,7 @@ function sleepUnlessAborted(ms: number, signal?: AbortSignal): Promise<void> {
  *
  * 拿不到**抛异常**而不是返回 isError —— pi 判定工具失败的唯一依据是 execute 有没有抛。
  * 拿到之后不放：锁跟着一整轮 run，由 ipc 层在 finally 里统一放掉，
- * 否则同一轮里两次写之间的空窗正好够别人插进来。
+ * 否则同一轮里两次写之间的空窗正好够别人插进来。工作室模式的制作人例外，见函数体。
  *
  * 工作室模式撞上队友的锁先等一会儿：团队并行时撞锁是常态，立刻失败只会让模型改排任务、
  * 几轮之后再回来补。等不到再报，报的时候说清是哪个队友。
@@ -564,7 +564,15 @@ function withFileLock(tool: UnrealAgentTool<never>): UnrealAgentTool<never> {
         result = acquire(target.projectDir, owner, [target.resPath], { soft: true })
       }
       if (!result.ok) throw new Error(describeConflicts(result.conflicts, owner))
-      return inner(toolCallId, params, signal, onUpdate)
+      // 工作室模式的制作人：它那一轮就是整局，锁只占这一次调用，不然它碰过的文件队友到交付前都改不了。
+      // 队员照旧占到这件活交回（`releaseAll` 在派活的 finally 里）
+      const producer = team && teamRootOf(owner) === owner
+      if (!producer) return inner(toolCallId, params, signal, onUpdate)
+      try {
+        return await inner(toolCallId, params, signal, onUpdate)
+      } finally {
+        releasePaths(target.projectDir, owner, [target.resPath])
+      }
     }
   } as UnrealAgentTool<never>
 }

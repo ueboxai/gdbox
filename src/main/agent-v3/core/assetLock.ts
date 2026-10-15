@@ -372,6 +372,27 @@ export function releaseAll(owner: string): number {
   return released.length
 }
 
+/**
+ * 放掉某个主人手上的几把锁（不是全部）。
+ *
+ * 给工作室模式的制作人用：它那一轮就是整局，锁跟着一轮走的话，它碰过的文件到交付之前
+ * 队友一个都改不了（2026-10-15 真机：制作人写完 main.tscn 就一直占着，程序要接音效线只能干等）。
+ */
+export function releasePaths(connectionId: string | undefined, owner: string, paths: string[]): number {
+  const root = rootSessionId(owner)
+  const released: LockRecord[] = []
+  for (const path of paths) {
+    const key = keyOf(connectionId, path)
+    const record = locks.get(key)
+    if (record && record.owner === root && locks.delete(key)) released.push(record)
+  }
+  if (released.length > 0) {
+    notifyChanged()
+    notifyReleased(released)
+  }
+  return released.length
+}
+
 /** 当前所有锁，给界面上那个「AI 锁定了 N 个资产」用 */
 export function listLocks(): LockRecord[] {
   return [...locks.values()]

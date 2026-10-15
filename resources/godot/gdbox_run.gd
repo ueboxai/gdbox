@@ -74,6 +74,17 @@ func _resolve(spec: String):
 		return "<no node>"
 	if prop == "":
 		return str(node.get_path())
+	# 最后一段可以是不带参数的取值方法："Spawner:get_child_count()"、"Player:is_on_floor()"。
+	# 只认 get_/is_/has_ 开头的：watch 是看数，不能顺手调一个会改游戏状态的方法
+	if prop.ends_with("()"):
+		var dot := prop.rfind(":")
+		var method := prop.substr(dot + 1).trim_suffix("()")
+		var target = node if dot < 0 else node.get_indexed(NodePath(":" + prop.substr(0, dot)))
+		if not (method.begins_with("get_") or method.begins_with("is_") or method.begins_with("has_")):
+			return "<only get_/is_/has_ methods>"
+		if typeof(target) != TYPE_OBJECT or target == null or not target.has_method(method):
+			return "<no method " + method + ">"
+		return target.call(method)
 	var value = node.get_indexed(NodePath(":" + prop))
 	return value
 

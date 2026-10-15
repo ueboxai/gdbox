@@ -15,7 +15,7 @@ import { z } from 'zod'
 
 import { defineTool, type UnrealAgentTool } from '../defineTool'
 import { digestGodotLog, runGodot } from '../../../godot/run'
-import { ensureImported, markImported } from '../../../godot/importState'
+import { ensureImported, runImport } from '../../../godot/importState'
 import { godotResourcesDir } from '../../../godot/editorLinkAddon'
 import { requireGodot, resolveProjectDir } from './project'
 import { createImportToProjectTool } from './importAssets'
@@ -71,11 +71,7 @@ export function createGodotCheckTool(): UnrealAgentTool<unknown> {
       const godot = (await requireGodot()).path
       const dir = resolveProjectDir(args.project_path)
       const frames = args.frames ?? 120
-      const imported = await runGodot(godot, ['--headless', '--path', dir, '--import'], {
-        timeoutMs: 180_000,
-        signal
-      })
-      if (!imported.timedOut && imported.code === 0) markImported(dir)
+      const imported = await runImport(godot, dir, signal)
       const runArgs = ['--headless', '--path', dir, '--fixed-fps', '60', '--quit-after', String(frames)]
       if (args.scene) runArgs.push(args.scene)
       const ran = await runGodot(godot, runArgs, { timeoutMs: 120_000, signal })
@@ -132,7 +128,8 @@ export function createGodotRunTool(
     description:
       'Play the game for a few seconds with scripted input and report how values change over time — verify behaviour without writing test scenes into the project. ' +
       'inputs press InputMap actions at given times; watch takes "NodePath:property[:sub]" relative to the scene root, ' +
-      'e.g. "Player:position:y", ".:player:velocity" (a script variable holding a node), "%CharacterBody2D:velocity" (first node of that class). ' +
+      'e.g. "Player:position:y", ".:player:velocity" (a script variable holding a node), "%CharacterBody2D:velocity" (first node of that class), ' +
+      '"Spawner:get_child_count()" (a no-argument get_/is_/has_ method). ' +
       'Optional screenshots at given times. Errors during the run are reported too.',
     input: z.object({
       project_path: projectPathInput,
