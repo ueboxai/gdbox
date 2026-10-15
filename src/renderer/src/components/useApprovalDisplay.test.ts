@@ -97,11 +97,11 @@ describe('useApprovalDisplay', () => {
    * 「即将执行写入操作：mcp_godot_call_tool」，正是这张卡片要消灭的句子。
    * 「本轮改动」那一栏早就这么干了（`AIBubble.changeLabel` 第一句）。
    */
-  it('MCP 工具归一成「通过引擎工具集操作」，不露原始工具名', () => {
+  it('MCP 工具归一成「通过 MCP 工具操作」，不露原始工具名', () => {
     enqueue({ toolName: 'mcp_godot_call_tool', risk: 'mutating' })
     const description = display().current.value?.description ?? ''
 
-    expect(description).toContain('引擎工具集')
+    expect(description).toContain('通过 MCP 工具操作')
     expect(description).not.toContain('mcp_godot_call_tool')
   })
 

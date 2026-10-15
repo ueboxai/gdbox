@@ -129,7 +129,7 @@ export function createGodotRunTool(
       'Play the game for a few seconds with scripted input and report how values change over time — verify behaviour without writing test scenes into the project. ' +
       'inputs press InputMap actions at given times; watch takes "NodePath:property[:sub]" relative to the scene root, ' +
       'e.g. "Player:position:y", ".:player:velocity" (a script variable holding a node), "%CharacterBody2D:velocity" (first node of that class), ' +
-      '"Spawner:get_child_count()" (a no-argument get_/is_/has_ method). ' +
+      '"Player:is_on_floor()" (a no-argument get_/is_/has_ method, e.g. child counts). ' +
       'Optional screenshots at given times. Errors during the run are reported too.',
     input: z.object({
       project_path: projectPathInput,
