@@ -1,22 +1,22 @@
 /**
- * 工程里到底有什么 —— 直接数磁盘上的 `Content/`。
+ * 工程里到底有什么 —— 直接数磁盘上的工程目录。
  *
- * ## 为什么数磁盘，不问引擎
+ * ## 为什么数磁盘，不问编辑器
  *
- * 2026-09-26 真机反馈：制作人一天里拿到三个版本的「现状」—— 自己搜出 8 个蓝图、
- * 队员说磁盘上有 39 个资产、另一个队员说 HUD 不是空壳。连接状态、内容浏览器缓存、
- * 时序都会让「问引擎」和「问队友」对不上。磁盘是唯一不看视角的真相：
- * 存下来的就在，没存的就不在；编辑器崩了、没连上也照样数得出来。
+ * 虚幻盒子 2026-09-26 的真机反馈：制作人一天里拿到三个版本的「现状」—— 自己搜出来的、
+ * 队员说的、另一个队员说的各不一样。连接状态、编辑器缓存、时序都会让「问编辑器」和
+ * 「问队友」对不上。磁盘是唯一不看视角的真相：存下来的就在，没存的就不在；
+ * 编辑器没开也照样数得出来。
  *
- * 分类按 UE 的命名惯例（`BP_` / `WBP_` / `M_` …）和扩展名（`.umap` 是关卡）猜，
- * 猜不出来的归「其他」。这是给人和模型看的概况，不是资产审计。
+ * 分类按扩展名。`.import` / `.uid` 是旁挂文件，编辑器缓存 `.godot/`、盒子数据 `.gdbox/`、
+ * 我们自己的插件 `addons/gdbox_link` 都不算工程内容。这是给人和模型看的概况，不是资产审计。
  */
 
 import { promises as fs } from 'fs'
 import { join, relative } from 'path'
 
 export interface InventoryItem {
-  /** 相对 Content 的路径，正斜杠 */
+  /** `res://` 路径 */
   path: string
   category: string
   modifiedAt: number
@@ -31,34 +31,33 @@ export interface Inventory {
   truncated: boolean
 }
 
-const PREFIXES: Array<[RegExp, string]> = [
-  [/^WBP_/i, 'UI'],
-  [/^(BP|B)_/i, '蓝图'],
-  [/^ABP_/i, '动画蓝图'],
-  [/^MI_/i, '材质实例'],
-  [/^(M|MF)_/i, '材质'],
-  [/^T_/i, '贴图'],
-  [/^SM_/i, '静态网格'],
-  [/^(SK|SKM)_/i, '骨骼网格'],
-  [/^(A|AM|AS)_/i, '动画'],
-  [/^(S|SC|SW)_/i, '声音'],
-  [/^(NS|P|FX)_/i, '特效'],
-  [/^(DT|D)_/i, '数据表'],
-  [/^E_/i, '枚举'],
-  [/^(F|ST)_/i, '结构体']
+const CATEGORIES: Array<[RegExp, string]> = [
+  [/\.(tscn|scn)$/i, '场景'],
+  [/\.(gd|cs)$/i, '脚本'],
+  [/\.(gdshader|gdshaderinc|shader)$/i, '着色器'],
+  [/\.(tres|res)$/i, '资源'],
+  [/\.(png|jpe?g|webp|svg|bmp|tga|exr|hdr)$/i, '图片'],
+  [/\.(wav|ogg|mp3)$/i, '音频'],
+  [/\.(glb|gltf|fbx|obj|blend|dae)$/i, '模型'],
+  [/\.(ttf|otf|woff2?|fnt)$/i, '字体'],
+  [/\.(json|cfg|csv|txt|md)$/i, '数据']
 ]
 
 export function categorize(fileName: string): string {
-  if (/\.umap$/i.test(fileName)) return '关卡'
-  for (const [pattern, category] of PREFIXES) if (pattern.test(fileName)) return category
+  for (const [pattern, category] of CATEGORIES) if (pattern.test(fileName)) return category
   return '其他'
 }
+
+/** 不是工程内容的文件：旁挂、工程配置本身、系统垃圾 */
+const SKIP_FILE = /\.(import|uid)$|^project\.godot$|^export_presets\.cfg$|^\.|^Thumbs\.db$|^desktop\.ini$/i
+
+/** 不往里走的目录（相对工程根，正斜杠） */
+const SKIP_DIR = /^(\.godot|\.gdbox|\.git|\.import|addons\/gdbox_link)$/i
 
 /** 最多数这么多个文件。再大的工程，概况也不需要逐个列 */
 const MAX_FILES = 20_000
 
 export async function contentInventory(projectDir: string, recentCount = 10): Promise<Inventory> {
-  const root = join(projectDir, 'Content')
   const items: InventoryItem[] = []
   let truncated = false
 
@@ -71,21 +70,23 @@ export async function contentInventory(projectDir: string, recentCount = 10): Pr
         return
       }
       const full = join(dir, entry.name)
+      const rel = relative(projectDir, full).replace(/\\/g, '/')
       if (entry.isDirectory()) {
-        // 引擎自带的开发者目录、集合不算工程资产
-        if (entry.name === 'Developers' || entry.name === 'Collections') continue
+        if (SKIP_DIR.test(rel) || entry.name.startsWith('.')) continue
+        // 带 .gdignore 的目录 Godot 自己也不导入
+        if (await fs.access(join(full, '.gdignore')).then(() => true, () => false)) continue
         await walk(full)
-      } else if (/\.(uasset|umap)$/i.test(entry.name)) {
+      } else if (!SKIP_FILE.test(entry.name)) {
         const stat = await fs.stat(full).catch(() => null)
         items.push({
-          path: relative(root, full).replace(/\\/g, '/'),
+          path: `res://${rel}`,
           category: categorize(entry.name),
           modifiedAt: stat?.mtimeMs ?? 0
         })
       }
     }
   }
-  await walk(root)
+  await walk(projectDir)
 
   const counts: Record<string, number> = {}
   for (const item of items) counts[item.category] = (counts[item.category] ?? 0) + 1
@@ -97,7 +98,7 @@ export async function contentInventory(projectDir: string, recentCount = 10): Pr
   }
 }
 
-/** 一行概况：「共 39 · 蓝图 8 · UI 5 · 材质 5 · 关卡 1」。数量多的在前 */
+/** 一行概况：「共 39 · 脚本 12 · 场景 8 · 图片 8 · 音频 3」。数量多的在前 */
 export function formatCounts(inventory: Inventory): string {
   const parts = Object.entries(inventory.counts)
     .sort((a, b) => b[1] - a[1])

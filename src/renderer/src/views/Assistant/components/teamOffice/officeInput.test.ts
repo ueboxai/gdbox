@@ -28,21 +28,22 @@ const team: TeamStateView = {
 
 describe('toolKind', () => {
   it('按工具名粗分动作；认不出的当成改东西', () => {
-    expect(toolKind('blueprint_apply_graph')).toBe('write')
-    expect(toolKind('ue_set_property')).toBe('write')
-    expect(toolKind('blueprint_describe')).toBe('read')
-    expect(toolKind('ue_content_search')).toBe('read')
-    expect(toolKind('blueprint_compile')).toBe('run')
-    expect(toolKind('ue_run_python_script')).toBe('run')
-    expect(toolKind('ue_screenshot')).toBe('look')
-    expect(toolKind('ue_autoplay')).toBe('play')
+    expect(toolKind('write_local_file')).toBe('write')
+    expect(toolKind('editor_save_all')).toBe('write')
+    expect(toolKind('editor_scene_tree')).toBe('read')
+    expect(toolKind('read_local_file')).toBe('read')
+    expect(toolKind('godot_check')).toBe('run')
+    expect(toolKind('gen_sprite')).toBe('run')
+    expect(toolKind('godot_screenshot')).toBe('look')
+    expect(toolKind('godot_run')).toBe('play')
+    expect(toolKind('editor_play')).toBe('play')
     expect(toolKind('team_message')).toBe('talk')
     expect(toolKind('something_new')).toBe('write')
   })
 })
 
 describe('memberMode', () => {
-  const tools = new Map([['阿场景', { tool: 'ue_screenshot', at: 1 }]])
+  const tools = new Map([['阿场景', { tool: 'godot_screenshot', at: 1 }]])
 
   it('等回话优先；在跑的看最近一次工具；没调工具时是在想', () => {
     const live = {
@@ -150,10 +151,10 @@ describe('teamEvents', () => {
 
 describe('动态 → 工具', () => {
   it('认出调的是哪个工具；它说的话算在想；每人取最后一条', () => {
-    expect(activityTool('调用 ue_set_property /Game/Maps/Arena')).toBe('ue_set_property')
+    expect(activityTool('调用 edit_local_file res://scenes/arena.tscn')).toBe('edit_local_file')
     expect(activityTool('我先看看关卡')).toBe('')
     const tools = recentTools([
-      { member: '阿场景', text: '调用 ue_screenshot', at: 1 },
+      { member: '阿场景', text: '调用 godot_screenshot', at: 1 },
       { member: '阿场景', text: '调用 blueprint_compile', at: 2 },
       { member: 'Bob', text: '想一想', at: 3 }
     ])
@@ -169,7 +170,7 @@ describe('动态 → 工具', () => {
       assignments: [{ member: '阿场景', text: '搭关卡', since: 10 }],
       recent: []
     }
-    const old = new Map([['阿场景', { tool: 'ue_screenshot', at: 5 }]])
+    const old = new Map([['阿场景', { tool: 'godot_screenshot', at: 5 }]])
     expect(memberMode({ ...team, live }, '阿场景', old)).toEqual({ kind: 'work', tool: 'think' })
   })
 })

@@ -112,13 +112,15 @@ export const C = {
   dayLight: '#fff3d6',
   nightTint: '#141c36',
   shadow: '#1c1410',
-  // 虚幻的小东西：节点图、默认材质、灰人偶
+  // 引擎的小东西：节点图、默认棋盘格、Godot 小机器人
   ueGraph: '#1b2230',
   ueGrid: '#232c3c',
   ueNode: '#2e3646',
   ueGrey: '#9a9ca3',
   ueLight: '#d2d4d8',
   ueDark: '#6b6e76',
+  godotBlue: '#478cbf',
+  godotBlueDark: '#2f6491',
   // 猫
   catOrange: '#e0913f',
   catOrangeDark: '#b86a26',

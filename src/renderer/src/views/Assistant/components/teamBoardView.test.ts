@@ -13,17 +13,11 @@ import {
 
 describe('shortTarget', () => {
   it('工程目录下的去掉工程目录；别处留最后两段；太长中间省略', () => {
-    const root = 'I:/UEBox Project/07/UEBox_Test_TASK_2'
-    expect(shortTarget('I:/UEBox Project/07/UEBox_Test_TASK_2/Content', root)).toBe('Content')
-    expect(
-      shortTarget('I:\\UEBox Project\\07\\UEBox_Test_TASK_2\\Config\\DefaultEngine.ini', root)
-    ).toBe('Config/DefaultEngine.ini')
-    expect(shortTarget('D:/Other/Proj/Source/CityLife/Hero.cpp')).toBe('Source/CityLife/Hero.cpp')
-    expect(shortTarget('D:/Other/Proj/Source/CityLife/Gameplay/Hero.cpp')).toBe(
-      'Source/…/Gameplay/Hero.cpp'
-    )
+    const root = 'I:/Games/Platformer'
+    expect(shortTarget('I:/Games/Platformer/scenes', root)).toBe('scenes')
+    expect(shortTarget('I:\\Games\\Platformer\\scripts\\player.gd', root)).toBe('scripts/player.gd')
+    expect(shortTarget('res://scenes/levels/level_1.tscn')).toBe('scenes/levels/level_1.tscn')
     expect(shortTarget('D:/Downloads/a/b/c.txt')).toBe('…/b/c.txt')
-    expect(shortTarget('/Game/Maps/Arena')).toBe('…/Maps/Arena')
     expect(shortTarget('x'.repeat(60))).toHaveLength(39)
   })
 })

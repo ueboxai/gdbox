@@ -202,7 +202,7 @@ describe('describeConflicts', () => {
 
   it('明说与编辑器操作无关 —— 模型曾把用户支去关闭资产，那不会解锁', () => {
     const text = describeConflicts([{ path: '/Game/A', owner: 's1' }])
-    expect(text).toContain('虚幻编辑器')
+    expect(text).toContain('Godot 编辑器')
   })
 })
 

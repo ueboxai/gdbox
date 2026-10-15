@@ -40,9 +40,9 @@ function harness(over: Partial<EditorWatchDeps> = {}): Harness {
       return () => handlers.delete(method)
     },
     connectedProjects: () => [{ connectionId: 'c1', projectPath: 'I:/Game' }],
-    findUproject: async (dir) => `${dir}/Game.uproject`,
+    findProjectFile: async (dir) => `${dir}/Game.projectFile`,
     isRunning: async () => running,
-    reopen: async (uproject) => void reopened.push(uproject),
+    reopen: async (projectFile) => void reopened.push(projectFile),
     waitLive: async () => true,
     crashReason: async () => 'Access violation',
     isOurs: (dir) => dir === 'I:/Game',
@@ -73,7 +73,7 @@ describe('编辑器看护', () => {
   it('没打招呼就断了、进程也没了：算崩溃，重开并等它连回来', async () => {
     const h = harness()
     await h.fire('system.disconnected', {}, 'c1')
-    expect(h.reopened).toEqual(['I:/Game/Game.uproject'])
+    expect(h.reopened).toEqual(['I:/Game/Game.projectFile'])
     expect(h.events.map((e) => e.kind)).toEqual(['crashed', 'recovered'])
     expect(h.events[0]).toMatchObject({ reason: 'Access violation' })
   })
@@ -113,7 +113,7 @@ describe('编辑器看护', () => {
     it('看门人没认成崩溃（没有崩溃报告）：这里自己重开', async () => {
       const h = harness({ crashHandledElsewhere: async () => null })
       await h.fire('system.disconnected', {}, 'c1')
-      expect(h.reopened).toEqual(['I:/Game/Game.uproject'])
+      expect(h.reopened).toEqual(['I:/Game/Game.projectFile'])
     })
   })
 
@@ -138,7 +138,7 @@ describe('编辑器看护', () => {
     let checks = 0
     const h = harness({ isRunning: async () => ++checks < 4 })
     await h.fire('system.disconnected', {}, 'c1')
-    expect(h.reopened).toEqual(['I:/Game/Game.uproject'])
+    expect(h.reopened).toEqual(['I:/Game/Game.projectFile'])
     expect(h.events.map((e) => e.kind)).toEqual(['crashed', 'recovered'])
   })
 

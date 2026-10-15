@@ -11,7 +11,7 @@
  * 就是把它这次跑完的消息存下来、下次作为起始消息喂回去。独立会话还要多出一整套
  * 会话生命周期、界面列表、审批归属，这一版用不上。
  *
- * 队员的锁主是它自己（不是制作人）：两个队员改同一个资产会被资产锁挡下，
+ * 队员的锁主是它自己（不是制作人）：两个队员改同一个文件会被文件锁挡下，
  * 而不是像 `task` 子任务那样父子共用一把锁、互相不设防。
  */
 
@@ -787,7 +787,7 @@ function createSnapshotTool(snapshots: TeamSnapshots): UnrealAgentTool<unknown> 
 function createDeliverTool(deps: TeamToolDeps): UnrealAgentTool<GoalVerdict | null> {
   const deliverInput = z.object({
     report: z.string().min(1).describe('交付说明：做了什么、玩法是什么、已知缺口'),
-    how_to_play: z.string().min(1).describe('怎么玩：打开哪个关卡、操作键位、胜负条件'),
+    how_to_play: z.string().min(1).describe('怎么玩：从哪个场景启动、操作键位、胜负条件'),
     project_path: z
       .string()
       .optional()

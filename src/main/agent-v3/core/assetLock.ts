@@ -306,7 +306,10 @@ export function acquire(
 ): AcquireResult {
   const root = rootSessionId(owner)
   // 哨兵不是包路径，别让 `toPackagePath` 按「截掉第一个点后面」的规则改它
-  const wanted = [...new Set(paths.map((p) => (p === CURRENT_LEVEL_LOCK ? p : toPackagePath(p))))]
+  // `res://` 路径就是文件本身，扩展名不能削（player.gd 和 player.tscn 是两个文件）
+  const wanted = [
+    ...new Set(paths.map((p) => (p === CURRENT_LEVEL_LOCK || p.startsWith('res://') ? p : toPackagePath(p))))
+  ]
 
   const conflicts: LockConflict[] = []
   for (const path of wanted) {
@@ -434,7 +437,7 @@ export function describeConflicts(conflicts: LockConflict[], requester?: string)
   // 「另一条 AI 会话」在团队里既不准确也没法照着做（2026-09-26 真机反馈）
   if (requester && conflicts.every((c) => sameTeam(c.owner, requester))) {
     return [
-      '以下资产正被**队友**改着，本次调用未做任何改动：',
+      '以下文件正被**队友**改着，本次调用未做任何改动：',
       ...conflicts.map(
         (c) =>
           `  - ${describeLockPath(c.path)}（${holderLabel(c.owner)}` +
@@ -445,9 +448,9 @@ export function describeConflicts(conflicts: LockConflict[], requester?: string)
   }
   const lines = conflicts.map((c) => `  - ${describeLockPath(c.path)}`)
   return [
-    '以下资产正被**盒子里的另一条 AI 对话**修改中，本次调用未做任何改动：',
+    '以下文件正被**盒子里的另一条 AI 对话**修改中，本次调用未做任何改动：',
     ...lines,
-    '这与用户在虚幻编辑器里的操作无关，别让用户去关闭资产或退出编辑 —— 那不会解锁。',
+    '这与用户在 Godot 编辑器里的操作无关，别让用户去关闭场景或编辑器 —— 那不会解锁。',
     '锁在那一轮结束时自动释放。请先做别的任务，或告诉用户等它结束。反复重试不会让锁提前释放。'
   ].join('\n')
 }

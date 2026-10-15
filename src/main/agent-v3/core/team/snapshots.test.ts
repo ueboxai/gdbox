@@ -46,12 +46,12 @@ describe.skipIf(!hasGit)('工程快照', { timeout: 60_000 }, () => {
     const store = createSnapshotStore(project, git)
     const first = await store.save('开工')
     // 标签说清「这一份里是什么」：谁触发的、改了几个文件
-    expect(first?.message).toBe('开工｜新增 3')
+    expect(first?.message).toBe('开工｜新增 3｜共 2 · 场景 1 · 脚本 1')
     expect(await store.save('什么都没改')).toBeNull()
 
     write('scenes/main.tscn', 'v2')
     const second = await store.save(snapshotMessage('地编', '改关卡\n细节…'))
-    expect(second?.message).toBe('地编：改关卡｜修改 1')
+    expect(second?.message).toBe('地编：改关卡｜修改 1｜共 2 · 场景 1 · 脚本 1')
     expect((await store.list()).map((s) => s.message.split('｜')[0])).toEqual([
       '地编：改关卡',
       '开工'

@@ -52,7 +52,11 @@ import {
   SET_SESSION_PROJECT_TOOL_NAME,
   rewriteCrossReferences
 } from './toolNames'
-import type { ToolRisk, UnrealAgentTool } from './defineTool'
+import { effectiveRisk, type ToolRisk, type UnrealAgentTool } from './defineTool'
+import { fileLockForCall, needsEditorKey } from './godotLocks'
+import { acquire, describeConflicts, getLockOwner, sameTeam } from '../core/assetLock'
+import { editorKeyActive, withEditorKey } from '../core/team/editorKey'
+import { effectiveConnectionId } from '../core/projectTargetContext'
 
 // ── V2 工具工厂 ──────────────────────────────────────────────────────────
 import * as noteTools from '../../agent-v3/tools/adapted/note'
@@ -498,11 +502,91 @@ export function buildAllTools(deps: BuildToolsDeps = {}): UnrealAgentTool<never>
       : []) as unknown as UnrealAgentTool<never>[])
   ]
 
-  const guarded = all
+  // 锁包在这里：这个数组是全部工具唯一汇合的地方，以后加的写工具不会漏。
+  // 先过文件锁（同会话外拿不到立刻失败），再排编辑器钥匙（拿不到就等）
+  const guarded = all.map((tool) => withFileLock(withEditorKeyGate(tool)))
 
   assertUniqueNames(guarded)
   if (!deps.sender && !deps.notebook) cache = guarded
   return guarded
+}
+
+/** 工作室模式撞上队友的锁时，最多等多久、多久看一次 */
+const TEAM_LOCK_WAIT_MS = 90_000
+const TEAM_LOCK_POLL_MS = 2_000
+
+function sleepUnlessAborted(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(signal.reason ?? new Error('Operation aborted'))
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
+    const onAbort = (): void => {
+      clearTimeout(timer)
+      reject(signal?.reason ?? new Error('Operation aborted'))
+    }
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
+}
+
+/**
+ * 写工程里的文件之前先拿这个文件的锁（见 `godotLocks.ts`）。
+ *
+ * 拿不到**抛异常**而不是返回 isError —— pi 判定工具失败的唯一依据是 execute 有没有抛。
+ * 拿到之后不放：锁跟着一整轮 run，由 ipc 层在 finally 里统一放掉，
+ * 否则同一轮里两次写之间的空窗正好够别人插进来。
+ *
+ * 工作室模式撞上队友的锁先等一会儿：团队并行时撞锁是常态，立刻失败只会让模型改排任务、
+ * 几轮之后再回来补。等不到再报，报的时候说清是哪个队友。
+ */
+function withFileLock(tool: UnrealAgentTool<never>): UnrealAgentTool<never> {
+  if (tool.unrealBox.risk === 'safe') return tool
+  const inner = tool.execute.bind(tool)
+  return {
+    ...tool,
+    execute: async (toolCallId, params, signal, onUpdate) => {
+      const owner = getLockOwner()
+      const target = owner ? fileLockForCall(tool.name, params) : null
+      if (!owner || !target || effectiveRisk(tool.unrealBox, params) === 'safe') {
+        return inner(toolCallId, params, signal, onUpdate)
+      }
+      const team = editorKeyActive()
+      let result = acquire(target.projectDir, owner, [target.resPath], { soft: true })
+      const deadline = Date.now() + TEAM_LOCK_WAIT_MS
+      while (
+        !result.ok &&
+        team &&
+        Date.now() < deadline &&
+        result.conflicts.every((conflict) => sameTeam(conflict.owner, owner))
+      ) {
+        await sleepUnlessAborted(TEAM_LOCK_POLL_MS, signal)
+        result = acquire(target.projectDir, owner, [target.resPath], { soft: true })
+      }
+      if (!result.ok) throw new Error(describeConflicts(result.conflicts, owner))
+      return inner(toolCallId, params, signal, onUpdate)
+    }
+  } as UnrealAgentTool<never>
+}
+
+/**
+ * 工作室模式下，改编辑器状态的工具先拿编辑器钥匙（见 `core/team/editorKey.ts`）。
+ * 不在工作室模式里就原样透传，普通会话零改变。
+ */
+function withEditorKeyGate(tool: UnrealAgentTool<never>): UnrealAgentTool<never> {
+  if (!needsEditorKey(tool.unrealBox)) return tool
+  const inner = tool.execute.bind(tool)
+  return {
+    ...tool,
+    execute: (toolCallId, params, signal, onUpdate) =>
+      editorKeyActive()
+        ? withEditorKey(
+            effectiveConnectionId() ?? 'default',
+            () => inner(toolCallId, params, signal, onUpdate),
+            signal
+          )
+        : inner(toolCallId, params, signal, onUpdate)
+  } as UnrealAgentTool<never>
 }
 
 /** 重名会让后注册的工具静默覆盖前一个，模型看到的行为与描述对不上 */

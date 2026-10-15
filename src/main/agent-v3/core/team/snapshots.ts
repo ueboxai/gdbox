@@ -157,7 +157,7 @@ export function createSnapshotStore(projectDir: string, git: GitRunner): Snapsho
     // 标签要说「这一份里是什么」，不只是「谁触发的」—— 回滚时是照着它选的。
     // 2026-09-26 真机反馈：标签只有队员留言的开头，看到编号完全不知道那一份里有什么
     const changes = summarizeChanges(await run(['diff', '--cached', '--name-status']))
-    // 资产清点还只认得虚幻的 Content/（见 inventory.ts）；数不出东西就不写「共 0」误导人
+    // 数不出东西（空工程）就不写「共 0」
     const inventory = await contentInventory(projectDir, 0).catch(() => null)
     const subject = [message, changes, inventory?.total ? formatCounts(inventory) : '']
       .filter(Boolean)

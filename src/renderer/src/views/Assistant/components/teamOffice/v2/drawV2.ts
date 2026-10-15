@@ -27,7 +27,7 @@ export interface DrawStateV2 {
   now: Date
   sprites: SpriteSet
   cat: OfficeCat
-  /** 每人此刻在调的工具名（屏幕上画蓝图还是材质图要看它） */
+  /** 每人此刻在调的工具名（屏幕上画代码还是节点图要看它） */
   tools: ReadonlyMap<string, string>
 }
 
@@ -322,7 +322,7 @@ interface WallPlan {
 
 /**
  * 墙上挂什么、挂哪：窗户位置由布局定，其余的找空墙。
- * 招牌尽量挂在工位区正中，蓝图画挂在大盆栽上方，吊兰塞进剩下的空当，最多三盆。
+ * 招牌尽量挂在工位区正中，节点图挂在大盆栽上方，吊兰塞进剩下的空当，最多三盆。
  */
 function wallPlan(sim: OfficeSim, S: SpriteSet): WallPlan {
   const L = sim.layout
@@ -626,7 +626,7 @@ function trinket(
       rect(ctx, C.brass, x - 2, base - 6, 4, 2)
       if (light.night) pool(ctx, C.warm, x, base - 3, 7, 5, 0.12)
       break
-    case 3: // 默认材质的灰白棋盘方块
+    case 3: // 默认贴图的灰白棋盘方块
       rect(ctx, C.line, x - 2, base - 4, 5, 5)
       rect(ctx, C.ueGrey, x - 1, base - 3, 3, 3)
       rect(ctx, C.ueLight, x - 1, base - 3, 1, 1)
@@ -636,15 +636,15 @@ function trinket(
       rect(ctx, C.ueLight, x + 1, base - 1, 1, 1)
       break
     case 4: {
-      // 灰色小人偶（引擎模板里那个），偶尔挥一下手
-      const wave = Math.floor(sim.time * 1.3) % 7 === 0 ? 1 : 0
-      rect(ctx, C.ueGrey, x, base - 7, 2, 2)
-      rect(ctx, C.ueGrey, x, base - 5, 2, 3)
-      rect(ctx, C.ueDark, x - 1, base - 5 - wave, 1, 2)
-      rect(ctx, C.ueDark, x + 2, base - 5, 1, 2)
-      rect(ctx, C.ueDark, x, base - 2, 1, 3)
-      rect(ctx, C.ueDark, x + 1, base - 2, 1, 3)
-      rect(ctx, C.ueLight, x, base - 7, 1, 1)
+      // Godot 的蓝色小机器人头，偶尔眨一下眼
+      const blink = Math.floor(sim.time * 1.3) % 9 === 0
+      rect(ctx, C.godotBlueDark, x - 2, base - 4, 6, 5)
+      rect(ctx, C.godotBlue, x - 1, base - 5, 4, 5)
+      rect(ctx, C.godotBlue, x - 2, base - 6, 1, 2)
+      rect(ctx, C.godotBlue, x + 3, base - 6, 1, 2)
+      rect(ctx, blink ? C.godotBlue : C.cream, x - 1, base - 3, 1, 1)
+      rect(ctx, blink ? C.godotBlue : C.cream, x + 2, base - 3, 1, 1)
+      rect(ctx, C.cream, x, base - 1, 2, 1)
       break
     }
     default: // 一摞书
@@ -677,9 +677,9 @@ function screen(
     return
   }
   rect(ctx, C.screen, x, y, w, h)
-  // 改蓝图、改材质的时候，屏幕上是节点图（虚幻的老朋友）
-  if (pose === 'type' && /^(blueprint|material)_/.test(tool)) {
-    nodeGraph(ctx, t, x, y, w, h, tool.startsWith('material') ? C.leafLight : C.codeB, owner.style)
+  // 在编辑器里动场景的时候，屏幕上是节点图；写着色器的时候是绿色的那一种
+  if (pose === 'type' && /^editor_|shader/.test(tool)) {
+    nodeGraph(ctx, t, x, y, w, h, tool.includes('shader') ? C.leafLight : C.codeB, owner.style)
     return
   }
   switch (pose) {
@@ -828,7 +828,7 @@ function nodeGraph(
   })
 }
 
-/** 墙上一幅框起来的蓝图：节点、连线，挂在大盆栽上方 */
+/** 墙上一幅框起来的节点图（可视化着色器那种）：节点、连线，挂在大盆栽上方 */
 function blueprintPoster(ctx: Ctx, x: number): void {
   const y = 14
   const w = POSTER_W

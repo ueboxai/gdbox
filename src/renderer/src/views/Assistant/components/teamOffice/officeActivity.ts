@@ -21,11 +21,13 @@ export type ToolKind =
 
 const RULES: [RegExp, ToolKind][] = [
   [/^team_/, 'talk'],
-  [/(autoplay|playtest|inject_input)/, 'play'],
-  [/(screenshot|capture|focus_viewport|preview|analyze_(image|video))/, 'look'],
-  [/(compile|run_|console_command|build|restart|trace|collect_garbage|fixup)/, 'run'],
+  // godot_run 是按时间表按键试玩；editor_play 是在编辑器里跑起来
+  [/(^godot_run$|^editor_play$|playtest)/, 'play'],
+  [/(screenshot|capture|preview|analyze_(image|video))/, 'look'],
+  // 检查、生图生音、跑命令：等机器
+  [/(^godot_check$|^gen_|compile|run_|build|restart)/, 'run'],
   [
-    /(describe|^ue_get_|_get_|search|list|inspect|audit|slice|dependencies|referencers|read|find|guidelines|log|health|stats|ranking|refs|size_map|_map$)/,
+    /(describe|_get_|search|list|inspect|audit|dependencies|referencers|read|find|scene_tree|log|stats|ranking|refs)/,
     'read'
   ]
 ]

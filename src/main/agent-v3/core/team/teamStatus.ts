@@ -10,7 +10,7 @@
  * 这里把能不看视角的东西放在一起：
  * - **磁盘上有什么**（`inventory.ts`）—— 存下来的就在，编辑器崩了也数得出来
  * - **谁在干什么**：谁手上有活、干了多久，谁空着
- * - **谁占着哪些资产**：资产锁表，按队友名说
+ * - **谁占着哪些文件**：文件锁表，按队友名说
  * - **最近实际改了什么**：按写操作台账记的，不是队员自己说的
  * - **任务板**里哪些「进行中」已经很久没更新（多半是过期备注）
  * - **最近的快照**
@@ -113,14 +113,14 @@ export async function buildTeamStatus(deps: TeamStatusDeps): Promise<string> {
   const others = locks.length - ours.length
   sections.push(
     [
-      '【谁占着哪些资产】',
+      '【谁占着哪些文件】',
       ...(ours.length
         ? ours.map(
             (lock) =>
               `- ${describeLockPath(lock.path)} ← ${holderLabel(lock.owner)}（已占 ${Math.max(1, Math.round((t - lock.acquiredAt) / 60_000))} 分钟，它这件活交回时放）`
           )
-        : ['- 团队里没人占着资产']),
-      ...(others > 0 ? [`- 另有 ${others} 个资产被盒子里别的对话占着`] : [])
+        : ['- 团队里没人占着文件']),
+      ...(others > 0 ? [`- 另有 ${others} 个文件被盒子里别的对话占着`] : [])
     ].join('\n')
   )
 
@@ -188,7 +188,7 @@ export function createStatusTool(deps: TeamStatusDeps): UnrealAgentTool<unknown>
     risk: 'safe',
     concurrency: 'parallel',
     description:
-      '团队此刻的现状，一次查全：磁盘上的资产概况和最近存过的文件、谁在干什么、谁占着哪些资产（已占多久）、' +
+      '团队此刻的现状，一次查全：磁盘上的工程文件概况和最近存过的文件、谁在干什么、谁占着哪些文件（已占多久）、' +
       '最近实际改了什么（按写操作记账）、任务板上很久没更新的项、最近的快照。' +
       '队员说的和你查的对不上时，以这里为准；派活前先看一眼，别给队员发过期的现状。',
     input: statusInput,

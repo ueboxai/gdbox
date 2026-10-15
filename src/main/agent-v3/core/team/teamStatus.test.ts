@@ -22,7 +22,7 @@ let dir: string
 let store: TeamStore
 
 function touch(rel: string, at: number): void {
-  const full = join(dir, 'proj', 'Content', rel)
+  const full = join(dir, 'proj', rel)
   mkdirSync(join(full, '..'), { recursive: true })
   writeFileSync(full, '')
   utimesSync(full, at / 1000, at / 1000)
@@ -44,33 +44,39 @@ afterEach(() => {
 })
 
 describe('磁盘清点', () => {
-  it('按 UE 命名惯例分类，关卡按扩展名认', () => {
-    expect(categorize('WBP_HUD.uasset')).toBe('UI')
-    expect(categorize('BP_Tower.uasset')).toBe('蓝图')
-    expect(categorize('MI_Rock.uasset')).toBe('材质实例')
-    expect(categorize('M_Rock.uasset')).toBe('材质')
-    expect(categorize('Main.umap')).toBe('关卡')
-    expect(categorize('Whatever.uasset')).toBe('其他')
+  it('按扩展名分类', () => {
+    expect(categorize('main.tscn')).toBe('场景')
+    expect(categorize('player.gd')).toBe('脚本')
+    expect(categorize('water.gdshader')).toBe('着色器')
+    expect(categorize('hero_frames.tres')).toBe('资源')
+    expect(categorize('hero.png')).toBe('图片')
+    expect(categorize('jump.wav')).toBe('音频')
+    expect(categorize('Whatever.bin')).toBe('其他')
   })
 
-  it('数 Content 下的资产，跳过 Developers；最近改的在前', async () => {
-    touch('Core/BP_GameMode.uasset', 1_000_000)
-    touch('UI/WBP_HUD.uasset', 3_000_000)
-    touch('Maps/Main.umap', 2_000_000)
-    touch('Developers/me/BP_Scratch.uasset', 4_000_000)
-    touch('readme.txt', 5_000_000)
+  it('数工程里的文件，跳过旁挂文件、编辑器缓存、盒子数据和我们的插件；最近改的在前', async () => {
+    touch('scripts/player.gd', 1_000_000)
+    touch('ui/hud.tscn', 3_000_000)
+    touch('main.tscn', 2_000_000)
+    touch('main.tscn.uid', 6_000_000)
+    touch('art/hero.png.import', 6_000_000)
+    touch('project.godot', 6_000_000)
+    touch('.godot/imported/x.ctex', 4_000_000)
+    touch('.gdbox/tmp/shot.png', 4_000_000)
+    touch('addons/gdbox_link/plugin.cfg', 4_000_000)
+    touch('raw/.gdignore', 4_000_000)
+    touch('raw/huge.psd', 4_000_000)
     const inventory = await contentInventory(join(dir, 'proj'))
     expect(inventory.total).toBe(3)
     expect(inventory.recent.map((i) => i.path)).toEqual([
-      'UI/WBP_HUD.uasset',
-      'Maps/Main.umap',
-      'Core/BP_GameMode.uasset'
+      'res://ui/hud.tscn',
+      'res://main.tscn',
+      'res://scripts/player.gd'
     ])
-    expect(formatCounts(inventory)).toMatch(/^共 3 · /)
-    expect(formatCounts(inventory)).toContain('关卡 1')
+    expect(formatCounts(inventory)).toMatch(/^共 3 · 场景 2/)
   })
 
-  it('没有 Content 目录也不报错', async () => {
+  it('工程目录不存在也不报错', async () => {
     expect((await contentInventory(join(dir, 'nope'))).total).toBe(0)
   })
 })
@@ -78,7 +84,7 @@ describe('磁盘清点', () => {
 describe('team_status', () => {
   it('一次说全：磁盘、谁在干什么、谁占着锁、最近改动、过期任务', async () => {
     target.path = join(dir, 'proj')
-    touch('Core/BP_GameMode.uasset', Date.now() - 2 * 60_000)
+    touch('scripts/game_mode.gd', Date.now() - 2 * 60_000)
     await store.putMember({
       name: '美术',
       persona: 'a',
@@ -95,8 +101,8 @@ describe('team_status', () => {
     })
     const live = createTeamLive(store)
     live.setAssignment('程序', '做炮塔的开火逻辑\n细节……')
-    acquire('conn', 's1:mate-程序', ['/Game/Core/BP_GameMode'])
-    acquire('conn', 'other-session', ['/Game/Other'])
+    acquire(join(dir, 'proj'), 's1:mate-程序', ['res://scripts/game_mode.gd'])
+    acquire(join(dir, 'proj'), 'other-session', ['res://other.gd'])
     await store.recordActivity({ who: '美术', what: '做三张材质', writes: 'material_create ×3' })
     await store.patchBoard([{ id: 't1', title: 'HUD', owner: '美术', status: 'doing' }])
 
@@ -107,11 +113,11 @@ describe('team_status', () => {
       now: () => Date.now() + 30 * 60_000
     })
     expect(text).toContain('共 1')
-    expect(text).toContain('Core/BP_GameMode.uasset')
+    expect(text).toContain('res://scripts/game_mode.gd')
     expect(text).toMatch(/程序：在干「做炮塔的开火逻辑」/)
     expect(text).toMatch(/美术：空闲（要它干活用 team_send）/)
-    expect(text).toMatch(/BP_GameMode.*← .*程序/)
-    expect(text).toContain('另有 1 个资产被盒子里别的对话占着')
+    expect(text).toMatch(/game_mode\.gd.*← .*程序/)
+    expect(text).toContain('另有 1 个文件被盒子里别的对话占着')
     expect(text).toMatch(/美术「做三张材质」：material_create ×3/)
     expect(text).toMatch(/很久没更新[\s\S]*t1 HUD @美术/)
   })
@@ -119,7 +125,7 @@ describe('team_status', () => {
   it('没连工程也能出，说清没有工程', async () => {
     const text = await buildTeamStatus({ store, sessionId: 's1' })
     expect(text).toContain('这一轮还没有连着的工程')
-    expect(text).toContain('团队里没人占着资产')
+    expect(text).toContain('团队里没人占着文件')
   })
 
   it('最近改动只留最近的', async () => {

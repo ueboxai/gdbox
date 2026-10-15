@@ -3,7 +3,7 @@
  *
  * ## 怎么分辨「崩了」和「人关的」
  *
- * - 插件正常退出（用户关编辑器、`ue_restart_editor`）会先发 `project.closed`，
+ * - 插件正常退出（用户关编辑器、盒子退回快照）会先发 `project.closed`，
  *   再断开连接。收到它的那条连接断了，就当正常关闭，不管。
  * - 没打招呼就断了：看编辑器进程还在不在。
  *   - 还在 —— 是卡住或者网络抖了一下。插件每 5 秒自己重连，这里不插手，
@@ -23,11 +23,11 @@
  *
  * 一小时内最多重开 3 次：反复崩就别再拉起来了，停下交给人。
  *
- * ## 和盒子的崩溃看门人的分工
+ * ## Godot 的不同
  *
- * 盒子本身也有一个看门人（`services/editorCrashWatch`），它只把崩溃告诉正在等命令的 Agent，
- * 不自己重开。这里是这一局在干的工程，由这里重开；`crashHandledElsewhere` 只用来尊重
- * 用户在设置里关掉重开的选择。
+ * 虚幻盒子还有一个全局的崩溃看门人，这里要和它分工；GDBox 没有那一层（Godot 编辑器
+ * 崩了不写崩溃报告、也没有「恢复未保存的包」那个模态窗），所以重开只在这里做。
+ * Godot 编辑器起得快，等插件连回来的时间也短得多。
  */
 
 import { projectPathKey } from '../projectPathKey'
@@ -61,12 +61,12 @@ export interface EditorWatchDeps {
   ) => () => void
   /** 开跑这一刻已经连着的工程 */
   connectedProjects: () => Array<{ connectionId: string; projectPath: string }>
-  /** 工程目录里的 .uproject。找不到给 null */
-  findUproject: (projectDir: string) => Promise<string | null>
-  /** 这个 .uproject 的编辑器进程还在不在 */
-  isRunning: (uprojectPath: string) => Promise<boolean>
+  /** 工程目录里的 project.godot。找不到给 null（工程被删了就不重开） */
+  findProjectFile: (projectDir: string) => Promise<string | null>
+  /** 这个 .projectFile 的编辑器进程还在不在 */
+  isRunning: (projectFile: string) => Promise<boolean>
   /** 重新打开工程（装插件、交给系统按关联的引擎打开） */
-  reopen: (uprojectPath: string) => Promise<void>
+  reopen: (projectFile: string) => Promise<void>
   /** 等插件连回来并答一条只读命令 */
   waitLive: (projectDir: string) => Promise<boolean>
   /** 开跑之后新出现的那次崩溃的报错，读不到给 null */
@@ -74,15 +74,13 @@ export interface EditorWatchDeps {
   /** 这是不是这一局在干的工程 */
   isOurs: (projectDir: string) => boolean
   /**
-   * 盒子的崩溃看门人（`services/editorCrashWatch`）对这次崩溃怎么处理的。
+   * 这次崩溃是不是已经有别处在处理。虚幻盒子的全局看门人会接这一棒；GDBox 没有，
+   * 宿主用它表达用户的设置（关了「编辑器崩溃后重开」就给 `{ declined }`）。
+   * - `'reopening'`：别处已经重开了，这里只等连回来
+   * - `{ declined }`：不重开，原因转给制作人
+   * - `null`：由这里自己重开
    *
-   * 它对所有交互式编辑器生效：认出崩溃后关报告窗口、备份自动存档、重开工程。
-   * 这里再各自重开一次，同一个工程就会开出两个编辑器 —— 所以重开让给它：
-   * - `'reopening'`：它已经重开了（或编辑器已经回来了），这里只等连回来
-   * - `{ declined }`：它认了崩溃但不重开（用户关了自动重开、反复崩、重开失败），原因转给制作人
-   * - `null`：它没认成崩溃（没有崩溃报告），由这里自己重开
-   *
-   * 不传就一律自己来（测试、没有看门人的环境）。
+   * 不传就一律自己来。
    */
   crashHandledElsewhere?: (
     projectDir: string,
@@ -142,21 +140,21 @@ export function watchEditorCrashes(deps: EditorWatchDeps, options: EditorWatchOp
     try {
       await sleep(graceMs)
       if (stopped) return
-      const uproject = await deps.findUproject(projectDir)
-      if (!uproject) return
+      const projectFile = await deps.findProjectFile(projectDir)
+      if (!projectFile) return
       /*
        * 进程还在：可能只是卡了一阵（插件缓过来会自己重连），也可能正卡在崩溃处理里
        * （2026-09-26 真机：引擎断言崩了，进程挂着写崩溃报告，socket 被盒子按僵尸连接断掉）。
        * 所以不马上下结论，接着看几分钟：连回来了就没事；进程退了就按崩溃处理；
        * 一直卡着就告诉制作人，别让全队对着一个不答话的编辑器干等。
        */
-      if (await deps.isRunning(uproject)) {
+      if (await deps.isRunning(projectFile)) {
         const deadline = now() + hangWatchMs
         for (;;) {
           await sleep(hangPollMs)
           if (stopped) return
           if ([...byConnection.values()].some((dir) => projectPathKey(dir) === key)) return
-          if (!(await deps.isRunning(uproject))) break
+          if (!(await deps.isRunning(projectFile))) break
           if (now() >= deadline) {
             options.onEvent({
               kind: 'gave-up',
@@ -195,7 +193,7 @@ export function watchEditorCrashes(deps: EditorWatchDeps, options: EditorWatchOp
           return
         }
         reopens.push(t)
-        await deps.reopen(uproject)
+        await deps.reopen(projectFile)
       }
       const live = await deps.waitLive(projectDir)
       if (stopped) return
@@ -245,7 +243,7 @@ export function buildCrashNotice(event: EditorWatchEvent): string {
   if (event.kind === 'crashed') {
     return [
       head,
-      `The Unreal editor for ${event.projectDir} crashed${event.reason ? `: ${event.reason}` : '.'}`,
+      `The Godot editor for ${event.projectDir} crashed${event.reason ? `: ${event.reason}` : '.'}`,
       'GDBox is reopening the project. Editor calls in flight failed; teammates may report errors. Unsaved editor changes since the last save are lost.'
     ].join('\n')
   }

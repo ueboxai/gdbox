@@ -24,7 +24,7 @@ const key = (name: string): string => name.trim().toLowerCase()
 const SHORT_MAX = 40
 
 /**
- * 路径变短：在工程目录下的去掉工程目录；否则只留最后两段。`/Game/...` 同样留两段。
+ * 路径变短：在工程目录下的去掉工程目录；`res://` 去掉前缀；否则只留最后两段。
  * 不像路径的原样返回（再长也只在中间省略）。完整的放悬停。
  */
 export function shortTarget(target: string, projectDir?: string): string {
@@ -35,13 +35,10 @@ export function shortTarget(target: string, projectDir?: string): string {
   if (looksLikePath) {
     const path = raw.replace(/\\/g, '/')
     const root = projectDir?.replace(/\\/g, '/').replace(/\/+$/, '')
-    // 虚幻工程的顶层目录：认出来就从它开始显示，不用知道工程在哪
-    const inProject = path.match(/\/((?:Content|Source|Config|Plugins|Saved)(?:\/.*)?)$/i)
-    if (root && path.toLowerCase().startsWith(`${root.toLowerCase()}/`)) {
+    if (path.startsWith('res://')) {
+      text = path.slice('res://'.length)
+    } else if (root && path.toLowerCase().startsWith(`${root.toLowerCase()}/`)) {
       text = path.slice(root.length + 1)
-    } else if (inProject && !path.startsWith('/Game/')) {
-      const rest = inProject[1]!.split('/')
-      text = rest.length > 3 ? `${rest[0]}/…/${rest.slice(-2).join('/')}` : rest.join('/')
     } else {
       const parts = path.split('/').filter(Boolean)
       text = parts.length > 2 ? `…/${parts.slice(-2).join('/')}` : path
