@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * 来源全部换成桩。真实现要查 sqlite、问 electron 的 userData ——
  * 跑测试的机器上导没导工程，都不该影响结论。
  */
-const getAgentFileAccessScope = vi.fn<() => 'ue-only' | 'full'>()
+const getAgentFileAccessScope = vi.fn<() => 'project-only' | 'full'>()
 const getAllProjects = vi.fn()
 
 vi.mock('electron', () => ({
@@ -33,7 +33,7 @@ const VAULT_FILE = 'C:/Users/me/AppData/Roaming/gdbox/database/vaults/system_vau
 beforeEach(() => {
   vi.clearAllMocks()
   __testing.resetCache()
-  getAgentFileAccessScope.mockReturnValue('ue-only')
+  getAgentFileAccessScope.mockReturnValue('project-only')
   getAllProjects.mockReturnValue([{ projectPath: 'I:/Games/MyGame' }])
 })
 

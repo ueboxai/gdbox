@@ -45,8 +45,8 @@
 
     <template v-else>
       <!--
-        分组是筛选条件，不是文件夹：这些名字多半是「UE 5.6」这类，用户要的是
-        「只看 5.6 的工程」，不是「打开一个盒子看里面」。做成一排筛选按钮之后，
+        分组是筛选条件，不是文件夹：这些名字多半是「Godot 4.3」这类，用户要的是
+        「只看 4.3 的工程」，不是「打开一个盒子看里面」。做成一排筛选按钮之后，
         网格里永远只有工程卡片一种东西，也就没有展开、收起、排版错位这些事了。
       -->
       <div v-if="filterChips.length || visibleProjects.length" class="collection-filter">
@@ -1213,8 +1213,8 @@ const blankContextMenuRef = ref<{ show: (x: number, y: number) => void } | null>
 // 当前项目的 sln 文件路径（如果是 C++ 工程）
 const activeSlnPath = ref<string | null>(null)
 
-// 当前项目的 UnrealAgentLink 状态，决定右键菜单显示「安装」还是「移除」
-const activeUalinkStatus = ref<UnrealAgentLinkStatus | null>(null)
+// 当前项目的 GDBox Link 状态，决定右键菜单显示「安装」还是「移除」
+const activeEditorLinkStatus = ref<EditorLinkStatus | null>(null)
 
 const menuItems = ref<MenuItem[]>([])
 
@@ -1235,13 +1235,13 @@ const blankMenuItems = computed<MenuItem[]>(() => [
  * - 第三区：危险/破坏性操作（移除项目）
  * @param pinned - 是否已置顶
  * @param slnPath - sln 文件路径（C++ 工程）
- * @param ualink - UnrealAgentLink 状态，null 表示还没查出来
+ * @param editorLink - GDBox Link 状态，null 表示还没查出来
  * @param memberships - 这个工程所在的分组，每个给一条「移出「XXX」」
  */
 const buildMenuItems = (
   pinned: boolean,
   slnPath: string | null,
-  ualink: UnrealAgentLinkStatus | null,
+  editorLink: EditorLinkStatus | null,
   memberships: ProjectCollectionRecord[],
   coverMode: ProjectCoverMode = 'auto'
 ): MenuItem[] => {
@@ -1280,18 +1280,18 @@ const buildMenuItems = (
     })
   }
 
-  // UnrealAgentLink 的装/删。状态还没查出来时先不显示，免得闪一下改文案
-  if (ualink) {
+  // GDBox Link 的装/删。状态还没查出来时先不显示，免得闪一下改文案
+  if (editorLink) {
     items.push(
-      ualink.installed
+      editorLink.installed
         ? {
-            key: 'ualink-remove',
-            label: t('page.home.project.menu.ualinkRemove'),
+            key: 'editor-link-remove',
+            label: t('page.home.project.menu.editorLinkRemove'),
             icon: PhPlugs
           }
         : {
-            key: 'ualink-install',
-            label: t('page.home.project.menu.ualinkInstall'),
+            key: 'editor-link-install',
+            label: t('page.home.project.menu.editorLinkInstall'),
             icon: PhPlugs
           }
     )
@@ -1332,7 +1332,7 @@ const handleProjectContextMenu = async (e: MouseEvent, item: ProjectRecord): Pro
   e.stopPropagation()
   activeProject.value = item
   activeSlnPath.value = null // 重置 sln 路径
-  activeUalinkStatus.value = null
+  activeEditorLinkStatus.value = null
 
   // 根据置顶状态更新菜单文案
   const pinned = Number(item.isPinned || 0) === 1
@@ -1356,23 +1356,23 @@ const handleProjectContextMenu = async (e: MouseEvent, item: ProjectRecord): Pro
     }
   }
 
-  // 异步查 UnrealAgentLink 状态
+  // 异步查 GDBox Link 状态
   const uprojectPath = item.originPath
   if (uprojectPath) {
     try {
-      const result = await window.api.database.project.ualinkStatus(uprojectPath)
+      const result = await window.api.database.project.editorLinkStatus(uprojectPath)
       if (result?.success && result.data) {
-        activeUalinkStatus.value = result.data
+        activeEditorLinkStatus.value = result.data
       }
     } catch (error) {
-      console.warn('检测 UnrealAgentLink 状态失败:', error)
+      console.warn('检测 GDBox Link 状态失败:', error)
     }
   }
 
   menuItems.value = buildMenuItems(
     pinned,
     activeSlnPath.value,
-    activeUalinkStatus.value,
+    activeEditorLinkStatus.value,
     memberships,
     projectCoverMode(item)
   )
@@ -1513,12 +1513,12 @@ const handleRefreshProjects = async (): Promise<void> => {
 }
 
 /**
- * 从项目里移除 UnrealAgentLink。
+ * 从项目里移除 GDBox Link。
  *
  * 要弹确认框 —— 它会删文件、改 .uproject，而且之后不再自动装回来，
  * 这三件事用户都该先知道。
  */
-const handleUalinkRemove = async (project: ProjectRecord): Promise<void> => {
+const handleEditorLinkRemove = async (project: ProjectRecord): Promise<void> => {
   const uprojectPath = project.originPath
   if (!uprojectPath) {
     message.warning(t('page.home.project.messages.pathNotFound'))
@@ -1526,49 +1526,49 @@ const handleUalinkRemove = async (project: ProjectRecord): Promise<void> => {
   }
 
   confirmDialog({
-    title: t('page.home.project.ualink.removeTitle'),
-    content: t('page.home.project.ualink.removeContent'),
+    title: t('page.home.project.editorLink.removeTitle'),
+    content: t('page.home.project.editorLink.removeContent'),
     okText: t('common.confirm'),
     cancelText: t('common.cancel'),
     danger: true,
     async onOk() {
       try {
-        const result = await window.api.database.project.ualinkRemove(uprojectPath)
+        const result = await window.api.database.project.editorLinkRemove(uprojectPath)
         if (result?.success) {
-          message.success(t('page.home.project.ualink.removeSuccess'))
+          message.success(t('page.home.project.editorLink.removeSuccess'))
         } else {
-          message.error(result?.error || t('page.home.project.ualink.removeFailed'))
+          message.error(result?.error || t('page.home.project.editorLink.removeFailed'))
         }
       } catch (error: unknown) {
         const errMsg =
-          error instanceof Error ? error.message : t('page.home.project.ualink.removeFailed')
+          error instanceof Error ? error.message : t('page.home.project.editorLink.removeFailed')
         message.error(errMsg)
       }
     }
   })
 }
 
-/** 把 UnrealAgentLink 装回项目（同时撤销之前的「不要装」） */
-const handleUalinkInstall = async (project: ProjectRecord): Promise<void> => {
+/** 把 GDBox Link 装回项目（同时撤销之前的「不要装」） */
+const handleEditorLinkInstall = async (project: ProjectRecord): Promise<void> => {
   const uprojectPath = project.originPath
   if (!uprojectPath) {
     message.warning(t('page.home.project.messages.pathNotFound'))
     return
   }
 
-  const hide = message.loading(t('page.home.project.ualink.installing'), 0)
+  const hide = message.loading(t('page.home.project.editorLink.installing'), 0)
   try {
-    const result = await window.api.database.project.ualinkInstall(uprojectPath)
+    const result = await window.api.database.project.editorLinkInstall(uprojectPath)
     hide()
     if (result?.success) {
-      message.success(t('page.home.project.ualink.installSuccess'))
+      message.success(t('page.home.project.editorLink.installSuccess'))
     } else {
-      message.error(result?.error || t('page.home.project.ualink.installFailed'))
+      message.error(result?.error || t('page.home.project.editorLink.installFailed'))
     }
   } catch (error: unknown) {
     hide()
     const errMsg =
-      error instanceof Error ? error.message : t('page.home.project.ualink.installFailed')
+      error instanceof Error ? error.message : t('page.home.project.editorLink.installFailed')
     message.error(errMsg)
   }
 }
@@ -1598,10 +1598,10 @@ const handleMenuClick = async (key: string) => {
         error instanceof Error ? error.message : t('page.home.project.messages.openSlnError')
       message.error(errMsg)
     }
-  } else if (key === 'ualink-remove') {
-    await handleUalinkRemove(activeProject.value)
-  } else if (key === 'ualink-install') {
-    await handleUalinkInstall(activeProject.value)
+  } else if (key === 'editor-link-remove') {
+    await handleEditorLinkRemove(activeProject.value)
+  } else if (key === 'editor-link-install') {
+    await handleEditorLinkInstall(activeProject.value)
   } else if (key === 'open-location') {
     const target = activeProject.value.originPath || activeProject.value.projectPath
     if (!target) {
@@ -1760,7 +1760,7 @@ const doOpenProject = async (projectKey: string, target: string) => {
   openingProjects.value.add(projectKey)
 
   try {
-    const res = await window.api.invoke('shell:openUproject', target)
+    const res = await window.api.invoke('shell:openProject', target)
     const ok = typeof res === 'boolean' ? res : Boolean((res as any)?.success)
     if (!ok) {
       if ((res as { pathNotFound?: boolean } | null)?.pathNotFound) {

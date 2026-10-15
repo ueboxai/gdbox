@@ -309,9 +309,9 @@ declare global {
     at: number
   }
 
-  /** 项目里 UnrealAgentLink 的当前状态 */
-  interface UnrealAgentLinkStatus {
-    /** 插件目录是否存在且有 .uplugin */
+  /** 工程里 GDBox Link 的当前状态 */
+  interface EditorLinkStatus {
+    /** 插件目录是否存在且有 plugin.cfg */
     installed: boolean
     /** 已安装的版本号，读不到就是 null */
     version: string | null
@@ -319,8 +319,8 @@ declare global {
     bundledVersion: string
     /** 用户是否明确拒绝过这个项目 */
     optedOut: boolean
-    /** .uproject 里是否已启用 */
-    enabledInUproject: boolean
+    /** project.godot 里是否已启用 */
+    enabledInProject: boolean
   }
 
   interface ProjectRecord {
@@ -758,7 +758,7 @@ declare global {
         data?: ProjectRecord
         /** 工程本来就在库里：success 为 false，data 是库里那条现成记录 */
         alreadyRegistered?: boolean
-        /** 工程进库了但 UnrealAgentLink 没装上，值是原因码/原文 */
+        /** 工程进库了但 GDBox Link 没装上，值是原因码/原文 */
         pluginFailure?: string
         error?: string
       }>
@@ -792,14 +792,14 @@ declare global {
       findSlnFile: (
         projectDir: string
       ) => Promise<{ success: boolean; data: string | null; error?: string }>
-      /** 查询项目里 UnrealAgentLink 的安装状态 */
-      ualinkStatus: (
-        uprojectPath: string
-      ) => Promise<{ success: boolean; data?: UnrealAgentLinkStatus; error?: string }>
-      /** 从项目里移除 UnrealAgentLink，并记住不再自动安装 */
-      ualinkRemove: (uprojectPath: string) => Promise<{ success: boolean; error?: string }>
-      /** 把 UnrealAgentLink 装回项目 */
-      ualinkInstall: (uprojectPath: string) => Promise<{ success: boolean; error?: string }>
+      /** 查询工程里 GDBox Link 的安装状态 */
+      editorLinkStatus: (
+        projectPath: string
+      ) => Promise<{ success: boolean; data?: EditorLinkStatus; error?: string }>
+      /** 从工程里移除 GDBox Link，并记住不再自动安装 */
+      editorLinkRemove: (projectPath: string) => Promise<{ success: boolean; error?: string }>
+      /** 把 GDBox Link 装回工程 */
+      editorLinkInstall: (projectPath: string) => Promise<{ success: boolean; error?: string }>
       /** 「我的项目」里多了工程时的通知，返回退订函数 */
       onLibraryChanged: (callback: () => void) => () => void
       /** 开机后台升级插件失败时的通知，返回退订函数 */
@@ -861,7 +861,7 @@ declare global {
     }
   }
 
-    // 文件对话框API接口
+  // 文件对话框API接口
   interface DialogAPI {
     showOpenDialog: (
       options?: Electron.OpenDialogOptions
@@ -2796,9 +2796,9 @@ declare global {
         autoLaunch: boolean
         enableFollowUpSuggestions: boolean
         language: 'zh-CN' | 'en-US'
-        autoEnableUnrealAgentLink: boolean
+        autoEnableEditorLink: boolean
         agentBrowserMode: 'window' | 'embedded' | 'hidden'
-        agentFileAccessScope: 'ue-only' | 'full'
+        agentFileAccessScope: 'project-only' | 'full'
         agentToolSearchEnabled: boolean
         /** 自动断点续传：中转不稳时每 60 秒自动续跑，最长 30 分钟 */
         agentPersistentAutoResume: boolean
@@ -2828,9 +2828,9 @@ declare global {
       set: (settings: {
         autoLaunch?: boolean
         enableFollowUpSuggestions?: boolean
-        autoEnableUnrealAgentLink?: boolean
+        autoEnableEditorLink?: boolean
         agentBrowserMode?: 'window' | 'embedded' | 'hidden'
-        agentFileAccessScope?: 'ue-only' | 'full'
+        agentFileAccessScope?: 'project-only' | 'full'
         agentToolSearchEnabled?: boolean
         agentPersistentAutoResume?: boolean
         agentGoalMaxRounds?: number
@@ -2859,23 +2859,10 @@ declare global {
       setThemeIcon: (
         theme: 'light' | 'dark'
       ) => Promise<{ success: boolean; data: boolean; error?: string }>
-      /** 设置启动项目时自动启用 UnrealAgentLink 插件 */
-      setAutoEnableUnrealAgentLink: (enabled: boolean) => Promise<{ success: boolean }>
-      /** 获取启动项目时自动启用 UnrealAgentLink 插件设置 */
-      getAutoEnableUnrealAgentLink: () => Promise<boolean>
-      /** 手动修复并清理引擎目录中残留的 UnrealAgentLink 插件 */
-      repairUnrealAgentLinkEngineResidue: () => Promise<{
-        success: boolean
-        scannedEngineCount: number
-        cleanedEngineCount: number
-        skippedEngineCount: number
-        failedEngines: Array<{
-          engineName: string
-          engineRootPath: string
-          error: string
-        }>
-        error?: string
-      }>
+      /** 设置打开工程时自动启用 GDBox Link 插件 */
+      setAutoEnableEditorLink: (enabled: boolean) => Promise<{ success: boolean }>
+      /** 获取打开工程时自动启用 GDBox Link 插件设置 */
+      getAutoEnableEditorLink: () => Promise<boolean>
     }
     /**
      * 截图模式 API

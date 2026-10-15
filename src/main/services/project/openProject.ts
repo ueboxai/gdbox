@@ -1,7 +1,7 @@
 /**
  * 用 Godot 编辑器打开一个工程。
  *
- * 首页双击、合集、右键「启动」走 `shell:openUproject` 这条 IPC，托盘菜单的「最近项目」
+ * 首页双击、合集、右键「启动」走 `shell:openProject` 这条 IPC，托盘菜单的「最近项目」
  * 直接调这里。两条入口必须同一段代码：插件先装、失败原因带回来、
  * 「打开工程后隐藏主界面」的设置才都能对得上。
  *
@@ -84,8 +84,8 @@ export async function openProject(
     // 用户之后遇到「AI 看不见编辑器」时，早就想不起来跟打开这一步有关
     let pluginFailure: string | undefined
     if (
-      appSettingsManager.getAutoEnableUnrealAgentLink() &&
-      !appSettingsManager.isUALinkOptedOut(projectDir)
+      appSettingsManager.getAutoEnableEditorLink() &&
+      !appSettingsManager.isEditorLinkOptedOut(projectDir)
     ) {
       try {
         installEditorLink(projectDir)

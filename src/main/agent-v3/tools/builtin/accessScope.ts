@@ -9,7 +9,7 @@
  * 这个模块是一份**白名单**，而且是用户自己开关的：
  *
  *   - `full`（默认）：这一层完全不参与判断，直接放行。
- *   - `ue-only`（历史键名）：只剩导入盒子的工程、素材库。用户主动选了才收窄。
+ *   - `project-only`：只剩导入盒子的工程、素材库。用户主动选了才收窄。
  *
  * 两层是「与」的关系 —— 白名单里的位置照样要过黑名单（工程目录里摆一个
  * `.ssh/` 一样碰不到），所以调用方两个都要问，顺序无所谓。
@@ -149,7 +149,7 @@ function currentScope(): AgentFileAccessScope {
     return appSettingsManager.getAgentFileAccessScope()
   } catch {
     // 设置整个读不出来（抛异常）时退回默认档 `full`，和「没选过」「值不认识」同一个兜底
-    // （见 appSettingsManager.getAgentFileAccessScope）。原先这里退到 `ue-only`：
+    // （见 appSettingsManager.getAgentFileAccessScope）。原先这里退到 `project-only`：
     // 用户从没收窄过，却因为一次读设置失败被挡在自己的素材目录外面，而他在设置页里
     // 看到的明明是「整台电脑」—— 界面和实际生效的对不上，比宽一点更糟。
     // 凭据目录不靠这一层，`pathBoundary` 在任何一档下都挡着。

@@ -126,8 +126,8 @@ const agentBrowserMode = ref<AgentBrowserMode>('embedded')
  * agent 能读写电脑上的哪些位置。同样存在应用设置里 ——
  * 判定发生在主进程的工具里，渲染层的 store 那边读不到。
  */
-type AgentFileAccessScope = 'ue-only' | 'full'
-const FILE_ACCESS_SCOPES: readonly AgentFileAccessScope[] = ['ue-only', 'full']
+type AgentFileAccessScope = 'project-only' | 'full'
+const FILE_ACCESS_SCOPES: readonly AgentFileAccessScope[] = ['project-only', 'full']
 const fileAccessScope = ref<AgentFileAccessScope>('full')
 
 /**
@@ -206,11 +206,11 @@ function agentBrowserModeLabel(mode: AgentBrowserMode): string {
 /** 当前档位下那一行小字。三档的差别 —— 尤其是「隐藏」的代价 —— 只有一句话说得清 */
 const agentBrowserHint = computed(() => t(`profile.ai.agentBrowser.${agentBrowserMode.value}Hint`))
 
-/** 用查表而不是模板字符串拼 key：`ue-only` 里有连字符，拼出来的路径解析不了 */
+/** 用查表而不是模板字符串拼 key：`project-only` 里有连字符，拼出来的路径解析不了 */
 function fileAccessScopeLabel(scope: AgentFileAccessScope): string {
   return t(
     {
-      'ue-only': 'profile.ai.fileAccessScopeUeOnly',
+      'project-only': 'profile.ai.fileAccessScopeProjectOnly',
       full: 'profile.ai.fileAccessScopeFull'
     }[scope]
   )
@@ -220,7 +220,7 @@ function fileAccessScopeLabel(scope: AgentFileAccessScope): string {
 const fileAccessScopeHint = computed(() =>
   t(
     {
-      'ue-only': 'profile.ai.fileAccessScopeUeOnlyHint',
+      'project-only': 'profile.ai.fileAccessScopeProjectOnlyHint',
       full: 'profile.ai.fileAccessScopeFullHint'
     }[fileAccessScope.value]
   )
@@ -230,10 +230,11 @@ onMounted(async () => {
   try {
     const settings = await window.api.appSettings.get()
     agentBrowserMode.value = settings.agentBrowserMode ?? 'embedded'
-    // 兜底跟主进程一字不差：只认 ue-only（那是用户主动选出来的收窄档），
+    // 兜底跟主进程一字不差：只认 project-only（那是用户主动选出来的收窄档），
     // 其余（含旧配置里根本没有这个字段）一律落到默认的 full。
     // 两边不一致的话，界面高亮的会和实际生效的对不上
-    fileAccessScope.value = settings.agentFileAccessScope === 'ue-only' ? 'ue-only' : 'full'
+    fileAccessScope.value =
+      settings.agentFileAccessScope === 'project-only' ? 'project-only' : 'full'
     persistentAutoResume.value = settings.agentPersistentAutoResume !== false
     goalMaxRounds.value = normalizeGoalMaxRounds(settings.agentGoalMaxRounds)
     // 两个都只认 true，和主进程的兜底一致

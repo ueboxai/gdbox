@@ -63,8 +63,8 @@ describe('应用图标主题 IPC', () => {
   it('文件访问范围只认两个字面量', async () => {
     // 这个值直接决定工具能不能碰盘。一个拼错的字符串落进配置文件，
     // 下次启动会兜底成「整台电脑」—— 用户以为自己收紧了，其实没有
-    await handlers.get('app-settings:set')!({}, { agentFileAccessScope: 'ue-only' })
-    expect(setAgentFileAccessScope).toHaveBeenCalledWith('ue-only')
+    await handlers.get('app-settings:set')!({}, { agentFileAccessScope: 'project-only' })
+    expect(setAgentFileAccessScope).toHaveBeenCalledWith('project-only')
 
     setAgentFileAccessScope.mockReset()
     await handlers.get('app-settings:set')!({}, { agentFileAccessScope: 'ue_only' })

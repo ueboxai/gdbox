@@ -83,7 +83,7 @@ const GENERIC_INVOKE_CHANNELS = new Set(
 dialog:showOpenDialog file:execute fs:copyDir fs:ensureDir fs:exists fs:writeFile
 networkVault:connect networkVault:saveCredentials networkVault:testAccess
 networkVaultV2:batch networkVaultV2:connectRemoteVault networkVaultV2:createRemoteVault networkVaultV2:deleteAsset networkVaultV2:deleteFolder networkVaultV2:deleteRemoteVault networkVaultV2:getConnectionStatus networkVaultV2:getDeletedAssets networkVaultV2:getRole networkVaultV2:getServerAccess networkVaultV2:getThumbnailBackupStatus networkVaultV2:listRemoteRoots networkVaultV2:listRemoteVaults networkVaultV2:pullSync networkVaultV2:purgeAsset networkVaultV2:restoreAsset networkVaultV2:restoreThumbnailBackup networkVaultV2:rotateServerAccess networkVaultV2:scan networkVaultV2:setRemoteVaultApiKey networkVaultV2:setShareWritePublish networkVaultV2:syncThumbnailBackup
-shell:openPath shell:openSkillsDir shell:openUproject shell:showItemInFolder
+shell:openPath shell:openSkillsDir shell:openProject shell:showItemInFolder
 vault:cleanThumbnailCache vault:create vault:delete vault:getAll vault:getCurrentPath vault:getStats vault:move vault:rename vault:switch vault:updateBrowsePath vault:updateIcon vault:updateNetworkPath vault:validatePath`
     .trim()
     .split(/\s+/)
@@ -660,15 +660,15 @@ const api = {
        * @returns 如果找到 .sln 文件返回其路径，否则返回 null
        */
       findSlnFile: (projectDir: string) => ipcRenderer.invoke('db:project:findSlnFile', projectDir),
-      /** 查询项目里 UnrealAgentLink 的安装状态 */
-      ualinkStatus: (uprojectPath: string) =>
-        ipcRenderer.invoke('db:project:ualinkStatus', uprojectPath),
-      /** 从项目里移除 UnrealAgentLink，并记住不再自动安装 */
-      ualinkRemove: (uprojectPath: string) =>
-        ipcRenderer.invoke('db:project:ualinkRemove', uprojectPath),
-      /** 把 UnrealAgentLink 装回项目 */
-      ualinkInstall: (uprojectPath: string) =>
-        ipcRenderer.invoke('db:project:ualinkInstall', uprojectPath),
+      /** 查询工程里 GDBox Link 的安装状态 */
+      editorLinkStatus: (projectPath: string) =>
+        ipcRenderer.invoke('db:project:editorLinkStatus', projectPath),
+      /** 从工程里移除 GDBox Link，并记住不再自动安装 */
+      editorLinkRemove: (projectPath: string) =>
+        ipcRenderer.invoke('db:project:editorLinkRemove', projectPath),
+      /** 把 GDBox Link 装回工程 */
+      editorLinkInstall: (projectPath: string) =>
+        ipcRenderer.invoke('db:project:editorLinkInstall', projectPath),
       /**
        * 「我的项目」里多了工程时的通知，返回退订函数。
        *
@@ -3005,9 +3005,9 @@ const api = {
       autoLaunch: boolean
       enableFollowUpSuggestions: boolean
       language: 'zh-CN' | 'en-US'
-      autoEnableUnrealAgentLink: boolean
+      autoEnableEditorLink: boolean
       agentBrowserMode: 'window' | 'embedded' | 'hidden'
-      agentFileAccessScope: 'ue-only' | 'full'
+      agentFileAccessScope: 'project-only' | 'full'
       agentToolSearchEnabled: boolean
       agentPersistentAutoResume: boolean
       agentGoalMaxRounds: number
@@ -3032,9 +3032,9 @@ const api = {
     set: (settings: {
       autoLaunch?: boolean
       enableFollowUpSuggestions?: boolean
-      autoEnableUnrealAgentLink?: boolean
+      autoEnableEditorLink?: boolean
       agentBrowserMode?: 'window' | 'embedded' | 'hidden'
-      agentFileAccessScope?: 'ue-only' | 'full'
+      agentFileAccessScope?: 'project-only' | 'full'
       agentToolSearchEnabled?: boolean
       agentPersistentAutoResume?: boolean
       agentGoalMaxRounds?: number
@@ -3079,30 +3079,15 @@ const api = {
     ): Promise<{ success: boolean; data: boolean; error?: string }> =>
       ipcRenderer.invoke('app-settings:setThemeIcon', theme),
     /**
-     * 设置启动项目时自动启用 UnrealAgentLink 插件
+     * 设置打开工程时自动启用 GDBox Link 插件
      */
-    setAutoEnableUnrealAgentLink: (enabled: boolean): Promise<{ success: boolean }> =>
-      ipcRenderer.invoke('app-settings:setAutoEnableUnrealAgentLink', enabled),
+    setAutoEnableEditorLink: (enabled: boolean): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('app-settings:setAutoEnableEditorLink', enabled),
     /**
-     * 获取启动项目时自动启用 UnrealAgentLink 插件设置
+     * 获取打开工程时自动启用 GDBox Link 插件设置
      */
-    getAutoEnableUnrealAgentLink: (): Promise<boolean> =>
-      ipcRenderer.invoke('app-settings:getAutoEnableUnrealAgentLink'),
-    /**
-     * 手动修复并清理引擎目录中残留的 UnrealAgentLink 插件
-     */
-    repairUnrealAgentLinkEngineResidue: (): Promise<{
-      success: boolean
-      scannedEngineCount: number
-      cleanedEngineCount: number
-      skippedEngineCount: number
-      failedEngines: Array<{
-        engineName: string
-        engineRootPath: string
-        error: string
-      }>
-      error?: string
-    }> => ipcRenderer.invoke('app-settings:repairUnrealAgentLinkEngineResidue')
+    getAutoEnableEditorLink: (): Promise<boolean> =>
+      ipcRenderer.invoke('app-settings:getAutoEnableEditorLink')
   },
   /**
    * 截图模式 API

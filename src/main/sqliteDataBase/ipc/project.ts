@@ -55,7 +55,7 @@ export async function ensureEditorLinkPlugin(
   projectPath: string
 ): Promise<{ pluginFailure: string | null }> {
   const projectDir = projectDirOf(projectPath)
-  if (appSettingsManager.isUALinkOptedOut(projectDir)) return { pluginFailure: null }
+  if (appSettingsManager.isEditorLinkOptedOut(projectDir)) return { pluginFailure: null }
   try {
     installEditorLink(projectDir)
     return { pluginFailure: null }
@@ -64,7 +64,7 @@ export async function ensureEditorLinkPlugin(
   }
 }
 
-/** 工程里 GDBox Link 的当前状态。字段名和渲染层的旧契约保持一致 */
+/** 工程里 GDBox Link 的当前状态。字段名和渲染层的契约保持一致 */
 export interface EditorLinkStatus {
   /** 插件目录在、有 plugin.cfg */
   installed: boolean
@@ -74,8 +74,8 @@ export interface EditorLinkStatus {
   bundledVersion: string
   /** 用户是否明确拒绝过这个工程 */
   optedOut: boolean
-  /** project.godot 里是否已启用（历史字段名） */
-  enabledInUproject: boolean
+  /** project.godot 里是否已启用 */
+  enabledInProject: boolean
 }
 
 /** 界面上要靠它决定右键菜单显示「安装」还是「移除」 */
@@ -87,8 +87,8 @@ export async function getEditorLinkStatus(projectPath: string): Promise<EditorLi
     installed,
     version: installed ? readAddonVersion(pluginCfg) : null,
     bundledVersion: bundledAddonVersion(),
-    optedOut: appSettingsManager.isUALinkOptedOut(projectDir),
-    enabledInUproject: isEditorLinkInstalled(projectDir)
+    optedOut: appSettingsManager.isEditorLinkOptedOut(projectDir),
+    enabledInProject: isEditorLinkInstalled(projectDir)
   }
 }
 
@@ -105,7 +105,7 @@ export async function removeEditorLinkPlugin(
       if (next !== text) fs.writeFileSync(projectFile, next)
     }
     fs.rmSync(path.join(projectDir, ADDON_DIR), { recursive: true, force: true })
-    appSettingsManager.setUALinkOptOut(projectDir, true)
+    appSettingsManager.setEditorLinkOptOut(projectDir, true)
     return { success: true }
   } catch (error) {
     return { success: false, error: (error as Error).message }
@@ -117,7 +117,7 @@ export async function installEditorLinkPlugin(
   projectPath: string
 ): Promise<{ success: boolean; error?: string }> {
   const projectDir = projectDirOf(projectPath)
-  appSettingsManager.setUALinkOptOut(projectDir, false)
+  appSettingsManager.setEditorLinkOptOut(projectDir, false)
   const { pluginFailure } = await ensureEditorLinkPlugin(projectDir)
   return pluginFailure ? { success: false, error: pluginFailure } : { success: true }
 }
@@ -128,11 +128,11 @@ export async function installEditorLinkPlugin(
  * 只升已经装着的：没装的工程用户可能是有意不装，打开时再按设置决定。
  */
 export async function upgradeAllProjectPlugins(): Promise<void> {
-  if (!appSettingsManager.getAutoEnableUnrealAgentLink()) return
+  if (!appSettingsManager.getAutoEnableEditorLink()) return
   const bundled = bundledAddonVersion()
   for (const project of getAllProjects(getPublicDatabase())) {
     const projectDir = project.projectPath
-    if (!projectDir || appSettingsManager.isUALinkOptedOut(projectDir)) continue
+    if (!projectDir || appSettingsManager.isEditorLinkOptedOut(projectDir)) continue
     const pluginCfg = path.join(projectDir, ADDON_DIR, 'plugin.cfg')
     if (!fs.existsSync(pluginCfg) || readAddonVersion(pluginCfg) === bundled) continue
     try {
@@ -216,7 +216,7 @@ export async function registerProjectByUproject(filePath: string): Promise<Regis
 
     // 根据设置决定是否把 GDBox Link 装进工程
     let pluginFailure: string | undefined
-    if (appSettingsManager.getAutoEnableUnrealAgentLink()) {
+    if (appSettingsManager.getAutoEnableEditorLink()) {
       pluginFailure = (await ensureEditorLinkPlugin(projectDir)).pluginFailure ?? undefined
     }
 
@@ -398,7 +398,7 @@ export const registerProjectIPC = (): void => {
   })
 
   // 查询某个工程的 GDBox Link 状态（右键菜单靠它决定显示「安装」还是「移除」）
-  ipcMain.handle('db:project:ualinkStatus', async (_, projectPath: string) => {
+  ipcMain.handle('db:project:editorLinkStatus', async (_, projectPath: string) => {
     void _
     try {
       if (!projectPath || !fs.existsSync(projectPath)) {
@@ -411,14 +411,14 @@ export const registerProjectIPC = (): void => {
   })
 
   // 从工程里移除 GDBox Link，并记住不再自动安装
-  ipcMain.handle('db:project:ualinkRemove', async (_, projectPath: string) => {
+  ipcMain.handle('db:project:editorLinkRemove', async (_, projectPath: string) => {
     void _
     if (!projectPath) return { success: false, error: '缺少工程路径' }
     return await removeEditorLinkPlugin(projectPath)
   })
 
   // 把 GDBox Link 装回工程（撤销之前的「不要装」）
-  ipcMain.handle('db:project:ualinkInstall', async (_, projectPath: string) => {
+  ipcMain.handle('db:project:editorLinkInstall', async (_, projectPath: string) => {
     void _
     if (!projectPath || !fs.existsSync(projectPath)) {
       return { success: false, error: '工程不存在' }

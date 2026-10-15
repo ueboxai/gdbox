@@ -47,7 +47,7 @@ export function registerAppSettingsIPC(setAppIconTheme: SetAppIconTheme): void {
       settings: {
         autoLaunch?: boolean
         enableFollowUpSuggestions?: boolean
-        autoEnableUnrealAgentLink?: boolean
+        autoEnableEditorLink?: boolean
         agentBrowserMode?: AgentBrowserMode
         agentFileAccessScope?: AgentFileAccessScope
         agentToolSearchEnabled?: boolean
@@ -73,8 +73,8 @@ export function registerAppSettingsIPC(setAppIconTheme: SetAppIconTheme): void {
       if (typeof settings.enableFollowUpSuggestions === 'boolean') {
         appSettingsManager.setEnableFollowUpSuggestions(settings.enableFollowUpSuggestions)
       }
-      if (typeof settings.autoEnableUnrealAgentLink === 'boolean') {
-        appSettingsManager.setAutoEnableUnrealAgentLink(settings.autoEnableUnrealAgentLink)
+      if (typeof settings.autoEnableEditorLink === 'boolean') {
+        appSettingsManager.setAutoEnableEditorLink(settings.autoEnableEditorLink)
       }
       if (
         settings.agentBrowserMode === 'window' ||
@@ -88,7 +88,10 @@ export function registerAppSettingsIPC(setAppIconTheme: SetAppIconTheme): void {
       // 只认这两个字面量。写死枚举而不是原样透传，是因为这个值直接决定
       // 工具能不能碰盘 —— 一个拼错的字符串落进配置文件，下次启动兜底成
       // 「整台电脑」，用户以为自己收紧了，其实没有
-      if (settings.agentFileAccessScope === 'ue-only' || settings.agentFileAccessScope === 'full') {
+      if (
+        settings.agentFileAccessScope === 'project-only' ||
+        settings.agentFileAccessScope === 'full'
+      ) {
         appSettingsManager.setAgentFileAccessScope(settings.agentFileAccessScope)
       }
       if (typeof settings.agentToolSearchEnabled === 'boolean') {
@@ -204,16 +207,15 @@ export function registerAppSettingsIPC(setAppIconTheme: SetAppIconTheme): void {
   /**
    * 设置打开项目时自动启用 GDBox Link 插件（键名沿用虚幻盒子的）
    */
-  ipcMain.handle('app-settings:setAutoEnableUnrealAgentLink', (_event, enabled: boolean) => {
-    appSettingsManager.setAutoEnableUnrealAgentLink(enabled)
+  ipcMain.handle('app-settings:setAutoEnableEditorLink', (_event, enabled: boolean) => {
+    appSettingsManager.setAutoEnableEditorLink(enabled)
     return { success: true }
   })
 
   /**
    * 获取打开项目时自动启用 GDBox Link 插件设置
    */
-  ipcMain.handle('app-settings:getAutoEnableUnrealAgentLink', () => {
-    return appSettingsManager.getAutoEnableUnrealAgentLink()
+  ipcMain.handle('app-settings:getAutoEnableEditorLink', () => {
+    return appSettingsManager.getAutoEnableEditorLink()
   })
-
 }

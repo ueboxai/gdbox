@@ -23,8 +23,9 @@ export type AgentBrowserMode = 'window' | 'embedded' | 'hidden'
 /**
  * agent 能读写这台电脑上的哪些位置。
  *
- * - `ue-only`（历史键名）：只剩导入盒子的工程和素材库。
+ * - `project-only`：只剩导入盒子的工程和素材库。
  *   想把 agent 圈在工程这一摊里的用户自己去设置里选它。
+ *   旧配置里存的是 `ue-only`，读的时候当成这一档（见 `loadSettings`）。
  * - `full`：除凭据、密钥、浏览器数据（见 `pathBoundary.ts`）之外，哪儿都能碰。
  *   **这是默认档。** 真实用法里「把 D:/素材 整理一下 / 导进来」「看一眼这份
  *   导出的 FBX」是常态而不是例外，默认收窄的结果是绝大多数人第一次用就撞墙，
@@ -34,7 +35,18 @@ export type AgentBrowserMode = 'window' | 'embedded' | 'hidden'
  * 这一档存在应用设置里而不是 aiConfig store：判定发生在主进程的工具里，
  * 渲染层那个 store 主进程读不到。
  */
-export type AgentFileAccessScope = 'ue-only' | 'full'
+export type AgentFileAccessScope = 'project-only' | 'full'
+
+/** 旧版本写进配置文件的键名和取值，读的时候换成现在的名字 */
+interface LegacyAppSettings {
+  autoEnableUnrealAgentLink?: boolean
+  ualinkOptOutProjects?: string[]
+}
+
+/** 只有明确选了收窄档才收；旧值 `ue-only` 也算 */
+function normalizeFileAccessScope(value: unknown): AgentFileAccessScope {
+  return value === 'project-only' || value === 'ue-only' ? 'project-only' : 'full'
+}
 
 /**
  * 一轮跑完了要不要弹系统通知。
@@ -62,8 +74,8 @@ interface AppSettings {
    * 见 `godot/locate.ts`。
    */
   godotPath: string
-  /** 打开工程时自动装上并启用 GDBox Link 编辑器插件（历史键名） */
-  autoEnableUnrealAgentLink: boolean
+  /** 打开工程时自动装上并启用 GDBox Link 编辑器插件 */
+  autoEnableEditorLink: boolean
   /**
    * 明确拒绝安装 GDBox Link 的工程目录。
    *
@@ -71,7 +83,7 @@ interface AppSettings {
    * 用户手动删掉插件、下次从盒子打开项目又会被装回去 —— 在用户眼里就是
    * 「这东西删不掉」。
    */
-  ualinkOptOutProjects: string[]
+  editorLinkOptOutProjects: string[]
   /** Agent 浏览器怎么显示。见 `AgentBrowserMode` */
   agentBrowserMode: AgentBrowserMode
   /** agent 能读写哪些位置。见 `AgentFileAccessScope` */
@@ -177,8 +189,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   enableFollowUpSuggestions: false,
   language: 'zh-CN',
   godotPath: '',
-  autoEnableUnrealAgentLink: true,
-  ualinkOptOutProjects: [],
+  autoEnableEditorLink: true,
+  editorLinkOptOutProjects: [],
   // 默认嵌入助手：安全前提「用户看得见 agent 在操作什么」照样成立，
   // 但不会弹一个独立窗口盖在编辑器上面打断用户。默认值不该是把它藏起来的那一档
   agentBrowserMode: 'embedded',
@@ -251,7 +263,7 @@ class AppSettingsManager {
     try {
       if (existsSync(this.configPath)) {
         const data = readFileSync(this.configPath, 'utf8')
-        const savedSettings = JSON.parse(data) as Partial<AppSettings>
+        const savedSettings = JSON.parse(data) as Partial<AppSettings> & LegacyAppSettings
 
         // 只保留当前仍支持的设置项，旧版本遗留字段不会继续透传或写回。
         const mergedSettings = { ...DEFAULT_SETTINGS, ...savedSettings }
@@ -260,10 +272,18 @@ class AppSettingsManager {
           enableFollowUpSuggestions: mergedSettings.enableFollowUpSuggestions,
           language: mergedSettings.language,
           godotPath: mergedSettings.godotPath,
-          autoEnableUnrealAgentLink: mergedSettings.autoEnableUnrealAgentLink,
-          ualinkOptOutProjects: mergedSettings.ualinkOptOutProjects,
+          // 新键没写过就沿用旧键（autoEnableUnrealAgentLink / ualinkOptOutProjects），
+          // 老用户关掉的自动安装、拒绝过的工程不会因为改名又被装回去
+          autoEnableEditorLink:
+            savedSettings.autoEnableEditorLink ??
+            savedSettings.autoEnableUnrealAgentLink ??
+            DEFAULT_SETTINGS.autoEnableEditorLink,
+          editorLinkOptOutProjects:
+            savedSettings.editorLinkOptOutProjects ??
+            savedSettings.ualinkOptOutProjects ??
+            DEFAULT_SETTINGS.editorLinkOptOutProjects,
           agentBrowserMode: mergedSettings.agentBrowserMode,
-          agentFileAccessScope: mergedSettings.agentFileAccessScope,
+          agentFileAccessScope: normalizeFileAccessScope(mergedSettings.agentFileAccessScope),
           // 没拨过的跟着新默认走（见 `agentToolSearchUserSet`）。例外：在全量模式下关过工具的
           // 老用户留在全量模式 —— 搜索模式不认那份名单，切过去等于把他关掉的工具又放出来
           agentToolSearchEnabled:
@@ -528,15 +548,15 @@ class AppSettingsManager {
   /**
    * 获取 agent 的文件访问范围。
    *
-   * 只认 `ue-only` 这一个字面量，其余一律当默认档（`full`）。收窄是用户
-   * **主动选出来**的一档，所以只有明确写着 `ue-only` 才收 —— 字段缺失、
+   * 只认 `project-only`（和旧值 `ue-only`），其余一律当默认档（`full`）。收窄是用户
+   * **主动选出来**的一档，所以只有明确写着它才收 —— 字段缺失、
    * 配置文件损坏、写进去一个不认识的值，都当没选过。
    *
    * 注意这和界面的兜底必须一字不差地一致（见 `ProfileAI.vue`），否则会出现
    * 最糟的错位：界面高亮着一档，实际生效的是另一档。
    */
   getAgentFileAccessScope(): AgentFileAccessScope {
-    return this.settings.agentFileAccessScope === 'ue-only' ? 'ue-only' : 'full'
+    return normalizeFileAccessScope(this.settings.agentFileAccessScope)
   }
 
   /** 设置「一轮跑完弹不弹通知」 */
@@ -634,25 +654,25 @@ class AppSettingsManager {
   /**
    * 设置打开工程时自动启用 GDBox Link 插件
    */
-  setAutoEnableUnrealAgentLink(enabled: boolean): void {
-    this.saveSettings({ autoEnableUnrealAgentLink: enabled })
+  setAutoEnableEditorLink(enabled: boolean): void {
+    this.saveSettings({ autoEnableEditorLink: enabled })
     logger.info(`打开工程时自动启用 GDBox Link 插件已${enabled ? '启用' : '禁用'}`)
   }
 
   /**
    * 获取打开工程时自动启用 GDBox Link 插件设置
    */
-  getAutoEnableUnrealAgentLink(): boolean {
-    return this.settings.autoEnableUnrealAgentLink
+  getAutoEnableEditorLink(): boolean {
+    return this.settings.autoEnableEditorLink
   }
 
   /**
    * 这个工程是否明确拒绝过 GDBox Link
    */
-  isUALinkOptedOut(projectDir: string): boolean {
+  isEditorLinkOptedOut(projectDir: string): boolean {
     if (!projectDir) return false
     const target = projectComparisonKey(projectDir)
-    return (this.settings.ualinkOptOutProjects || []).some(
+    return (this.settings.editorLinkOptOutProjects || []).some(
       (item) => projectComparisonKey(item) === target
     )
   }
@@ -663,17 +683,17 @@ class AppSettingsManager {
    * @param projectDir 工程目录
    * @param optOut true = 不再自动安装；false = 恢复自动安装
    */
-  setUALinkOptOut(projectDir: string, optOut: boolean): void {
+  setEditorLinkOptOut(projectDir: string, optOut: boolean): void {
     if (!projectDir) return
     const target = projectComparisonKey(projectDir)
-    const current = this.settings.ualinkOptOutProjects || []
+    const current = this.settings.editorLinkOptOutProjects || []
     const without = current.filter((item) => projectComparisonKey(item) !== target)
 
     // 已经是想要的状态就不写盘，省得每次打开项目都刷一遍配置文件
     if (optOut && without.length === current.length) {
-      this.saveSettings({ ualinkOptOutProjects: [...without, projectDir] })
+      this.saveSettings({ editorLinkOptOutProjects: [...without, projectDir] })
     } else if (!optOut && without.length !== current.length) {
-      this.saveSettings({ ualinkOptOutProjects: without })
+      this.saveSettings({ editorLinkOptOutProjects: without })
     }
 
     logger.info(`GDBox Link ${optOut ? '已加入' : '已移出'}项目黑名单: ${projectDir}`)

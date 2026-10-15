@@ -55,13 +55,13 @@ export function registerShellIPC(): void {
   })
 
   /**
-   * 用 Godot 编辑器打开工程（通道名沿用历史的 openUproject）。
+   * 用 Godot 编辑器打开工程。
    *
    * 实现住在 `services/project/openProject.ts` —— 托盘菜单的「最近项目」
    * 不走 IPC，也要同一套「先装插件、失败带原因、开了才藏窗口」。
    */
   ipcMain.handle(
-    'shell:openUproject',
+    'shell:openProject',
     async (
       _event,
       projectPath: string,

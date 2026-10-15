@@ -1667,8 +1667,8 @@ async function openProjectForReview(): Promise<boolean> {
     .getAll()
     .then((res) => (res?.success ? res.data || [] : []))
     .catch(() => [])
-  const uproject = findSessionUproject(project, rows)
-  if (!uproject) return false
+  const projectFile = findSessionProjectFile(project, rows)
+  if (!projectFile) return false
 
   const offlineSummary = reviewSummary.value
   reviewSummary.value = ''
@@ -1692,7 +1692,9 @@ async function openProjectForReview(): Promise<boolean> {
   reviewSummary.value = t('assistant.review.openingProject', { name: project.projectName })
   try {
     // forImport：编辑器已经开着就复用，且不藏主界面 —— 用户正等着审查结果
-    const res = (await window.api.invoke('shell:openUproject', uproject, { forImport: true })) as {
+    const res = (await window.api.invoke('shell:openProject', projectFile, {
+      forImport: true
+    })) as {
       success?: boolean
       error?: string
       pluginFailure?: string

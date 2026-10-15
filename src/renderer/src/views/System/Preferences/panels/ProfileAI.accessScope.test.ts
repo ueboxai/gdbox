@@ -36,7 +36,10 @@ function scopeButtons(wrapper: ReturnType<typeof mount>): ReturnType<typeof moun
 beforeEach(() => {
   vi.clearAllMocks()
   setActivePinia(createPinia())
-  appSettingsGet.mockResolvedValue({ agentBrowserMode: 'window', agentFileAccessScope: 'ue-only' })
+  appSettingsGet.mockResolvedValue({
+    agentBrowserMode: 'window',
+    agentFileAccessScope: 'project-only'
+  })
   appSettingsSet.mockResolvedValue({ success: true })
   ;(window as unknown as { api: unknown }).api = {
     appSettings: { get: appSettingsGet, set: appSettingsSet },
@@ -55,7 +58,7 @@ describe('AI 设置 · 文件访问范围', () => {
     const row = wrapper
       .findAll('.setting-item')
       .find((item) => item.text().includes('profile.ai.fileAccessScope'))!
-    expect(row.get('.setting-desc').text()).toBe('profile.ai.fileAccessScopeUeOnlyHint')
+    expect(row.get('.setting-desc').text()).toBe('profile.ai.fileAccessScopeProjectOnlyHint')
     await row.findAll('.app-segmented__item')[1].trigger('click')
     await flushPromises()
     expect(row.get('.setting-desc').text()).toBe('profile.ai.fileAccessScopeFullHint')
@@ -68,7 +71,7 @@ describe('AI 设置 · 文件访问范围', () => {
 
     const buttons = scopeButtons(wrapper) as unknown as Array<{ text: () => string }>
     expect(buttons.map((b) => b.text())).toEqual([
-      'profile.ai.fileAccessScopeUeOnly',
+      'profile.ai.fileAccessScopeProjectOnly',
       'profile.ai.fileAccessScopeFull'
     ])
   })
@@ -97,7 +100,7 @@ describe('AI 设置 · 文件访问范围', () => {
   })
 
   /**
-   * 旧配置文件里没有这个字段。界面的兜底必须和主进程一致（只认 `ue-only`），
+   * 旧配置文件里没有这个字段。界面的兜底必须和主进程一致（只认 `project-only`），
    * 否则会出现最糟的一种错位：界面高亮着一档，实际生效的是另一档，
    * 用户看着设置对不上行为。
    */
@@ -116,7 +119,7 @@ describe('AI 设置 · 文件访问范围', () => {
   it('读回用户选的「仅虚幻相关」，并且不写回去', async () => {
     appSettingsGet.mockResolvedValue({
       agentBrowserMode: 'embedded',
-      agentFileAccessScope: 'ue-only'
+      agentFileAccessScope: 'project-only'
     })
 
     const wrapper = mountPanel()

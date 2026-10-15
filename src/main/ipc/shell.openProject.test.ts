@@ -3,7 +3,7 @@ import { EventEmitter } from 'node:events'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
- * `shell:openUproject`（通道名沿用历史）用 Godot 编辑器打开工程：
+ * `shell:openProject` 用 Godot 编辑器打开工程：
  * `services/project/openProject.ts` 起 `godot --editor --path <工程目录>`，打开前先装 GDBox Link。
  *
  * 「打开工程后隐藏主界面」的判定在主进程这一侧，覆盖所有从盒子启动工程的入口
@@ -58,8 +58,8 @@ vi.mock('child_process', () => ({
 
 vi.mock('../appSettingsManager', () => ({
   appSettingsManager: {
-    getAutoEnableUnrealAgentLink: () => getAutoEnableLink(),
-    isUALinkOptedOut: () => false,
+    getAutoEnableEditorLink: () => getAutoEnableLink(),
+    isEditorLinkOptedOut: () => false,
     getGodotPath: () => '',
     getHideWindowOnProjectLaunch: () => getHideWindowOnProjectLaunch()
   }
@@ -91,10 +91,10 @@ beforeEach(() => {
 })
 
 async function openProject(path = 'D:/Demo/project.godot'): Promise<unknown> {
-  return handlers.get('shell:openUproject')!({}, path)
+  return handlers.get('shell:openProject')!({}, path)
 }
 
-describe('shell:openUproject · 用 Godot 编辑器打开', () => {
+describe('shell:openProject · 用 Godot 编辑器打开', () => {
   it('起 Godot 时带 --editor --path <工程目录>，传 project.godot 和传目录一样', async () => {
     await expect(openProject('D:/Demo/project.godot')).resolves.toEqual({ success: true })
     await expect(openProject('D:/Demo')).resolves.toEqual({ success: true })
@@ -141,7 +141,7 @@ describe('shell:openUproject · 用 Godot 编辑器打开', () => {
   })
 })
 
-describe('shell:openUproject · 打开工程后隐藏主界面', () => {
+describe('shell:openProject · 打开工程后隐藏主界面', () => {
   it('设置开着时把主界面收起来', async () => {
     getHideWindowOnProjectLaunch.mockReturnValue(true)
 
@@ -189,9 +189,9 @@ describe('shell:openUproject · 打开工程后隐藏主界面', () => {
   })
 })
 
-describe('shell:openUproject · 导入弹窗替用户打开工程', () => {
+describe('shell:openProject · 导入弹窗替用户打开工程', () => {
   const openForImport = (): Promise<unknown> =>
-    handlers.get('shell:openUproject')!({}, 'D:/Demo/project.godot', {
+    handlers.get('shell:openProject')!({}, 'D:/Demo/project.godot', {
       forImport: true
     }) as Promise<unknown>
 

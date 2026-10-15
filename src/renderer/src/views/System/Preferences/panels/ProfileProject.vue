@@ -3,7 +3,7 @@
  * 项目设置
  *
  * 管的是「从盒子打开工程」这个动作前后发生什么：用哪个 Godot 打开、打开后藏不藏窗口。
- * 真相源在主进程（`appSettingsManager`）—— 打开工程和隐藏窗口都在 `shell:openUproject`
+ * 真相源在主进程（`appSettingsManager`）—— 打开工程和隐藏窗口都在 `shell:openProject`
  * 里做，覆盖所有从盒子启动工程的入口；这里的 ref 只是显示态。
  */
 import { onMounted, ref } from 'vue'
