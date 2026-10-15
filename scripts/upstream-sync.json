@@ -1,0 +1,129 @@
+{
+  "upstream": {
+    "path": "../uebox-pub",
+    "branch": "main"
+  },
+  "base": "b6b4aabe",
+  "entries": {
+    "018aa584": {
+      "status": "todo",
+      "note": "P2 Blender 官方源码随包、pip 走国内镜像。GDBox 保留 Blender→glb 管线，有用；但改的是 blender-ue-pipeline 技能和 package.json，要手工搬，排在 c3a20c69 之后"
+    },
+    "048ff2d1": {
+      "status": "skip",
+      "note": "只是 prettier 换行；跟着前置提交搬时本仓自己格式化"
+    },
+    "0ce932d4": {
+      "status": "todo",
+      "note": "P2 网络资产库撑住几十万行（分页落盘、查询进 worker、补索引）。值得要，但 39 个文件、5 处冲突，单独开一批手工搬"
+    },
+    "21848bfa": {
+      "status": "skip",
+      "note": "措辞改动，GDBox 的文档另写"
+    },
+    "21b66268": {
+      "status": "skip",
+      "note": "UE Python API 执行前检查设计稿，GDBox 没有 Python 执行工具"
+    },
+    "23f1c9ea": {
+      "status": "todo",
+      "note": "P1 经验系统去掉每工具 5 条上限、没出过场的不再排在淘汰最前——通用。API 事实那一层是为 ue_run_python_script，GDBox 用不上；手工只搬通用部分"
+    },
+    "2aedf1ab": {
+      "status": "ported",
+      "note": "本仓已有同样的改动"
+    },
+    "2b7a4ece": {
+      "status": "ported",
+      "note": "本仓已有同样的改动"
+    },
+    "3327e56b": {
+      "status": "todo",
+      "note": "P1 快照标签用交回报告的第一句。teamTools 小冲突"
+    },
+    "361d2ebd": {
+      "status": "todo",
+      "note": "P2 手册措辞，干净，顺手带上"
+    },
+    "3de02a25": {
+      "status": "ported",
+      "local": "d55b7594",
+      "note": "P0 敏感操作确认卡去掉整块警示黄。样式，干净"
+    },
+    "4c57b4aa": {
+      "status": "ported",
+      "note": "本仓已有同样的改动"
+    },
+    "5c609e3f": {
+      "status": "ported",
+      "local": "bf8d7db8",
+      "note": "系统提示词保留 GDBox 的收尾示例，registry 只加 turnReport 的导入"
+    },
+    "63637ee2": {
+      "status": "ported",
+      "local": "dda74388",
+      "note": "P0 提示消息同屏上限修复（进度消息堆成三条卡住）。干净"
+    },
+    "6a0f49de": {
+      "status": "ported",
+      "note": "本仓已有同样的改动"
+    },
+    "767e14b8": {
+      "status": "ported",
+      "local": "eeeb83a3",
+      "note": "主进程分叉时已删，本次删 preload 和类型声明"
+    },
+    "7732f361": {
+      "status": "todo",
+      "note": "P1 全部权限下 ask_user 到点按推荐项继续；设置里对话/Agent 合成一个主模型。干净"
+    },
+    "91ed7990": {
+      "status": "ported",
+      "note": "GDBox 分叉时已在 registry.ts 按 Godot 文件锁自己实现了同样的逻辑"
+    },
+    "bc25d769": {
+      "status": "ported",
+      "note": "本仓已有同样的改动"
+    },
+    "c3a20c69": {
+      "status": "todo",
+      "note": "P2 Blender 缺 Git/Python 一键 winget 安装。agentV3.ts 冲突"
+    },
+    "ce7149d0": {
+      "status": "todo",
+      "note": "P1 排队消息挪到输入框顶上（现在插话/撤回重新编辑/删除）。InputComposer.vue 冲突，上游那次带了大面积重排，手工合"
+    },
+    "e4b85d02": {
+      "status": "ported",
+      "local": "0403b795",
+      "note": "P0 对话页消息区铺满整页、滚动条贯通。干净"
+    },
+    "e55fea06": {
+      "status": "todo",
+      "note": "P2 网络库变更日志为空时不再每次全量对账。依赖 0ce932d4，同一批搬"
+    },
+    "e728d43f": {
+      "status": "skip",
+      "note": "官网语音合成说明，GDBox 官网另写"
+    },
+    "e7c8b69a": {
+      "status": "ported",
+      "local": "2559548f",
+      "note": "P0 创作者套餐连接弹窗的地址能点开、能复制。干净"
+    },
+    "ec65d7d1": {
+      "status": "ported",
+      "local": "7946d305",
+      "note": "P0 小窗透明度不生效、插话被拒提示不准。干净"
+    },
+    "f0576152": {
+      "status": "ported",
+      "local": "cf7ef58",
+      "note": "off() 要传 on() 返回的包装"
+    },
+    "fa3b3ebd": {
+      "status": "skip",
+      "note": "上游自己的 lint 基线，两边基线各管各的"
+    }
+  }
+}

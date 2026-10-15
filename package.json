@@ -18,6 +18,7 @@
     "lint": "node scripts/check-lint-baseline.mjs",
     "lint:baseline:update": "node scripts/check-lint-baseline.mjs --update",
     "palette": "node scripts/gen-palette.mjs",
+    "upstream": "node scripts/upstream-sync.mjs",
     "lint:all": "eslint --cache src tests scripts electron.vite.config.ts vitest.config.ts eslint.config.mjs",
     "lint:changed": "node scripts/lint-changed.mjs",
     "verify": "node scripts/verify.mjs",
