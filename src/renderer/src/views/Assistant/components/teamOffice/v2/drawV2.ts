@@ -310,7 +310,7 @@ function windowWithSky(
   ctx.drawImage(s.img, x, y)
 }
 
-const NEON_TEXT = 'UEBOX STUDIO'
+const NEON_TEXT = 'GDBOX STUDIO'
 const NEON_W = NEON_TEXT.length * 4 - 1
 const POSTER_W = 22
 
