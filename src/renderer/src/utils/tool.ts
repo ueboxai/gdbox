@@ -74,20 +74,8 @@ export const getAssetTypeColor = (className?: string, assetName?: string): strin
     }
 
     // Level/Map 相关
-    if (
-      assetNameStr.endsWith('.umap') ||
-      assetNameStr.includes('level') ||
-      assetNameStr.includes('map')
-    ) {
+    if (assetNameStr.includes('level') || assetNameStr.includes('map')) {
       return ASSET_TYPE_COLORS['World']
-    }
-
-    // Blueprint 相关
-    if (
-      assetNameStr.endsWith('.uasset') &&
-      (assetNameStr.includes('bp_') || assetNameStr.includes('blueprint'))
-    ) {
-      return ASSET_TYPE_COLORS['Blueprint']
     }
 
     // 代码文件

@@ -38,7 +38,7 @@ export default {
     done: 'Done',
     dragHint: 'Checked tools stay in the sidebar; drag to reorder'
   },
-  // Sidebar "AI Chat" list: grouped by UE project, pinning, project-less chats
+  // Sidebar "AI Chat" list: grouped by Godot project, pinning, project-less chats
   chatSidebar: {
     pinned: 'Pinned',
     projects: 'Projects',
@@ -2122,8 +2122,8 @@ export default {
      * Reviewing this turn's changes.
      *
      * The change list says what the agent did; this says what the engine
-     * currently holds — every tool can report success while the material was
-     * never saved and the blueprint does not compile.
+     * currently holds — every tool can report success while a resource was
+     * never saved and a script does not parse.
      */
     review: {
       run: 'Review',
@@ -3154,8 +3154,8 @@ export default {
       taskTitle: 'Task execution',
       // Privacy settings
       privacyTitle: 'Privacy',
-      // File access scope (two levels). Defaults to the narrow one: the box is an Unreal tool,
-      // it has no business browsing a whole drive out of the gate. On a refusal the AI is told
+      // File access scope (two levels). Defaults to the whole computer; the narrow one is
+      // opt-in (see appSettingsManager). On a refusal the AI is told
       // how to ask the user to open it up, and decides whether to pass that on
       fileAccessScope: 'File access scope',
 

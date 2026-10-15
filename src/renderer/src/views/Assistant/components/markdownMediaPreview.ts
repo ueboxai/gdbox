@@ -31,15 +31,15 @@ const VIDEO_EXTENSION = /\.(?:mp4|webm|mov|m4v)$/i
 
 /** 绝对路径 / 可直接加载的协议前缀 —— 相对路径没法定位到真实文件，不预览 */
 const RESOURCE_PREFIX =
-  /^(?:https?:\/\/|file:\/{2,}|local-resource:\/{2,}|uebox-asset:\/{2,}|[A-Za-z]:[\\/]|\\\\|\/)/
+  /^(?:https?:\/\/|file:\/{2,}|local-resource:\/{2,}|gdbox-asset:\/{2,}|[A-Za-z]:[\\/]|\\\\|\/)/
 
 /** 从纯文本里扫路径时用的模式，结尾必须是图片扩展名 */
 const IMAGE_REF_IN_TEXT =
-  /(?:https?:\/\/|file:\/{2,}|local-resource:\/{2,}|uebox-asset:\/{2,}|[A-Za-z]:[\\/]|\/)[^\s"'`<>()（）【】「」，,。；;]*\.(?:png|jpe?g|gif|bmp|webp|svg|ico|avif)/gi
+  /(?:https?:\/\/|file:\/{2,}|local-resource:\/{2,}|gdbox-asset:\/{2,}|[A-Za-z]:[\\/]|\/)[^\s"'`<>()（）【】「」，,。；;]*\.(?:png|jpe?g|gif|bmp|webp|svg|ico|avif)/gi
 
 /** 同上，视频那一份 */
 const VIDEO_REF_IN_TEXT =
-  /(?:https?:\/\/|file:\/{2,}|local-resource:\/{2,}|uebox-asset:\/{2,}|[A-Za-z]:[\\/]|\/)[^\s"'`<>()（）【】「」，,。；;]*\.(?:mp4|webm|mov|m4v)/gi
+  /(?:https?:\/\/|file:\/{2,}|local-resource:\/{2,}|gdbox-asset:\/{2,}|[A-Za-z]:[\\/]|\/)[^\s"'`<>()（）【】「」，,。；;]*\.(?:mp4|webm|mov|m4v)/gi
 
 /** 路径左边界：只有前面是空白或这些标点时才当成一条独立路径，避免把 `assets/a.png` 截成 `/a.png` */
 const LEFT_BOUNDARY = /[\s("'（「【[:：=>,，]/

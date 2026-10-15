@@ -70,12 +70,6 @@
                 @click.stop="handleResetPoster"
               />
             </div>
-            <!-- UE5 颜色条 -->
-            <div
-              v-if="isUAssetFile"
-              class="preview-color-strip"
-              :style="{ backgroundColor: getAssetTypeColor(asset?.className, asset?.assetName) }"
-            ></div>
           </div>
 
           <!-- 文本/代码文件：没有预览图时显示文本预览 -->
@@ -94,12 +88,6 @@
             <div v-else class="text-preview-empty">
               {{ $t('assetLib.details.previewUnavailable') }}
             </div>
-            <!-- UE5 颜色条（如果有） -->
-            <div
-              v-if="isUAssetFile"
-              class="preview-color-strip"
-              :style="{ backgroundColor: getAssetTypeColor(asset?.className, asset?.assetName) }"
-            ></div>
           </div>
 
           <!-- 其他情况：显示占位符或图标 -->
@@ -108,8 +96,8 @@
             <div v-if="isImageAsset" class="placeholder">
               {{ $t('assetLib.details.noPreview') }}
             </div>
-            <!-- 虚幻资产或3D模型但无缩略图 -->
-            <div v-else-if="isUnrealAssetFile || is3DModel" class="placeholder">
+            <!-- 3D模型但无缩略图 -->
+            <div v-else-if="is3DModel" class="placeholder">
               {{ $t('assetLib.details.noThumbnail') }}
             </div>
             <!-- 其他文件显示图标 -->
@@ -126,13 +114,6 @@
               />
               <PhPencilSimple class="edit-icon" @click.stop="handleOpenPoster" />
             </div>
-
-            <!-- UE5 颜色条 -->
-            <div
-              v-if="isUAssetFile"
-              class="preview-color-strip"
-              :style="{ backgroundColor: getAssetTypeColor(asset?.className, asset?.assetName) }"
-            ></div>
           </div>
         </div>
         <h1 class="file-name">{{ asset?.assetName }}</h1>
@@ -142,101 +123,8 @@
         </div>
       </div>
 
-      <!-- UE5 资产特殊信息 -->
-      <div v-if="isUAssetFile" class="inspector-group ue-asset-info">
-        <div class="ue-section-header">
-          <!-- 依赖图入口挪到了下面「导入依赖」那一组，跟依赖列表放在一起 -->
-          <div class="ue-section-title">{{ $t('assetLib.details.assetInfo') }}</div>
-        </div>
-        <div class="ue-meta-grid">
-          <div v-if="asset?.assetType" class="ue-meta-row">
-            <label class="ue-meta-label">{{ $t('assetLib.details.assetType') }}</label>
-            <div class="ue-meta-value">{{ asset?.assetType }}</div>
-          </div>
-          <div v-if="asset?.classNameCn" class="ue-meta-row">
-            <label class="ue-meta-label">{{ $t('assetLib.details.classNameCn') }}</label>
-            <div class="ue-meta-value">{{ asset?.classNameCn }}</div>
-          </div>
-          <div v-if="asset?.engineVersion" class="ue-meta-row">
-            <label class="ue-meta-label">{{ $t('assetLib.details.engineVersion') }}</label>
-            <div class="ue-meta-value">{{ asset?.engineVersion }}</div>
-          </div>
-          <div v-if="asset?.className" class="ue-meta-row">
-            <label class="ue-meta-label">{{ $t('assetLib.details.className') }}</label>
-            <div class="ue-meta-value">{{ asset?.className }}</div>
-          </div>
-          <div v-if="asset?.assetClass" class="ue-meta-row">
-            <label class="ue-meta-label">{{ $t('assetLib.details.assetClass') }}</label>
-            <div class="ue-meta-value">{{ asset?.assetClass }}</div>
-          </div>
-          <div class="ue-meta-row">
-            <label class="ue-meta-label">{{ $t('assetLib.details.format') }}</label>
-            <div class="ue-meta-value">{{ asset?.fileExtension || '—' }}</div>
-          </div>
-          <!-- 没有创建时间的来源（服务器库只记修改时间）就不占一行空的「—」 -->
-          <div v-if="asset?.created_at" class="ue-meta-row">
-            <label class="ue-meta-label">{{ $t('assetLib.details.created') }}</label>
-            <div class="ue-meta-value">{{ asset?.created_at || '—' }}</div>
-          </div>
-          <div class="ue-meta-row">
-            <label class="ue-meta-label">{{ $t('assetLib.details.modified') }}</label>
-            <div class="ue-meta-value">{{ asset?.updated_at || '—' }}</div>
-          </div>
-          <!-- 软路径 -->
-          <div v-if="asset?.softPath" class="ue-meta-row">
-            <label class="ue-meta-label">{{ $t('assetLib.details.softPath') }}</label>
-            <div
-              class="ue-meta-value soft-path clickable"
-              :title="asset?.softPath + $t('assetLib.details.softPathTooltip')"
-              @click="handleCopySoftPath"
-            >
-              {{ asset?.softPath }}
-            </div>
-          </div>
-          <!-- 本地路径 -->
-          <div v-if="localFilePath" class="ue-meta-row">
-            <label class="ue-meta-label">{{ $t('assetLib.details.localPath') }}</label>
-            <div
-              class="ue-meta-value soft-path clickable"
-              :title="localFilePath + '\n\n' + $t('assetLib.details.localPathTooltip')"
-              @click="handleCopyLocalPath"
-            >
-              {{ localFilePath }}
-            </div>
-          </div>
-          <!-- 云端位置：百度网盘 -->
-          <div v-if="(asset as any)?.baiduyunPath" class="ue-meta-row">
-            <label class="ue-meta-label">{{ $t('assetDetailsPanel.cloud.baiduyunLabel') }}</label>
-            <div
-              class="ue-meta-value soft-path clickable"
-              :title="
-                (asset as any)?.baiduyunPath +
-                '\n\n' +
-                $t('assetDetailsPanel.cloud.baiduyunClickHint')
-              "
-              @click="handleGotoBaiduyun"
-            >
-              {{ (asset as any)?.baiduyunPath }}
-            </div>
-          </div>
-          <!-- 云端位置：WebDAV -->
-          <div v-if="(asset as any)?.webdavPath" class="ue-meta-row">
-            <label class="ue-meta-label">{{ $t('assetLib.details.webdavPath', 'WebDAV') }}</label>
-            <div
-              class="ue-meta-value soft-path clickable"
-              :title="
-                (asset as any)?.webdavPath + '\n\n' + $t('assetDetailsPanel.cloud.webdavClickHint')
-              "
-              @click="handleGotoWebdav"
-            >
-              {{ (asset as any)?.webdavPath }}
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Meta Grid 容器：属性列表,使用分组块 -->
-      <div v-if="!isUAssetFile" class="inspector-group">
+      <div class="inspector-group">
         <div class="inspector-group-title">{{ $t('assetLib.details.fileInfo') }}</div>
         <div class="meta-grid-container">
           <div class="meta-row">
@@ -260,6 +148,34 @@
               @click="handleCopyLocalPath"
             >
               {{ localFilePath }}
+            </div>
+          </div>
+          <!-- 云端位置：百度网盘 -->
+          <div v-if="(asset as any)?.baiduyunPath" class="meta-row">
+            <label class="meta-label">{{ $t('assetDetailsPanel.cloud.baiduyunLabel') }}</label>
+            <div
+              class="meta-value soft-path clickable"
+              :title="
+                (asset as any)?.baiduyunPath +
+                '\n\n' +
+                $t('assetDetailsPanel.cloud.baiduyunClickHint')
+              "
+              @click="handleGotoBaiduyun"
+            >
+              {{ (asset as any)?.baiduyunPath }}
+            </div>
+          </div>
+          <!-- 云端位置：WebDAV -->
+          <div v-if="(asset as any)?.webdavPath" class="meta-row">
+            <label class="meta-label">{{ $t('assetLib.details.webdavPath', 'WebDAV') }}</label>
+            <div
+              class="meta-value soft-path clickable"
+              :title="
+                (asset as any)?.webdavPath + '\n\n' + $t('assetDetailsPanel.cloud.webdavClickHint')
+              "
+              @click="handleGotoWebdav"
+            >
+              {{ (asset as any)?.webdavPath }}
             </div>
           </div>
         </div>
@@ -355,79 +271,6 @@
         :readonly-reason="capabilityReason('canEditNotes')"
         :hide-rich-note="!libraryCaps.richNotes"
       />
-
-      <!-- 导入依赖 -->
-      <div v-if="isUAssetFile" class="inspector-group ue-imports-info">
-        <div class="imports-header">
-          <div class="ue-section-title">
-            {{ $t('assetLib.details.dependencies') }}
-            <span v-if="importTotal > 0" class="imports-count">{{ importTotal }}</span>
-          </div>
-          <span v-if="unresolvedCount > 0" class="imports-warning">
-            {{ $t('assetLib.details.unresolvedCount', { count: unresolvedCount }) }}
-          </span>
-        </div>
-
-        <div v-if="importsLoading" class="imports-loading">
-          <AppSpin size="small" />
-        </div>
-
-        <template v-else-if="importTotal > 0">
-          <div class="imports-list">
-            <!-- 库里有的可以点开；库里没有的不给任何可点的暗示 -->
-            <div
-              v-for="item in visibleImportItems"
-              :key="item.softPath"
-              class="import-item"
-              :class="{ resolved: item.status === 'in-vault', unresolved: item.isUnresolved }"
-              :title="item.softPath"
-              :role="item.status === 'in-vault' ? 'button' : undefined"
-              :tabindex="item.status === 'in-vault' ? 0 : undefined"
-              @click="handleImportClick(item)"
-              @keydown.enter="handleImportClick(item)"
-            >
-              <span class="import-status-bar" :style="{ background: item.accentColor }"></span>
-              <div class="import-text">
-                <div class="import-name">{{ item.name }}</div>
-                <div class="import-folder">{{ item.folder || '—' }}</div>
-              </div>
-              <PhWarningCircle v-if="item.isUnresolved" class="import-missing-icon" />
-              <!-- 定位是第二个动作，给它自己的按钮。藏在双击里既不好发现，
-                   又会和整行的单击打架 -->
-              <AppTooltip
-                v-else-if="item.folderKey"
-                :title="$t('assetLib.details.locateDependency')"
-              >
-                <button
-                  class="import-locate-btn"
-                  :aria-label="$t('assetLib.details.locateDependency')"
-                  @click.stop="handleImportLocate(item)"
-                >
-                  <PhExport />
-                </button>
-              </AppTooltip>
-            </div>
-          </div>
-
-          <button v-if="canExpandImports" class="imports-expand" @click="importsExpanded = true">
-            {{ $t('assetLib.details.showAllDependencies', { count: importTotal }) }}
-          </button>
-
-          <AppButton
-            v-if="libraryCaps.dependencyGraph"
-            variant="soft"
-            size="small"
-            block
-            class="imports-graph-btn"
-            @click="handleOpenDependencyGraph"
-          >
-            <template #icon><PhGraph /></template>
-            {{ $t('assetLib.details.viewDependency') }}
-          </AppButton>
-        </template>
-
-        <div v-else class="imports-empty">{{ $t('assetLib.details.noDependencies') }}</div>
-      </div>
 
       <!-- Duplicate cropper modal removed -->
     </div>
@@ -650,11 +493,9 @@
 <script setup lang="ts">
 import AppSpin from '@renderer/components/AppSpin.vue'
 import AppModal from '@renderer/components/AppModal.vue'
-import AppTooltip from '@renderer/components/AppTooltip.vue'
 import AppButton from '@renderer/components/AppButton.vue'
 import AppTag from '@renderer/components/AppTag.vue'
 import { ref, watch, computed, inject, nextTick, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import type { AssetDetail } from '../types'
 import TagSelectorModal from '@renderer/components/TagSelector/TagSelectorModal.vue'
@@ -672,7 +513,7 @@ import {
   resolveAssetUrl,
   resolveAssetUrlWithFallback
 } from '@renderer/utils/assetAccess'
-import { formatFileSize, getAssetTypeColor } from '@renderer/utils/tool'
+import { formatFileSize } from '@renderer/utils/tool'
 import {
   computeSmartTags,
   extractPathTags,
@@ -684,22 +525,18 @@ import {
   PhCamera,
   PhCode,
   PhCursorClick,
-  PhExport,
   PhFile,
   PhFilePdf,
   PhFileText,
   PhFileZip,
   PhFolder,
-  PhGraph,
   PhPencilSimple,
   PhPlus,
   PhSparkle,
   PhTrash,
   PhVideoCamera,
-  PhWarningCircle,
   PhX
 } from '@phosphor-icons/vue'
-import type { AssetImportStatusSummary } from '@core/shared/assetDependency'
 import folderTagAPI from '@renderer/api/folderTag'
 import assetDataAPI from '@renderer/api/assetData'
 import assetFolderAPI from '@renderer/api/assetFolder'
@@ -726,7 +563,6 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'updatePoster', 'folder-updated', 'locate-in-folder'])
 
 const { t } = useI18n()
-const router = useRouter()
 const selectedAsset = inject('selectedAsset', null) as any
 const showEditIcon = ref(false)
 const isDragOver = ref(false)
@@ -1077,27 +913,6 @@ const isImageAsset = computed(() => {
   )
 })
 
-// 判断是否为 .uasset 或 .umap 文件
-const isUAssetFile = computed(() => {
-  const displayAsset = props.asset
-  if (!displayAsset) return false
-  const fileName = (displayAsset.assetName || '').toLowerCase()
-  const ext = (displayAsset.fileExtension || '').toLowerCase()
-  return (
-    fileName.endsWith('.uasset') ||
-    fileName.endsWith('.umap') ||
-    ext === 'uasset' ||
-    ext === 'umap' ||
-    (displayAsset as any).classKey === 'uasset' ||
-    (displayAsset as any).classKey === 'umap'
-  )
-})
-
-// 判断是否为虚幻资产文件（uasset 或 umap）
-const isUnrealAssetFile = computed(() => {
-  return isUAssetFile.value
-})
-
 // 判断是否为文本文件
 const isTextFile = computed(() => {
   const displayAsset = props.asset
@@ -1144,101 +959,6 @@ const is3DModel = computed(() => {
   const modelExts = ['.fbx', '.obj', '.glb', '.gltf']
   return modelExts.some((e) => fileName.endsWith(e) || ext === e.replace('.', ''))
 })
-
-/**
- * 导入依赖。
- *
- * 以前这里是把 asset.imports 这个 JSON 字符串就地拆成字符串数组铺出来 ——
- * 展示的是解析器的输入。现在改成问主进程要解析后的结果：每条依赖在不在
- * 当前保管库里。用户看依赖是想知道「这资产搬走了会不会坏」，不是想读路径。
- */
-const IMPORTS_COLLAPSED_COUNT = 8
-
-const importStatus = ref<AssetImportStatusSummary | null>(null)
-const importsLoading = ref(false)
-const importsExpanded = ref(false)
-let importStatusRequestId = 0
-
-const importTotal = computed(() => importStatus.value?.total ?? 0)
-const unresolvedCount = computed(() => importStatus.value?.unresolvedCount ?? 0)
-
-/** 给每条依赖补上渲染要用的派生字段，模板里就不用再算了 */
-const importItems = computed(() =>
-  (importStatus.value?.items ?? []).map((item) => ({
-    ...item,
-    isUnresolved: item.status === 'unresolved',
-    accentColor:
-      item.status === 'unresolved'
-        ? 'var(--color-warning-solid)'
-        : getAssetTypeColor(item.className, item.name)
-  }))
-)
-
-const canExpandImports = computed(
-  () => !importsExpanded.value && importTotal.value > IMPORTS_COLLAPSED_COUNT
-)
-
-const visibleImportItems = computed(() =>
-  importsExpanded.value ? importItems.value : importItems.value.slice(0, IMPORTS_COLLAPSED_COUNT)
-)
-
-const loadImportStatus = async (assetKey: string | undefined): Promise<void> => {
-  const requestId = ++importStatusRequestId
-  importsExpanded.value = false
-
-  if (!assetKey) {
-    importStatus.value = null
-    importsLoading.value = false
-    return
-  }
-
-  importsLoading.value = true
-  try {
-    const summary = await getActiveLibrarySource().assets.getImportStatus(assetKey)
-    // 用户可能已经点到别的资产上了，迟到的结果直接丢掉
-    if (requestId !== importStatusRequestId) return
-    importStatus.value = summary
-  } catch (error) {
-    if (requestId !== importStatusRequestId) return
-    console.error('获取导入依赖失败:', error)
-    importStatus.value = null
-  } finally {
-    if (requestId === importStatusRequestId) importsLoading.value = false
-  }
-}
-
-watch(
-  () => [props.asset?.assetKey, isUAssetFile.value] as const,
-  ([assetKey, isUAsset]) => {
-    void loadImportStatus(isUAsset ? (assetKey as string | undefined) : undefined)
-  },
-  { immediate: true }
-)
-
-/** 单击库里有的依赖：面板内切过去看它 */
-const handleImportClick = async (item: (typeof importItems.value)[number]): Promise<void> => {
-  if (item.status !== 'in-vault' || !item.assetKey) return
-  try {
-    const target = await getActiveLibrarySource().assets.getById(item.assetKey)
-    if (!target) {
-      message.warning(t('assetLib.details.dependencyNotFound'))
-      return
-    }
-    if (selectedAsset) selectedAsset.value = target
-  } catch (error) {
-    console.error('打开依赖资产失败:', error)
-    message.warning(t('assetLib.details.dependencyNotFound'))
-  }
-}
-
-/**
- * 跳到这条依赖所在的文件夹。
- * 把 assetKey 一起给出去 —— 只跳到目录、让用户在一屏文件里自己找，等于没跳。
- */
-const handleImportLocate = (item: (typeof importItems.value)[number]): void => {
-  if (item.status !== 'in-vault' || !item.folderKey || !item.assetKey) return
-  emit('locate-in-folder', item.folderKey, item.assetKey)
-}
 
 /**
  * 智能标签：根据文件名自动推断的分类标签
@@ -1430,7 +1150,7 @@ const previewUrl = computed(() => {
     )
   }
 
-  // 2. 使用 imgLocalPath（如 uasset 的缩略图）
+  // 2. 使用 imgLocalPath
   const imgLocalPath = displayAsset.imgLocalPath
   if (imgLocalPath) {
     // 🔧 统一使用 buildThumbnailUrl，传入 isNetworkVault
@@ -2531,25 +2251,6 @@ const removeTag = async (tagId: number) => {
 }
 
 /**
- * 复制软路径到剪贴板
- */
-const handleCopySoftPath = async (): Promise<void> => {
-  const softPath = props.asset?.softPath
-  if (!softPath) {
-    message.warning(t('assetDetailsPanel.softPath.empty'))
-    return
-  }
-
-  try {
-    await navigator.clipboard.writeText(softPath)
-    message.success(t('assetDetailsPanel.softPath.copied'))
-  } catch (err) {
-    console.error('复制软路径失败', err)
-    message.error(t('assetDetailsPanel.common.copyFailed'))
-  }
-}
-
-/**
  * 复制本地路径到剪贴板
  */
 const handleCopyLocalPath = async (): Promise<void> => {
@@ -2580,7 +2281,7 @@ const handleGotoBaiduyun = async (): Promise<void> => {
 
   try {
     // 提取目录路径（去掉文件名）
-    const dirPath = baiduyunPath.substring(0, baiduyunPath.lastIndexOf('/')) || '/apps/unreal-agent'
+    const dirPath = baiduyunPath.substring(0, baiduyunPath.lastIndexOf('/')) || '/apps/gdbox'
 
     // 切换到百度网盘模式并导航到目录
     assetViewStore.setMode('baiduyun')
@@ -2611,7 +2312,7 @@ const handleGotoWebdav = async (): Promise<void> => {
 
   try {
     // 提取目录路径（去掉文件名）
-    const dirPath = webdavPath.substring(0, webdavPath.lastIndexOf('/')) || '/unreal-agent'
+    const dirPath = webdavPath.substring(0, webdavPath.lastIndexOf('/')) || '/gdbox'
 
     // 切换到 WebDAV 模式并导航到目录
     assetViewStore.setMode('webdav')
@@ -2628,25 +2329,6 @@ const handleGotoWebdav = async (): Promise<void> => {
     message.error(t('assetDetailsPanel.cloudPath.gotoFailed'))
   }
 }
-
-// 打开依赖关系图(在新tab中)
-const handleOpenDependencyGraph = () => {
-  const assetKey = (props.asset as any)?.assetKey
-  if (!assetKey) {
-    message.warning(t('assetDetailsPanel.assetInfoFailed'))
-    return
-  }
-
-  // 打开新tab显示依赖关系图
-  router.push({
-    name: 'AssetDependencyGraph',
-    query: {
-      assetKey
-    }
-  })
-}
-
-// 依赖关系图相关功能已移至新tab页面
 </script>
 
 <style lang="less" scoped>
@@ -2731,17 +2413,6 @@ const handleOpenDependencyGraph = () => {
   justify-content: center;
   position: relative;
   overflow: hidden;
-
-  // UE5 颜色条
-  .preview-color-strip {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-    z-index: 2;
-  }
 }
 
 .preview-box.has-image {
@@ -2961,17 +2632,6 @@ const handleOpenDependencyGraph = () => {
   border: 1px solid var(--color-border-subtle);
   position: relative;
   overflow: hidden;
-
-  // UE5 颜色条
-  .preview-color-strip {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-    z-index: 2;
-  }
 }
 
 // 文本预览容器
@@ -3054,17 +2714,6 @@ const handleOpenDependencyGraph = () => {
     color: var(--color-text-secondary);
     font-size: 12px;
     text-align: center;
-  }
-
-  // UE5 颜色条
-  .preview-color-strip {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-    z-index: 2;
   }
 }
 
@@ -3190,321 +2839,6 @@ const handleOpenDependencyGraph = () => {
 }
 
 // 备注那一整块的样式已经跟着搬进 NoteSection.vue
-
-// UE5 资产特殊信息
-.ue-asset-info {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 0;
-  padding: 12px;
-}
-
-.ue-section-title {
-  font-size: 12px;
-  font-weight: bold;
-  color: var(--color-text-secondary);
-  letter-spacing: 1px;
-  margin-bottom: 8px;
-}
-
-.ue-meta-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.ue-meta-row {
-  display: grid;
-  grid-template-columns: 95px 1fr;
-  gap: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-border-subtle);
-
-  &:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-  }
-}
-
-.ue-meta-label {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  text-align: left;
-  font-weight: 500;
-}
-
-.ue-meta-value {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  font-family: monospace;
-  word-break: break-word;
-  text-align: right;
-
-  &.soft-path {
-    font-size: 11px;
-    color: var(--color-accent-text);
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    display: block;
-
-    &.clickable {
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      &:hover {
-        color: var(--color-accent-text);
-        background: var(--color-accent-bg);
-        border-radius: 4px;
-        padding: 0 4px;
-      }
-
-      &:active {
-        transform: scale(0.98);
-      }
-    }
-  }
-}
-
-.ue-imports-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
-  padding-top: 16px;
-  border-top: 1px solid var(--color-border-subtle);
-}
-
-.ue-imports-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.ue-section-header {
-  margin-bottom: 12px;
-
-  .ue-section-title {
-    margin-bottom: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    justify-content: space-between;
-  }
-}
-
-.view-graph-icon-simple {
-  font-size: 14px;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    color: var(--color-accent-text);
-    transform: scale(1.1);
-  }
-}
-
-// 导入依赖
-// 外层不再套背景和边框：容器和条目原来用的是同一个背景 token、同一个边框
-// token，盒中盒且零对比，外面那圈纯属白给。现在只有条目有底色。
-.ue-imports-info {
-  // 上下间距交给 .panel-body 的 gap 和 .inspector-group 的 margin-bottom，
-  // 这里再加 margin-top 会让这一组和上面那组的缝比别处宽一截
-  margin-top: 0;
-}
-
-.imports-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-
-  .ue-section-title {
-    margin-bottom: 0;
-  }
-}
-
-.imports-count {
-  margin-left: 6px;
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
-  background: var(--color-bg-sunken);
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0;
-}
-
-.imports-warning {
-  flex-shrink: 0;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--color-warning-bg);
-  color: var(--color-warning-text);
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.imports-loading {
-  display: flex;
-  justify-content: center;
-  padding: 16px 0;
-}
-
-.imports-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.import-item {
-  display: flex;
-  align-items: stretch;
-  gap: 8px;
-  // 纵向内边距放在 .import-text 上，好让左边那条状态色顶天立地
-  padding: 0 8px 0 0;
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-sunken);
-  overflow: hidden;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
-
-  // 库里有的才可点。库里没有的不给 hover 变化、不给手型 ——
-  // 点不了就不许给点的暗示
-  &.resolved {
-    cursor: pointer;
-
-    &:hover {
-      background: var(--color-bg-raised);
-
-      .import-name {
-        color: var(--color-accent-text);
-      }
-
-      .import-locate-btn {
-        opacity: 1;
-      }
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--color-border-focus);
-      outline-offset: -2px;
-    }
-  }
-
-  &.unresolved {
-    cursor: default;
-
-    .import-name {
-      color: var(--color-text-muted);
-      text-decoration: line-through;
-      text-decoration-color: var(--color-border-strong);
-    }
-  }
-}
-
-// 左边那条状态色：库里有=类型色，库里没有=警示色。一列扫下来就知道哪条断了
-.import-status-bar {
-  flex-shrink: 0;
-  width: 3px;
-  border-radius: 0 2px 2px 0;
-}
-
-.import-text {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 0;
-}
-
-// 资产名在上，正常字体、看得清。这才是用户要找的东西
-.import-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: color 0.15s ease;
-}
-
-// 目录在下，等宽小字。放不下就截，完整路径在 title 里
-.import-folder {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  font-family: 'JetBrains Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
-  line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-// 定位按钮：平时不显示，鼠标移到这一行才露出来
-.import-locate-btn {
-  flex-shrink: 0;
-  align-self: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-xs);
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: 14px;
-  cursor: pointer;
-  opacity: 0;
-  transition: all 0.15s ease;
-
-  &:hover {
-    background: var(--color-bg-surface-hover);
-    color: var(--color-accent-text);
-  }
-
-  &:focus-visible {
-    opacity: 1;
-    outline: 2px solid var(--color-border-focus);
-    outline-offset: -2px;
-  }
-}
-
-.import-missing-icon {
-  flex-shrink: 0;
-  font-size: 14px;
-  color: var(--color-warning-text);
-}
-
-.imports-expand {
-  margin-top: 6px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--color-accent-text);
-  font-size: 12px;
-  cursor: pointer;
-
-  &:hover {
-    text-decoration: underline;
-  }
-}
-
-.imports-graph-btn {
-  margin-top: 10px;
-}
-
-.imports-empty {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  padding: 8px 0;
-}
 
 // 空状态样式
 .empty {

@@ -363,7 +363,7 @@ export const createBaiduFile = (accessToken: string, options: BaiduCreateFilePar
 /**
  * 在百度网盘创建文件夹
  * @param accessToken - 访问令牌
- * @param path - 文件夹在百度网盘中的完整路径，如 /apps/unreal-agent/我的文件夹
+ * @param path - 文件夹在百度网盘中的完整路径，如 /apps/gdbox/我的文件夹
  * @param rtype - 重名策略，默认 1（覆盖）
  */
 export const createBaiduFolder = (accessToken: string, path: string, rtype: 0 | 1 | 2 | 3 = 1) => {

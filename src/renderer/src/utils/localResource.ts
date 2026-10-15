@@ -9,7 +9,7 @@
  */
 
 /** 已经能直接加载的协议，原样返回 */
-const PASSTHROUGH_SCHEME = /^(local-resource|uebox-asset|uebox-preview|https?|data|blob):/i
+const PASSTHROUGH_SCHEME = /^(local-resource|gdbox-asset|uebox-preview|https?|data|blob):/i
 
 /**
  * 把路径转换为正确编码的 file:// URL。
@@ -49,7 +49,7 @@ function encodeSegments(path: string): string {
 /**
  * 把本地绝对路径或 file:// URL 转成 `local-resource://` URL。
  *
- * - http(s) / data / blob / local-resource / uebox-asset：原样返回
+ * - http(s) / data / blob / local-resource / gdbox-asset：原样返回
  * - 空值：返回 undefined，交给调用方决定占位图
  * - UNC 路径（`\\server\share`）：local-resource 协议还原不了主机名，
  *   退回 file:// 形式（打包后的 file: 源里仍然可用）

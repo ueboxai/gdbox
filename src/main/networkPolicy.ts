@@ -36,7 +36,7 @@ const LOCAL_PROTOCOLS = new Set([
   'devtools:',
   'chrome-extension:',
   'local-resource:',
-  'uebox-asset:',
+  'gdbox-asset:',
   'uebox-preview:',
   'uebox:'
 ])

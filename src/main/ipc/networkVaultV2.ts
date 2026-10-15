@@ -2054,7 +2054,7 @@ export function registerNetworkVaultV2Handlers(): void {
         const client = vsm.getClient(localVaultId)
         client?.setStandaloneApiKey(apiKey)
 
-        // 运行期码表也要跟着换。缩略图上传/探测、uebox-asset 协议代理、
+        // 运行期码表也要跟着换。缩略图上传/探测、gdbox-asset 协议代理、
         // 导入下载全都从这张表取头 —— 不刷新的话，用户填了新码，同步恢复了，
         // 而缩略图和预览继续 401，直到下次切库或重启。
         const state = vsm.getAllStates().find((s) => s.vaultId === localVaultId)

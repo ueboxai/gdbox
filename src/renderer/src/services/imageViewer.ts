@@ -224,7 +224,7 @@ function normalizeSrc(src: string): string {
     s.startsWith('data:') ||
     s.startsWith('blob:') ||
     s.startsWith('local-resource:') ||
-    s.startsWith('uebox-asset:')
+    s.startsWith('gdbox-asset:')
   ) {
     return s
   }

@@ -7,7 +7,7 @@
  * 而 AI 生成的图片经常就是 data URL，一走 fetch 复制和下载就全废。
  * data URL 自己解码即可拿到字节，不需要网络栈——CSP 保持原样收窄。
  *
- * 其余协议（http/https/local-resource/uebox-asset）都在 `connect-src` 白名单里，继续走 fetch。
+ * 其余协议（http/https/local-resource/gdbox-asset）都在 `connect-src` 白名单里，继续走 fetch。
  */
 
 /** MIME → 下载文件扩展名 */
@@ -123,7 +123,7 @@ export async function convertImageBlobToPng(blob: Blob): Promise<Blob> {
 
 /**
  * 复制图片到剪贴板（统一转 PNG，兼容性最好）
- * @param src 图片地址（http/https/data/local-resource/uebox-asset）
+ * @param src 图片地址（http/https/data/local-resource/gdbox-asset）
  */
 export async function copyImageToClipboard(src: string): Promise<void> {
   const blob = await loadImageBlob(src)

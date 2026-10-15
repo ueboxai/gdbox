@@ -70,12 +70,12 @@ describe('sanitizeRenderedHtml', () => {
    * DOMPurify 碰上不认识的协议是静默摘掉 src，页面上留一个没有 src 的 <img>，
    * 看起来像图没生成 —— AI 出的概念图和视口截图全都走这两个协议。
    */
-  it('保留 local-resource / uebox-asset 的本地图片', () => {
+  it('保留 local-resource / gdbox-asset 的本地图片', () => {
     const out = sanitizeRenderedHtml(
-      '<img src="local-resource://C:/vault/a.png"><img src="uebox-asset://pkg/b.png">'
+      '<img src="local-resource://C:/vault/a.png"><img src="gdbox-asset://pkg/b.png">'
     )
     expect(out).toContain('src="local-resource://C:/vault/a.png"')
-    expect(out).toContain('src="uebox-asset://pkg/b.png"')
+    expect(out).toContain('src="gdbox-asset://pkg/b.png"')
   })
 
   /**

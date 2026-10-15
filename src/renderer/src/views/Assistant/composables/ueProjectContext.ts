@@ -359,12 +359,12 @@ function buildProjectContextText(projectInfo: UEProjectInfo): string {
 
   if (projectInfo.currentLevelName || projectInfo.currentLevelPath) {
     sections.push(
-      `- 当前编辑关卡: ${projectInfo.currentLevelName || '未知'}${projectInfo.currentLevelPath ? ` (${projectInfo.currentLevelPath})` : ''}`
+      `- 当前编辑场景: ${projectInfo.currentLevelName || '未知'}${projectInfo.currentLevelPath ? ` (${projectInfo.currentLevelPath})` : ''}`
     )
   }
 
   if (projectInfo.defaultMap) {
-    sections.push(`- 默认地图: ${projectInfo.defaultMap}`)
+    sections.push(`- 主场景: ${projectInfo.defaultMap}`)
   }
 
   if (projectInfo.editorStartupMap) {

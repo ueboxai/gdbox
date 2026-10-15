@@ -88,7 +88,7 @@ async function resolveProjectCoverUrl(
     source.startsWith('https://') ||
     source.startsWith('file:') ||
     source.startsWith('local-resource:') ||
-    source.startsWith('uebox-asset:') ||
+    source.startsWith('gdbox-asset:') ||
     source.startsWith('data:') ||
     source.startsWith('blob:')
   ) {

@@ -201,7 +201,7 @@ async function checkForUpdates(): Promise<void> {
         原来这里挂的是一块内部 Trello 看板。开源版不该把团队的内部计划板
         当成用户入口 —— 换成开源许可，那才是这个版本里用户真正需要知道的事。
       -->
-      <AppButton variant="soft" size="medium" @click="openLink('https://github.com/ueboxai')">
+      <AppButton variant="soft" size="medium" @click="openLink('https://github.com/ueboxai/gdbox')">
         GitHub
       </AppButton>
       <AppButton

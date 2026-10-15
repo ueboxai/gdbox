@@ -4195,8 +4195,12 @@ const handleFileOpen = async (file: any) => {
     'ps1',
     'cmd',
     'sql',
-    'uproject',
-    'uplugin',
+    'gd',
+    'gdshader',
+    'tscn',
+    'tres',
+    'godot',
+    'cfg',
     'lock',
     'gitignore'
   ]

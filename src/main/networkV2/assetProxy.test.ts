@@ -20,7 +20,7 @@ vi.mock('../sqliteDataBase/VaultManager', () => ({
 
 const SERVER = 'https://assets.example.test/team'
 const request = (serverUrl = SERVER, vaultId = 'remote-vault', file = '纹理/a b.png'): Request =>
-  new Request('uebox-asset://file?' + new URLSearchParams({ serverUrl, vaultId, path: file }), {
+  new Request('gdbox-asset://file?' + new URLSearchParams({ serverUrl, vaultId, path: file }), {
     headers: { Range: 'bytes=1-5' }
   })
 

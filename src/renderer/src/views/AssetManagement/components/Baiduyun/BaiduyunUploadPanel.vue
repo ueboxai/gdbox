@@ -73,7 +73,7 @@ const { t } = useI18n()
 const isAuthenticated = computed(() => baiduyunStore.isAuthenticated && !baiduyunStore.isExpired)
 
 // 应用名称（用于拼接 /apps/{appname} 目录）
-const localAppName = ref<string>('unreal-agent')
+const localAppName = ref<string>('gdbox')
 // 固定前缀的上传目录（不可编辑），由应用名称拼接得到
 const localUploadFolder = computed(() => `/apps/${(localAppName.value || '').replace(/^\/+/, '')}`)
 const localUploadPath = ref<string>('')
@@ -113,7 +113,7 @@ const chunkSize = 4 * 1024 * 1024
 function handleBeforeUploadInternal(file: any) {
   const f = file as File
   uploadFile.value = f
-  const baseDir = localUploadFolder.value || '/apps/unreal-agent'
+  const baseDir = localUploadFolder.value || '/apps/gdbox'
   localUploadPath.value = `${baseDir}/${f.name}`
   return false
 }
@@ -132,7 +132,7 @@ function handleUploadChangeInternal(info: any) {
   if (candidate) {
     const file = candidate as File
     uploadFile.value = file
-    const baseDir = localUploadFolder.value || '/apps/unreal-agent'
+    const baseDir = localUploadFolder.value || '/apps/gdbox'
     localUploadPath.value = `${baseDir}/${file.name}`
   } else {
     uploadFile.value = null

@@ -33,7 +33,7 @@ import DOMPurify from 'dompurify'
  * 看起来像「图没生成」，其实图在磁盘上躺得好好的。
  *
  * 只加这两个自定义协议，**不加 `file:`**：渲染进程的 CSP（index.html）
- * `img-src` 放行的正是 `local-resource:` 和 `uebox-asset:`，两处保持一致 ——
+ * `img-src` 放行的正是 `local-resource:` 和 `gdbox-asset:`，两处保持一致 ——
  * 在这里放行一个 CSP 会挡的协议，换来的只是另一种形式的空图。
  *
  * 安全上的取舍：这确实让不可信内容（抓回来的网页、模型写的笔记）能引用本机
@@ -42,7 +42,7 @@ import DOMPurify from 'dompurify'
  * 那条回传路径）；而不放行的代价是这个应用的核心功能之一直接不可用。
  */
 const LOCAL_RESOURCE_SCHEMES =
-  /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix|local-resource|uebox-asset):|[^a-z]|[a-z+.-]+(?:[^a-z+.:-]|$))/i
+  /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix|local-resource|gdbox-asset):|[^a-z]|[a-z+.-]+(?:[^a-z+.:-]|$))/i
 
 /**
  * 渲染器自己生成的结构要留住：

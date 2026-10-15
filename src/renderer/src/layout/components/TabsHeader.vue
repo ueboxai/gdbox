@@ -290,7 +290,7 @@ const handleDragEnd = (event: DragEvent): void => {
 }
 
 /** 拖动标签用的数据类型 */
-const TAB_DRAG_MIME = 'application/x-uebox-tab'
+const TAB_DRAG_MIME = 'application/x-gdbox-tab'
 
 /**
  * 往下拖出标签栏多远才算「拎出来」。

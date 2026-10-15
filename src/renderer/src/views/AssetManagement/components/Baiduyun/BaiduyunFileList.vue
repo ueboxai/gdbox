@@ -1268,12 +1268,12 @@ function handleDropDragLeave(e: DragEvent): void {
 
 /**
  * 根据资产命名规则和分类生成百度网盘目标路径
- * 按照规则系统文档的要求：/apps/unreal-agent/{分类目录}
+ * 按照规则系统文档的要求：/apps/gdbox/{分类目录}
  * @param assetType 资产类型
  * @param fileName 文件名
  */
 function getBaiduyunTargetPath(assetType: string | undefined, fileName: string): string {
-  const basePath = '/apps/unreal-agent'
+  const basePath = '/apps/gdbox'
 
   // 根据资产类型获取分类目录
   const assetTypeToDirectory: Record<string, string> = {

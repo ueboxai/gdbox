@@ -14,7 +14,7 @@ function buildRemoteAssetProxyUrl(
     vaultId,
     path: relativePath
   })
-  return `uebox-asset://file?${params.toString()}`
+  return `gdbox-asset://file?${params.toString()}`
 }
 
 /**
@@ -153,7 +153,7 @@ export function buildCompressedThumbnailUrl(
  * 构造 Vault 内文件的直接访问 URL（不经过 thumbnails 目录）
  * 用于图片/视频文件本身就是预览资源的场景
  * - 本地 Vault: local-resource://vaultPath/filePath
- * - Network Vault (HTTP): uebox-asset:// proxy URL
+ * - Network Vault (HTTP): gdbox-asset:// proxy URL
  * @param vaultPath   保管库路径（本地绝对路径或 http://host:port/vaultId 格式）
  * @param filePath    文件的相对路径（相对于 vault 根目录）
  * @param isNetworkVault 是否为网络库

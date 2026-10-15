@@ -37,9 +37,9 @@ describe('buildThumbnailUrl', () => {
     )
   })
 
-  it('远程 HTTP 库仍然走 uebox-asset 代理', () => {
+  it('远程 HTTP 库仍然走 gdbox-asset 代理', () => {
     expect(buildThumbnailUrl('http://127.0.0.1:8766/vault-1', 'cover.png', true)).toMatch(
-      /^uebox-asset:\/\/file\?/
+      /^gdbox-asset:\/\/file\?/
     )
   })
 
@@ -71,9 +71,9 @@ describe('buildDirectFileUrl', () => {
     )
   })
 
-  it('远程库走 uebox-asset 代理，绝对路径无法代理时返回 undefined', () => {
+  it('远程库走 gdbox-asset 代理，绝对路径无法代理时返回 undefined', () => {
     expect(buildDirectFileUrl('http://127.0.0.1:8766/vault-1', 'sub/pic.png', true)).toMatch(
-      /^uebox-asset:\/\/file\?/
+      /^gdbox-asset:\/\/file\?/
     )
     expect(buildDirectFileUrl('http://127.0.0.1:8766/vault-1', 'D:/pic.png', true)).toBeUndefined()
   })

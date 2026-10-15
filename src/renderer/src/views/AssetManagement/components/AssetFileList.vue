@@ -1134,7 +1134,7 @@ const isReferenceVault = computed(() => {
 const favoriteStore = useFavoriteStore()
 const tabsStore = useTabsStore()
 const selectionStore = useAssetSelectionStore()
-const { t, locale } = useI18n()
+const { t } = useI18n()
 
 // ---- 当前数据源能做什么（服务器库时，本地库的改动类操作不出现）
 const libraryStore = useAssetLibraryStore()
@@ -1620,7 +1620,7 @@ const handleGifLeave = (event: Event): void => {
 
 /**
  * 上传文件到百度网盘
- * 固定目录：/apps/unreal-agent/
+ * 固定目录：/apps/gdbox/
  * @param item 资产或文件夹对象
  */
 const handleUploadToBaiduyun = async (item: AssetDataRow | FolderItem): Promise<void> => {
@@ -1641,7 +1641,7 @@ const handleUploadToBaiduyun = async (item: AssetDataRow | FolderItem): Promise<
     ? (item as FolderItem).name
     : (item as AssetDataRow).assetName || localPath.split(/[/\\]/).pop() || 'unknown'
 
-  // 智能生成目标路径（UE资产按软路径，非UE按类型分类）
+  // 智能生成目标路径（按文件类型分类）
   const targetPath = generateSmartUploadPath(item, fileName)
 
   message.loading({
@@ -1716,7 +1716,7 @@ const sanitizeBaiduPath = (path: string): string => {
 }
 
 /**
- * 非UE资产文件扩展名到分类目录的映射
+ * 文件扩展名到分类目录的映射
  */
 const FILE_TYPE_CATEGORIES: Record<string, string> = {
   // 音频
@@ -1772,44 +1772,14 @@ const FILE_TYPE_CATEGORIES: Record<string, string> = {
 }
 
 /**
- * UE资产类型到目录的映射
- */
-const UE_ASSET_TYPE_DIRS: Record<string, string> = {
-  StaticMesh: 'Meshes/Static',
-  SkeletalMesh: 'Meshes/Skeletal',
-  Texture: 'Textures',
-  Texture2D: 'Textures',
-  Material: 'Materials',
-  MaterialInstance: 'Materials/Instances',
-  MaterialInstanceConstant: 'Materials/Instances',
-  Blueprint: 'Blueprints',
-  WidgetBlueprint: 'Blueprints/Widgets',
-  AnimSequence: 'Animations',
-  AnimMontage: 'Animations/Montages',
-  AnimBlueprint: 'Animations/Blueprints',
-  SoundWave: 'Audio',
-  SoundCue: 'Audio/Cues',
-  ParticleSystem: 'Effects',
-  NiagaraSystem: 'Effects/Niagara',
-  NiagaraEmitter: 'Effects/Niagara',
-  World: 'Maps',
-  Level: 'Maps',
-  DataTable: 'Data',
-  CurveTable: 'Data',
-  Enum: 'Data',
-  Struct: 'Data'
-}
-
-/**
  * 生成智能上传路径
- * - UE资产：使用 softPath（软路径）保持唯一性，如 /Game/Characters/Hero/SKM_Hero
- * - 非UE资产：按文件类型分类
+ * 按文件类型分类放进 /apps/gdbox 下
  * @param item 资产或文件夹对象
  * @param fileName 文件名
  * @returns 智能生成的云端路径
  */
 const generateSmartUploadPath = (item: AssetDataRow | FolderItem, fileName: string): string => {
-  const basePath = '/apps/unreal-agent'
+  const basePath = '/apps/gdbox'
 
   // 文件夹直接使用名称
   if ((item as FolderItem).type === 'folder') {
@@ -1817,26 +1787,11 @@ const generateSmartUploadPath = (item: AssetDataRow | FolderItem, fileName: stri
   }
 
   const asset = item as AssetDataRow
-  const softPath = (asset as any).softPath as string | undefined
   // 优先使用资产的 fileExtension 字段，否则从文件名解析
   const fileExt = (asset as any).fileExtension || (asset as any).ext || ''
   const ext =
     fileExt.toLowerCase().replace(/^\./, '') || fileName.split('.').pop()?.toLowerCase() || ''
 
-  // 检测是否为UE资产且有软路径
-  const isUEAsset = ext === 'uasset' || ext === 'umap'
-
-  if (isUEAsset && softPath) {
-    // UE资产：直接使用软路径作为云端目录结构
-    // softPath 格式如: /Game/Characters/Hero/SKM_Hero 或 /Game/Materials/M_Metal
-    // 转换为: /apps/unreal-agent/Game/Characters/Hero/SKM_Hero.uasset
-    const cleanSoftPath = softPath.replace(/^\//, '') // 移除开头斜杠
-    const result = sanitizeBaiduPath(`${basePath}/${cleanSoftPath}.${ext}`)
-    console.log('[generateSmartUploadPath] UE asset result:', result)
-    return result
-  }
-
-  // 非UE资产（或无软路径的UE资产）：按文件扩展名分类
   const category = FILE_TYPE_CATEGORIES[ext] || 'Others'
   return sanitizeBaiduPath(`${basePath}/${category}/${fileName}`)
 }
@@ -2016,7 +1971,7 @@ const handleUploadFolderToBaiduyun = async (
 
   try {
     let filesToUpload: Array<{ localPath: string; remotePath: string }> = []
-    const remoteRoot = `/apps/unreal-agent/${folder.name}`
+    const remoteRoot = `/apps/gdbox/${folder.name}`
 
     if (isBackup && vaultPath) {
       // 备份模式：从数据库获取文件夹下所有资产
@@ -2308,7 +2263,7 @@ const handleUploadFolderToWebdav = async (folder: FolderItem): Promise<void> => 
 
   try {
     let filesToUpload: Array<{ localPath: string; remotePath: string }> = []
-    const remoteRoot = `/unreal-agent/${folder.name}`
+    const remoteRoot = `/gdbox/${folder.name}`
 
     if (isBackup && vaultPath) {
       // 备份模式：从数据库获取文件夹下所有资产
@@ -2420,7 +2375,7 @@ const handleUploadFolderToWebdav = async (folder: FolderItem): Promise<void> => 
 
 /**
  * 上传文件到 WebDAV
- * 固定目录：/unreal-agent/
+ * 固定目录：/gdbox/
  * @param item 资产或文件夹对象
  */
 const handleUploadToWebdav = async (item: AssetDataRow | FolderItem): Promise<void> => {
@@ -2441,12 +2396,9 @@ const handleUploadToWebdav = async (item: AssetDataRow | FolderItem): Promise<vo
     ? (item as FolderItem).name
     : (item as AssetDataRow).assetName || localPath.split(/[/\\]/).pop() || 'unknown'
 
-  // 智能生成目标路径（UE资产按软路径，非UE按类型分类）
-  // WebDAV使用 /unreal-agent 前缀，替换百度的 /apps/unreal-agent
-  const remotePath = generateSmartUploadPath(item, fileName).replace(
-    '/apps/unreal-agent',
-    '/unreal-agent'
-  )
+  // 智能生成目标路径（按文件类型分类）
+  // WebDAV使用 /gdbox 前缀，替换百度的 /apps/gdbox
+  const remotePath = generateSmartUploadPath(item, fileName).replace('/apps/gdbox', '/gdbox')
 
   message.loading({
     content: t('assetLib.contextMenu.uploading', '上传中...'),
@@ -2475,7 +2427,7 @@ const handleUploadToWebdav = async (item: AssetDataRow | FolderItem): Promise<vo
         serverUrl: connection.serverUrl,
         username: connection.username,
         password: connection.password,
-        path: '/unreal-agent'
+        path: '/gdbox'
       })
     } catch {
       // 目录可能已存在，忽略错误
@@ -2662,11 +2614,8 @@ const getThumbnailSourceUrl = (file: Record<string, string | undefined>): string
   ]
   const isCodeFile = codeFileExts.some((ext) => fileNameLower.endsWith(ext))
 
-  // uasset 文件自带缩略图，即使不是图片文件也应该显示
-  const isUassetFile = fileNameLower.endsWith('.uasset')
-
-  // 如果是代码文件且不是 uasset，不显示缩略图
-  if (isCodeFile && !isUassetFile) return undefined
+  // 代码文件不显示缩略图
+  if (isCodeFile) return undefined
 
   // 优先使用 customPoster（列表显示 _thumb 压缩版）
   if (file.customPoster) {
@@ -2774,15 +2723,6 @@ const isThumbnailGif = (file: any): boolean => {
  */
 const getFileExtLabel = (file: any): string => {
   if (!file || file?.type === 'folder') return ''
-
-  // 针对 Unreal 资产 (.uasset, .umap) 显示其类名（支持中英文转换）
-  const extLower = getFileExtLower(file)
-  if (extLower === 'uasset' || extLower === 'umap') {
-    const isCn = locale.value.startsWith('zh')
-    if (isCn && file.classNameCn) return file.classNameCn
-    if (file.className) return file.className
-    // 如果没有类名，则回退到后缀名显示
-  }
 
   const normalize = (extRaw: string): string => {
     const ext = String(extRaw || '')
@@ -4053,7 +3993,7 @@ const getFileExtLower = (file: any): string => {
 
 // 获取图标颜色（用于实心图标）
 const getIconColor = (file: any): string => {
-  // 如果是UE资产（有className），使用资产类型对应的颜色
+  // 有 className 的资产，使用资产类型对应的颜色
   if (file.className) {
     return getAssetTypeColorForFile(file)
   }
@@ -4061,11 +4001,6 @@ const getIconColor = (file: any): string => {
   // 没有 className 的通用文件：根据扩展名按“大类型”配色
   const ext = getFileExtLower(file)
   if (!ext) return 'var(--color-filetype-unknown)'
-
-  // UE 资产文件（有时 className 缺失）：仍按 UE 颜色逻辑走
-  if (ext === 'uasset' || ext === 'umap') {
-    return getAssetTypeColor(undefined, String(file.assetName || file.name || '') || `.${ext}`)
-  }
 
   const inSet = (v: string, set: string[]): boolean => set.includes(v)
 

@@ -493,7 +493,7 @@ protocol.registerSchemesAsPrivileged([
     }
   },
   {
-    scheme: 'uebox-asset',
+    scheme: 'gdbox-asset',
     privileges: {
       standard: true,
       secure: true,
@@ -617,11 +617,11 @@ appReady?.then(async () => {
     }
   })
 
-  protocol.handle('uebox-asset', async (request) => {
+  protocol.handle('gdbox-asset', async (request) => {
     try {
       return await serveRemoteAsset(request)
     } catch (error) {
-      logger.warn('[uebox-asset] proxy failed:', error)
+      logger.warn('[gdbox-asset] proxy failed:', error)
       return new Response('Asset proxy failed', { status: 502 })
     }
   })

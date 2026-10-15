@@ -178,7 +178,7 @@ export class VaultServiceManager {
     }
 
     // 让主进程里所有绕过 SyncClient 的直连调用点（缩略图、导入下载、
-    // uebox-asset 代理）也能拿到同一把码
+    // gdbox-asset 代理）也能拿到同一把码
     rememberVaultAccessKey(serverUrl, discovery.vaultId, accessKey)
 
     // 防止重复创建：先停掉已有的 SyncClient（避免双 WS → 服务端踢旧连接 → 重连循环）
@@ -256,7 +256,7 @@ export class VaultServiceManager {
     const apiOnly = options?.apiOnly ?? false
 
     // 让主进程里绕过 SyncClient 的直连调用点（缩略图、导入下载、
-    // uebox-asset 代理）也能拿到同一把码
+    // gdbox-asset 代理）也能拿到同一把码
     rememberVaultAccessKey(normalizedUrl, remoteVaultId, options?.apiKey)
 
     const clientId = this.getClientId()

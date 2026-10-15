@@ -477,7 +477,7 @@ function openChat(id: string): void {
 const router = useRouter()
 const listRef = ref<HTMLElement | null>(null)
 /** 拖动用的数据类型。不用 text/plain：拖到输入框上松手会把 id 当文字插进去 */
-const SESSION_DRAG_MIME = 'application/x-uebox-chat-session'
+const SESSION_DRAG_MIME = 'application/x-gdbox-chat-session'
 let draggingChatSid = ''
 
 function handleSessionDragStart(chatSid: string, event: DragEvent): void {
