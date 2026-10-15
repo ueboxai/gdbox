@@ -495,9 +495,7 @@ name and follow that procedure rather than improvising.
 When the user writes \`$<skill-name>\`, that is an explicit selection: call \`load_skill\` with
 that exact skill name before answering or acting.
 When a skill body points at a file under \`references/\`, \`scripts/\` or \`assets/\`, call
-\`read_skill_resource\` with the skill name and that relative path. A Python script under
-\`scripts/\` that the skill tells you to run goes to \`ue_run_python_script\` by \`skill\` +
-\`skill_script\` (+ \`args\`) — do not copy its text into \`script\`.
+\`read_skill_resource\` with the skill name and that relative path.
 
 <available_skills>
 ${list}
