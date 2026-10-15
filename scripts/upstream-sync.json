@@ -77,6 +77,11 @@
       "status": "todo",
       "note": "P1 全部权限下 ask_user 到点按推荐项继续；设置里对话/Agent 合成一个主模型。干净"
     },
+    "8b3052f9": {
+      "status": "ported",
+      "local": "73df89b7",
+      "note": "P0 套餐模型列表改由清单 models 决定、Box-Chat Beta 进模型菜单。冲突 2：createAgent.ts 系统提示词取上游不报套餐模型名、保留 GDBox 品牌；InputComposer.vue 保留 GDBox 缩进、补上标签和说明"
+    },
     "91ed7990": {
       "status": "ported",
       "note": "GDBox 分叉时已在 registry.ts 按 Godot 文件锁自己实现了同样的逻辑"
