@@ -23,17 +23,17 @@ import { REVIEW_FIX_ACTION, SELF_CHECK_ACTION } from '../composables/selfCheck'
  * （查完了但还没让它解释）对谁都没有用。这些测试盯着那一条链没断。
  */
 
-/** 一条「新建了材质 M_Wood」的改动记录，够生成一行改动清单 */
-const materialChange: ResponseMetadataChange = {
-  toolName: 'material_create',
+/** 一条「生成了瓦片集 wood.tres」的改动记录，够生成一行改动清单 */
+const tilesetChange: ResponseMetadataChange = {
+  toolName: 'gen_tileset',
   risk: 'mutating',
-  target: '/Game/A/M_Wood',
+  target: 'res://assets/gen/sprites/wood.tres',
   reversible: true,
   failed: false
 }
 
 function mountBubble(
-  changes: ResponseMetadataChange[] = [materialChange],
+  changes: ResponseMetadataChange[] = [tilesetChange],
   status: 'typing' | 'done' = 'done'
 ): ReturnType<typeof mount> {
   return mount(AIBubble, {
@@ -73,8 +73,13 @@ describe('AIBubble 审查改动', () => {
       success: true,
       checked: 1,
       findings: [
-        { target: '/Game/A/M_Wood', code: 'unsaved', severity: 'warning' },
-        { target: '/Game/A/M_Wood', code: 'naming', severity: 'info', detail: 'M_ / MI_' }
+        { target: 'res://assets/gen/sprites/wood.tres', code: 'unsaved', severity: 'warning' },
+        {
+          target: 'res://assets/gen/sprites/wood.tres',
+          code: 'naming',
+          severity: 'info',
+          detail: 'M_ / MI_'
+        }
       ],
       engineChecked: true
     })
@@ -85,7 +90,7 @@ describe('AIBubble 审查改动', () => {
 
     // 机器那一半：结论 + 逐条问题
     expect(reviewChanges).toHaveBeenCalledWith([
-      { path: '/Game/A/M_Wood', action: 'created', kind: 'material' }
+      { path: 'res://assets/gen/sprites/wood.tres', action: 'created', kind: 'resource' }
     ])
     expect(wrapper.find('.response-review-summary').text()).toContain('2')
     expect(wrapper.findAll('.response-review-item')).toHaveLength(2)
@@ -177,7 +182,9 @@ describe('AIBubble 审查改动', () => {
     reviewChanges.mockResolvedValue({
       success: true,
       checked: 1,
-      findings: [{ target: '/Game/A/M_Wood', code: 'unsaved', severity: 'warning' }],
+      findings: [
+        { target: 'res://assets/gen/sprites/wood.tres', code: 'unsaved', severity: 'warning' }
+      ],
       engineChecked: true
     })
 
@@ -220,7 +227,7 @@ describe('AIBubble 一轮结束时自动体检', () => {
 
   it('看着它从 typing 变成 done，就静默体检一次，不发自证', async () => {
     reviewChanges.mockResolvedValue(clean)
-    const wrapper = mountBubble([materialChange], 'typing')
+    const wrapper = mountBubble([tilesetChange], 'typing')
 
     await finishTurn(wrapper)
 
@@ -230,14 +237,14 @@ describe('AIBubble 一轮结束时自动体检', () => {
   })
 
   it('翻历史对话时不跑 —— 气泡一挂上来就是 done', async () => {
-    mountBubble([materialChange], 'done')
+    mountBubble([tilesetChange], 'done')
     await vi.advanceTimersByTimeAsync(1000)
 
     expect(reviewChanges).not.toHaveBeenCalled()
   })
 
   it('一闪而过的 done 不算结束', async () => {
-    const wrapper = mountBubble([materialChange], 'typing')
+    const wrapper = mountBubble([tilesetChange], 'typing')
 
     await wrapper.setProps({ status: 'done' })
     await vi.advanceTimersByTimeAsync(100)
@@ -249,8 +256,8 @@ describe('AIBubble 一轮结束时自动体检', () => {
 
   it('改的资产太多就不自动跑，留给用户点', async () => {
     const many = Array.from({ length: 21 }, (_, i) => ({
-      ...materialChange,
-      target: `/Game/A/M_${i}`
+      ...tilesetChange,
+      target: `res://assets/gen/sprites/wood_${i}.tres`
     }))
     const wrapper = mountBubble(many, 'typing')
 
@@ -261,7 +268,7 @@ describe('AIBubble 一轮结束时自动体检', () => {
 
   it('引擎没连时不出声 —— 用户没要过这次检查', async () => {
     reviewChanges.mockResolvedValue({ ...clean, engineChecked: false })
-    const wrapper = mountBubble([materialChange], 'typing')
+    const wrapper = mountBubble([tilesetChange], 'typing')
 
     await finishTurn(wrapper)
 
@@ -273,14 +280,14 @@ describe('AIBubble 一轮结束时自动体检', () => {
       ...clean,
       findings: [
         {
-          target: '/Game/A/M_Wood',
+          target: 'res://assets/gen/sprites/wood.tres',
           code: 'compile-error',
           severity: 'error',
           detail: 'Accessed None'
         }
       ]
     })
-    const wrapper = mountBubble([materialChange], 'typing')
+    const wrapper = mountBubble([tilesetChange], 'typing')
 
     await finishTurn(wrapper)
 
@@ -299,9 +306,11 @@ describe('AIBubble 一轮结束时自动体检', () => {
   it('只有未保存这类小问题时不给修的入口', async () => {
     reviewChanges.mockResolvedValue({
       ...clean,
-      findings: [{ target: '/Game/A/M_Wood', code: 'unsaved', severity: 'warning' }]
+      findings: [
+        { target: 'res://assets/gen/sprites/wood.tres', code: 'unsaved', severity: 'warning' }
+      ]
     })
-    const wrapper = mountBubble([materialChange], 'typing')
+    const wrapper = mountBubble([tilesetChange], 'typing')
 
     await finishTurn(wrapper)
 

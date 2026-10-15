@@ -1,45 +1,52 @@
 import { describe, expect, it } from 'vitest'
-import { changeLabelKey, isLocalFileChange, isMcpChange } from './changeSummary'
-
-describe('isLocalFileChange', () => {
-  it('盘符路径与 UNC 路径算本地文件', () => {
-    expect(isLocalFileChange({ target: 'I:/UE Project/a/说明.html' })).toBe(true)
-    expect(isLocalFileChange({ target: 'C:\\Users\\me\\a.cpp' })).toBe(true)
-    expect(isLocalFileChange({ target: '\\\\nas\\share\\a.txt' })).toBe(true)
-  })
-
-  it('引擎内路径与空目标不算', () => {
-    expect(isLocalFileChange({ target: '/Game/Blueprints/BP_Door' })).toBe(false)
-    expect(isLocalFileChange({ target: 'BP_Door' })).toBe(false)
-    expect(isLocalFileChange({ target: '' })).toBe(false)
-  })
-})
 
 import type { AgentProcessItem } from '../components/AgentProcessLog.types'
 import type { ChangeEntry } from './changeSummary'
 import {
   changeKindOf,
+  changeLabelKey,
   extractChangeDetail,
   extractChangeOutcomes,
   extractChangeTarget,
-  formatChangeProperties,
   groupChanges,
+  isEditorAction,
+  isLocalFileChange,
+  isMcpChange,
+  isResPath,
   isReversibleTool,
   summarizeChanges
 } from './changeSummary'
 
 const RISKS = {
-  ue_spawn_actor: 'mutating',
-  blueprint_apply_graph: 'mutating',
-  delete_actor: 'destructive',
+  write_local_file: 'mutating',
+  edit_local_file: 'mutating',
+  read_local_file: 'safe',
+  import_to_project: 'mutating',
+  gen_sprite: 'mutating',
+  gen_sfx: 'mutating',
+  gen_music: 'mutating',
+  gen_voice: 'mutating',
+  art_style: 'mutating',
+  editor_play: 'mutating',
+  editor_stop: 'mutating',
+  editor_open_scene: 'mutating',
+  editor_select: 'mutating',
+  editor_save_all: 'mutating',
+  godot_check: 'safe',
+  godot_run: 'safe',
   run_shell_command: 'destructive',
-  read_local_file: 'safe'
+  delete_note: 'destructive',
+  browser_interact: 'mutating'
 } as const
 
-function call(name: string, args: Record<string, unknown>): AgentProcessItem {
+function call(name: string, args: Record<string, unknown>, risk?: string): AgentProcessItem {
   return {
     type: 'tool-call',
-    data: { id: `c-${name}`, function: { name, arguments: JSON.stringify(args) } },
+    data: {
+      id: `c-${name}`,
+      function: { name, arguments: JSON.stringify(args) },
+      ...(risk ? { risk } : {})
+    },
     timestamp: 1
   }
 }
@@ -48,959 +55,572 @@ function result(toolName: string, isError = false): AgentProcessItem {
   return { type: 'tool-result', data: { toolName, isError, result: {} }, timestamp: 2 }
 }
 
-/** 带返回值的结果项 —— 「真改了谁、真写进去了什么」只有它知道 */
+/** 带返回值（工具的 details）的结果项 —— 「真写出了哪些文件」只有它知道 */
 function resultWith(toolName: string, payload: unknown, isError = false): AgentProcessItem {
   return { type: 'tool-result', data: { toolName, isError, result: payload }, timestamp: 2 }
 }
 
-describe('changeSummary', () => {
-  it('keeps only the calls that actually change something', () => {
-    const items = [
-      call('read_local_file', { path: 'D:/notes.md' }),
-      result('read_local_file'),
-      call('blueprint_apply_graph', { blueprintPath: '/Game/BP_Weapon' }),
-      result('blueprint_apply_graph')
-    ]
+function entry(over: Partial<ChangeEntry>): ChangeEntry {
+  return {
+    toolName: 'edit_local_file',
+    risk: 'mutating',
+    target: 'D:/game/player.gd',
+    reversible: true,
+    failed: false,
+    ...over
+  }
+}
 
-    const changes = summarizeChanges(items, RISKS)
-
-    expect(changes).toHaveLength(1)
-    expect(changes[0]).toEqual({
-      toolName: 'blueprint_apply_graph',
-      risk: 'mutating',
-      target: '/Game/BP_Weapon',
-      reversible: true,
-      failed: false
-    })
+describe('路径判断', () => {
+  it('盘符、UNC、POSIX 绝对路径算本地文件', () => {
+    expect(isLocalFileChange({ target: 'D:/game/player.gd' })).toBe(true)
+    expect(isLocalFileChange({ target: 'C:\\Users\\me\\game\\main.tscn' })).toBe(true)
+    expect(isLocalFileChange({ target: '\\\\nas\\share\\a.gd' })).toBe(true)
+    expect(isLocalFileChange({ target: '/Users/me/game/player.gd' })).toBe(true)
   })
 
-  it('marks a failed call so it is not read as an applied change', () => {
-    const items = [call('delete_actor', { actorName: 'Cube' }), result('delete_actor', true)]
+  it('res:// 路径、资产名、空目标不算本地文件', () => {
+    expect(isLocalFileChange({ target: 'res://player.gd' })).toBe(false)
+    expect(isLocalFileChange({ target: 'hero' })).toBe(false)
+    expect(isLocalFileChange({ target: '' })).toBe(false)
+  })
+
+  it('只有 res:// 路径能在编辑器里打开', () => {
+    expect(isResPath('res://scenes/main.tscn')).toBe(true)
+    expect(isResPath('res://')).toBe(false)
+    expect(isResPath('D:/game/main.tscn')).toBe(false)
+    expect(isResPath('hero')).toBe(false)
+  })
+})
+
+describe('MCP 与文案 key', () => {
+  it('认得出 MCP 来的改动', () => {
+    expect(isMcpChange({ toolName: 'mcp_my-server_do_thing' })).toBe(true)
+    expect(isMcpChange({ toolName: 'write_local_file' })).toBe(false)
+  })
+
+  it('拼出 i18n key', () => {
+    expect(changeLabelKey('gen_sprite')).toBe('assistant.changes.tools.gen_sprite')
+  })
+})
+
+describe('summarizeChanges', () => {
+  it('只留真的动了东西的调用：只读工具和验证工具不算', () => {
+    const items = [
+      call('read_local_file', { path: 'D:/game/player.gd' }),
+      result('read_local_file'),
+      call('godot_check', {}),
+      result('godot_check'),
+      call('edit_local_file', { path: 'D:/game/player.gd' }),
+      result('edit_local_file')
+    ]
+
+    expect(summarizeChanges(items, RISKS)).toEqual([
+      {
+        toolName: 'edit_local_file',
+        risk: 'mutating',
+        target: 'D:/game/player.gd',
+        reversible: true,
+        failed: false
+      }
+    ])
+  })
+
+  it('失败的调用标出来，别读成已经改了', () => {
+    const items = [call('delete_note', { name: '设计' }), result('delete_note', true)]
 
     expect(summarizeChanges(items, RISKS)[0]).toMatchObject({ failed: true, risk: 'destructive' })
   })
 
-  it('pairs repeated calls of the same tool with their results in order', () => {
+  it('同名工具的多次调用按顺序配对结果', () => {
     const items = [
-      call('ue_spawn_actor', { name: 'A' }),
-      call('ue_spawn_actor', { name: 'B' }),
-      result('ue_spawn_actor', false),
-      result('ue_spawn_actor', true)
+      call('edit_local_file', { path: 'D:/game/a.gd' }),
+      call('edit_local_file', { path: 'D:/game/b.gd' }),
+      result('edit_local_file', false),
+      result('edit_local_file', true)
     ]
 
-    const changes = summarizeChanges(items, RISKS)
-
-    expect(changes.map((change) => [change.target, change.failed])).toEqual([
-      ['A', false],
-      ['B', true]
-    ])
+    expect(summarizeChanges(items, RISKS).map((change) => change.failed)).toEqual([false, true])
   })
 
-  /**
-   * 本地命令行照常进台账 —— 它落盘给「用量」页统计。只是不上「本轮改动」
-   * 面板，那一步在 `groupChanges()` 里做（见下面「聚合时才滤掉」那条）。
-   */
+  it('风险表里没有的工具不算', () => {
+    expect(summarizeChanges([call('unknown_tool', { path: 'x' })], RISKS)).toEqual([])
+  })
+
   it('本地命令行照常记进台账，带着命令原文和不可回滚', () => {
     const items = [
-      call('run_shell_command', { command: 'where ffmpeg' }),
-      result('run_shell_command'),
-      call('blueprint_apply_graph', { blueprintPath: '/Game/BP_Weapon' }),
-      result('blueprint_apply_graph')
+      call('run_shell_command', { command: 'git status' }),
+      result('run_shell_command')
+    ]
+
+    expect(summarizeChanges(items, RISKS)[0]).toMatchObject({
+      toolName: 'run_shell_command',
+      detail: 'git status',
+      reversible: false
+    })
+  })
+
+  it('主进程按参数算出 safe 的调用不进台账，也不打乱后面的结果配对', () => {
+    const items = [
+      call('art_style', { action: 'show' }, 'safe'),
+      call('art_style', { action: 'load_preset', preset: 'pixel_16' }),
+      result('art_style', false),
+      result('art_style', true)
     ]
 
     const changes = summarizeChanges(items, RISKS)
-
-    expect(changes.map((change) => change.toolName)).toEqual([
-      'run_shell_command',
-      'blueprint_apply_graph'
-    ])
-    expect(changes[0]).toMatchObject({ detail: 'where ffmpeg', reversible: false })
-    expect(isReversibleTool('blueprint_apply_graph')).toBe(true)
+    expect(changes).toHaveLength(1)
+    expect(changes[0]).toMatchObject({ detail: 'pixel_16', failed: true })
   })
 
-  it('ignores tools the risk table does not know', () => {
-    expect(summarizeChanges([call('mystery_tool', {})], RISKS)).toEqual([])
-  })
-
-  it('picks the first target-looking argument, or nothing', () => {
-    expect(extractChangeTarget({ blueprintPath: '/Game/BP' })).toBe('/Game/BP')
-    expect(extractChangeTarget({ note: 'hi', path: ' D:/a.txt ' })).toBe('D:/a.txt')
-    expect(extractChangeTarget({ count: 3 })).toBe('')
-    expect(extractChangeTarget(undefined)).toBe('')
-  })
-
-  it('名字和目标文件夹分开传时拼成资产路径', () => {
-    // material_create 收 material_name + destination_path，其余材质工具收
-    // 拼好的 material_path。不拼，同一个材质会在清单上占两行
-    expect(
-      extractChangeTarget({ material_name: 'M_GlowBreath', destination_path: '/Game/GlowDemo' })
-    ).toBe('/Game/GlowDemo/M_GlowBreath')
-    expect(
-      extractChangeTarget({ instance_name: 'MI_Wood', destination_path: '/Game/Materials/' })
-    ).toBe('/Game/Materials/MI_Wood')
-  })
-
-  it('只给名字时原样返回 —— 拼不出来就别编一个目录', () => {
-    expect(extractChangeTarget({ material_name: 'M_GlowBreath' })).toBe('M_GlowBreath')
-  })
-
-  it('新建关卡的路径在 save_as 里', () => {
-    expect(extractChangeTarget({ save_as: '/Game/Maps/NewLevel' })).toBe('/Game/Maps/NewLevel')
-  })
-
-  it('spawn 的目标在 instances 里，不拆开清单上只剩「创建 Actor」四个字', () => {
-    expect(extractChangeTarget({ instances: [{ asset_id: 'Cube', name: 'GlowSphere' }] })).toBe(
-      'GlowSphere'
-    )
-    expect(extractChangeTarget({ instances: [{ asset_id: '/Game/Meshes/SM_Rock' }] })).toBe(
-      '/Game/Meshes/SM_Rock'
-    )
-  })
-})
-
-/**
- * MCP 的 `call_tool` 是个派发器 —— 它自己永远叫这个名字，真正干了什么在参数里。
- * 不拆开的话，一轮里改了 Niagara、改了 PCG、改了动画，清单上会是三行
- * 一模一样的「call_tool」，等于没写。
- */
-describe('MCP 改动', () => {
-  it('认得出 MCP 来的改动', () => {
-    expect(isMcpChange({ toolName: 'mcp_ue-official_call_tool' })).toBe(true)
-    expect(isMcpChange({ toolName: 'ue_spawn_actor' })).toBe(false)
-  })
-
-  it('target 取的是派发过去的那个工具，不是 call_tool', () => {
-    expect(
-      extractChangeTarget({
-        toolset_name: 'NiagaraToolsets.NiagaraToolset_System',
-        tool_name: 'create_system'
+  it('写出一个原来不存在的文件时标 created —— 返回值的 fileChange 说的', () => {
+    const items = [
+      call('write_local_file', { path: 'D:/game/enemy.gd' }),
+      resultWith('write_local_file', {
+        fileChange: { path: 'D:/game/enemy.gd', before: '', after: 'extends Node', created: true }
       })
-    ).toBe('NiagaraToolset_System.create_system')
-  })
+    ]
 
-  it('工具集名只取后半段 —— 前半段是插件名，用户不看那个', () => {
-    const target = extractChangeTarget({
-      toolset_name: 'EditorToolset.EditorAppToolset',
-      tool_name: 'select_actors'
-    })
-    expect(target).toBe('EditorAppToolset.select_actors')
-    expect(target).not.toContain('EditorToolset.')
-  })
-
-  it('没有工具集名时只显示工具名', () => {
-    expect(extractChangeTarget({ tool_name: 'list_toolsets' })).toBe('list_toolsets')
-  })
-
-  it('派发信息优先于通用的 name/path —— call_tool 的 name 往往是别的东西', () => {
-    expect(extractChangeTarget({ name: 'call_tool', tool_name: 'create_system' })).toBe(
-      'create_system'
-    )
-  })
-
-  it('不是 MCP 调用时不受影响', () => {
-    expect(extractChangeTarget({ blueprintPath: '/Game/BP' })).toBe('/Game/BP')
-  })
-})
-
-describe('changeLabelKey', () => {
-  it('拼出 i18n key', () => {
-    expect(changeLabelKey('ue_spawn_actor')).toBe('assistant.changes.tools.ue_spawn_actor')
-  })
-})
-
-/**
- * 聚合。清单要回答的是「我的工程里变了几样东西」，而原来一次调用一行答的是
- * 「agent 干了多少步」—— 做一个材质三十多步，这两个数没有关系。
- */
-describe('groupChanges', () => {
-  function entry(over: Partial<ChangeEntry> & { toolName: string }): ChangeEntry {
-    return { risk: 'mutating', target: '', reversible: true, failed: false, ...over }
-  }
-
-  /**
-   * 真机截图那一轮：新建关卡 → 建材质 → 搭图 → 编译 → 整理 → 放 Actor →
-   * 保存 → 保存关卡 → 试玩。用户眼里只发生了三件事（多了一个关卡、一个材质、
-   * 一个 Actor），清单就该是三行。
-   */
-  const REAL_TURN: ChangeEntry[] = [
-    entry({ toolName: 'ue_new_level', target: '/Game/GlowDemo/NewLevel' }),
-    entry({ toolName: 'material_create', target: 'M_GlowBreath' }),
-    ...Array.from({ length: 11 }, () =>
-      entry({ toolName: 'material_add_node', target: '/Game/GlowDemo/M_GlowBreath' })
-    ),
-    entry({ toolName: 'material_compile', target: '/Game/GlowDemo/M_GlowBreath' }),
-    entry({ toolName: 'material_tidy_graph', target: '/Game/GlowDemo/M_GlowBreath' }),
-    entry({ toolName: 'ue_spawn_actor', target: 'GlowSphere' }),
-    entry({ toolName: 'ue_save', target: '' }),
-    entry({ toolName: 'ue_save', target: '' }),
-    entry({ toolName: 'ue_save_level', target: '' }),
-    entry({ toolName: 'ue_playtest', target: '' })
-  ]
-
-  it('截图那一轮：19 次调用 → 3 行，因为用户眼里只多了三样东西', () => {
-    const groups = groupChanges(REAL_TURN)
-
-    expect(groups.map((group) => [group.kind, group.target, group.action])).toEqual([
-      ['level', '/Game/GlowDemo/NewLevel', 'created'],
-      ['material', '/Game/GlowDemo/M_GlowBreath', 'created'],
-      ['actor', 'GlowSphere', 'created']
-    ])
-  })
-
-  it('同一个材质不会占两行 —— 建的时候只给名字，之后给完整路径', () => {
-    const groups = groupChanges(REAL_TURN).filter((group) => group.kind === 'material')
-
-    expect(groups).toHaveLength(1)
-    // 并到带路径的那一份上，行上才有目录可显示、才能在编辑器里打开
-    expect(groups[0].target).toBe('/Game/GlowDemo/M_GlowBreath')
-    expect(groups[0].steps.map((step) => step.toolName)).toContain('material_create')
-  })
-
-  it('保存 / 试玩不单独占行 —— 用户在自己工程里指不出「保存」这个东西', () => {
-    const keys = groupChanges(REAL_TURN).map((group) => group.key)
-
-    expect(keys).not.toContain('ue_save')
-    expect(keys).not.toContain('ue_save_level')
-    expect(keys).not.toContain('ue_playtest')
-  })
-
-  it('编译和整理连线并进那个资产的展开区，不丢也不占行', () => {
-    const material = groupChanges(REAL_TURN).find((group) => group.kind === 'material')!
-
-    expect(material.steps.map((step) => step.toolName)).toEqual([
-      'material_create',
-      'material_add_node',
-      'material_compile',
-      'material_tidy_graph'
-    ])
-  })
-
-  it('不可逆的操作一律占一行，哪怕它长得像内务', () => {
-    // ue_open_level / ue_restart_editor 会丢掉用户没保存的改动。
-    // 漏报一次不可逆操作，比多显示一行糟得多
-    const groups = groupChanges([
-      entry({ toolName: 'ue_open_level', risk: 'destructive', target: '/Game/Maps/Other' }),
-      entry({ toolName: 'ue_fixup_redirectors', risk: 'destructive' })
-    ])
-
-    expect(groups.map((group) => group.key)).toEqual(['/Game/Maps/Other', 'ue_fixup_redirectors'])
-  })
-
-  it('整轮只有内务时清单为空 —— 用户说「保存一下」不需要一张台账', () => {
-    expect(groupChanges([entry({ toolName: 'ue_save' }), entry({ toolName: 'ue_save' })])).toEqual(
-      []
-    )
-  })
-
-  it('内务跑在编辑之前也不会凭空多出一行', () => {
-    const groups = groupChanges([
-      entry({ toolName: 'material_compile', target: '/Game/M_A' }),
-      entry({ toolName: 'material_add_node', target: '/Game/M_A' })
-    ])
-
-    expect(groups).toHaveLength(1)
-    expect(groups[0].steps.map((step) => step.toolName)).toEqual([
-      'material_compile',
-      'material_add_node'
-    ])
-  })
-
-  it('同名不同目录的两个资产不合并 —— 分不清裸名字指哪个就别猜', () => {
-    const groups = groupChanges([
-      entry({ toolName: 'material_add_node', target: '/Game/A/M_X' }),
-      entry({ toolName: 'material_add_node', target: '/Game/B/M_X' }),
-      entry({ toolName: 'material_create', target: 'M_X' })
-    ])
-
-    expect(groups.map((group) => group.target)).toEqual(['/Game/A/M_X', '/Game/B/M_X', 'M_X'])
-  })
-
-  /** 截图里那一轮：建材质 → 加十个节点 → 连九条线 → 编译 → 整理连线 */
-  const MATERIAL_TURN: ChangeEntry[] = [
-    entry({ toolName: 'material_create', target: '/Game/GlowDemo/M_GlowBreath' }),
-    ...Array.from({ length: 10 }, () =>
-      entry({ toolName: 'material_add_node', target: '/Game/GlowDemo/M_GlowBreath' })
-    ),
-    ...Array.from({ length: 9 }, () =>
-      entry({ toolName: 'material_connect_pins', target: '/Game/GlowDemo/M_GlowBreath' })
-    ),
-    entry({ toolName: 'material_compile', target: '/Game/GlowDemo/M_GlowBreath' }),
-    entry({ toolName: 'material_tidy_graph', target: '/Game/GlowDemo/M_GlowBreath' })
-  ]
-
-  it('三十多次调用聚合成一行，因为用户只多了一个材质', () => {
-    const groups = groupChanges(MATERIAL_TURN)
-
-    expect(groups).toHaveLength(1)
-    expect(groups[0]).toMatchObject({
-      target: '/Game/GlowDemo/M_GlowBreath',
-      kind: 'material',
-      action: 'created',
-      stepCount: 22,
-      failedCount: 0,
-      local: false
+    expect(summarizeChanges(items, RISKS)[0]).toMatchObject({
+      target: 'D:/game/enemy.gd',
+      created: true
     })
   })
 
-  it('施工步骤没有丢，只是同名的合并计数', () => {
-    const steps = groupChanges(MATERIAL_TURN)[0].steps
+  it('覆盖已有文件不标 created', () => {
+    const items = [
+      call('write_local_file', { path: 'D:/game/enemy.gd' }),
+      resultWith('write_local_file', {
+        fileChange: { path: 'D:/game/enemy.gd', before: 'a', after: 'b', created: false }
+      })
+    ]
 
-    expect(steps.map((step) => [step.toolName, step.count])).toEqual([
-      ['material_create', 1],
-      ['material_add_node', 10],
-      ['material_connect_pins', 9],
-      ['material_compile', 1],
-      ['material_tidy_graph', 1]
+    expect(summarizeChanges(items, RISKS)[0].created).toBeUndefined()
+  })
+
+  it('二进制 / 太大没抓快照时，路径照样取返回值里的', () => {
+    const items = [
+      call('write_local_file', { path: 'D:/game/big.tscn' }),
+      resultWith('write_local_file', { fileChangeUnavailable: 'D:/game/big.tscn' })
+    ]
+
+    expect(summarizeChanges(items, RISKS)[0].target).toBe('D:/game/big.tscn')
+  })
+})
+
+describe('生成与导入：以真写出来的文件为准', () => {
+  it('gen_sprite 只收一个名字，写出来的是图集和 .tres 两个文件', () => {
+    const items = [
+      call('gen_sprite', { project_path: 'D:/game', name: 'hero', description: '骑士' }),
+      resultWith('gen_sprite', {
+        outputs: ['res://assets/gen/sprites/hero.png', 'res://assets/gen/sprites/hero.tres']
+      })
+    ]
+
+    expect(summarizeChanges(items, RISKS).map((change) => change.target)).toEqual([
+      'res://assets/gen/sprites/hero.png',
+      'res://assets/gen/sprites/hero.tres'
     ])
   })
 
-  it('不同资产分开，各算各的', () => {
-    const groups = groupChanges([
-      entry({ toolName: 'material_create', target: '/Game/M_A' }),
-      entry({ toolName: 'blueprint_apply_graph', target: '/Game/BP_B' }),
-      entry({ toolName: 'material_compile', target: '/Game/M_A' })
-    ])
+  it('一次出三个音效候选就是三行', () => {
+    const outputs = [1, 2, 3].map((n) => `res://assets/gen/sfx/jump_${n}.wav`)
+    const items = [
+      call('gen_sfx', { name: 'jump', kind: 'jump' }),
+      resultWith('gen_sfx', { outputs })
+    ]
 
-    expect(groups.map((group) => [group.target, group.kind, group.action])).toEqual([
-      ['/Game/M_A', 'material', 'created'],
-      ['/Game/BP_B', 'blueprint', 'modified']
+    expect(summarizeChanges(items, RISKS).map((change) => change.target)).toEqual(outputs)
+  })
+
+  it('gen_voice 只算这次真合成的，没变化跳过的不算', () => {
+    const items = [
+      call('gen_voice', { lines: [{ id: 'intro_01', text: '你好' }] }),
+      resultWith('gen_voice', {
+        outputs: ['res://assets/gen/voice/intro_01.wav', 'res://assets/gen/voice/intro_02.wav'],
+        generated: ['res://assets/gen/voice/intro_01.wav'],
+        skipped: ['res://assets/gen/voice/intro_02.wav']
+      })
+    ]
+
+    expect(summarizeChanges(items, RISKS).map((change) => change.target)).toEqual([
+      'res://assets/gen/voice/intro_01.wav'
     ])
   })
 
-  it('没建过就是「修改」——「新建」只认资产级的新建工具', () => {
-    // 加变量建的是蓝图**里面**的东西，那个蓝图本身是被改了，不是被新建
-    const groups = groupChanges([
-      entry({ toolName: 'blueprint_add_variable', target: '/Game/BP_Door' })
-    ])
+  it('调用失败时没有返回值可读，退回参数里的名字，整行标未生效', () => {
+    const items = [call('gen_music', { name: 'level1_bgm' }), result('gen_music', true)]
 
-    expect(groups[0].action).toBe('modified')
+    expect(summarizeChanges(items, RISKS)).toEqual([
+      expect.objectContaining({ target: 'level1_bgm', failed: true })
+    ])
   })
 
-  it('先建后删，净结果是删掉了', () => {
-    const groups = groupChanges([
-      entry({ toolName: 'ue_spawn_actor', target: 'Cube' }),
-      entry({ toolName: 'ue_destroy_actor', target: 'Cube' })
-    ])
-
-    expect(groups[0].action).toBe('deleted')
+  it('gen_voice 失败时退回第一条台词的 id', () => {
+    expect(extractChangeTarget({ lines: [{ id: 'intro_01', text: '你好' }] })).toBe('intro_01')
   })
 
-  it('失败的那一步不改变净结果', () => {
-    const groups = groupChanges([
-      entry({ toolName: 'ue_spawn_actor', target: 'Cube' }),
-      entry({ toolName: 'ue_destroy_actor', target: 'Cube', failed: true })
-    ])
+  it('导入只算真放进去的，同名跳过的不算', () => {
+    const items = [
+      call('import_to_project', {
+        files: ['E:/lib/a.png', 'E:/lib/b.png'],
+        destination: 'res://art'
+      }),
+      resultWith('import_to_project', {
+        imported: ['res://art/a.png'],
+        skipped: ['res://art/b.png']
+      })
+    ]
 
-    expect(groups[0]).toMatchObject({ action: 'created', failedCount: 1, stepCount: 2 })
+    expect(summarizeChanges(items, RISKS).map((change) => change.target)).toEqual([
+      'res://art/a.png'
+    ])
   })
 
-  it('取不到目标的万能工具按工具名归一组，别摊成六行一样的字', () => {
+  it('全是同名跳过的导入什么都没改，不进台账', () => {
+    const items = [
+      call('import_to_project', { files: ['E:/lib/a.png'], destination: 'res://art' }),
+      resultWith('import_to_project', { imported: [], skipped: ['res://art/a.png'] })
+    ]
+
+    expect(summarizeChanges(items, RISKS)).toEqual([])
+  })
+
+  it('一次导入太多就退回一行目标目录，宁可粗也不要一堵墙', () => {
+    const imported = Array.from({ length: 30 }, (_, i) => `res://art/t_${i}.png`)
+    const items = [
+      call('import_to_project', { files: ['x'], destination: 'res://art' }),
+      resultWith('import_to_project', { imported })
+    ]
+
+    const changes = summarizeChanges(items, RISKS)
+    expect(changes).toHaveLength(1)
+    expect(changes[0].target).toBe('res://art')
+  })
+
+  it('覆盖导入撤不回来，默认的不覆盖导入可以', () => {
+    const items = [
+      call('import_to_project', { files: ['E:/a.png'], destination: 'res://art', overwrite: true }),
+      call('import_to_project', { files: ['E:/b.png'], destination: 'res://art' })
+    ]
+
+    expect(summarizeChanges(items, RISKS).map((change) => change.reversible)).toEqual([false, true])
+  })
+
+  it('认不出返回值形状时退回参数那套，不会因此丢行', () => {
+    expect(extractChangeOutcomes('gen_sprite', { something: 1 })).toBeNull()
+    expect(extractChangeOutcomes('art_style', { style: {} })).toBeNull()
+    expect(extractChangeOutcomes('gen_sprite', 'text')).toBeNull()
+  })
+})
+
+describe('编辑器里的操作', () => {
+  it('path 是「打开哪个场景」，进 detail，不当成改了哪个文件', () => {
+    const items = [
+      call('editor_open_scene', { path: 'res://main.tscn' }),
+      result('editor_open_scene')
+    ]
+
+    expect(summarizeChanges(items, RISKS)[0]).toMatchObject({
+      target: '',
+      detail: 'res://main.tscn'
+    })
+  })
+
+  it('选中的节点和运行的场景都写进 detail', () => {
+    expect(extractChangeDetail('editor_select', { paths: ['Player', 'Camera2D'] })).toBe(
+      'Player, Camera2D'
+    )
+    expect(extractChangeDetail('editor_play', { scene: 'res://level1.tscn' })).toBe(
+      'res://level1.tscn'
+    )
+    expect(extractChangeDetail('editor_play', {})).toBe('')
+  })
+
+  it('认得出哪些是编辑器操作', () => {
+    expect(isEditorAction('editor_play')).toBe(true)
+    expect(isEditorAction('editor_open_scene')).toBe(true)
+    expect(isEditorAction('write_local_file')).toBe(false)
+  })
+
+  it('打开两个不同的场景是两行，同一个场景打开两次是一行 ×2', () => {
     const groups = groupChanges([
-      entry({ toolName: 'ue_run_python_script' }),
-      entry({ toolName: 'ue_run_python_script' }),
-      entry({ toolName: 'ue_run_python_script' })
+      entry({ toolName: 'editor_open_scene', target: '', detail: 'res://a.tscn' }),
+      entry({ toolName: 'editor_open_scene', target: '', detail: 'res://b.tscn' }),
+      entry({ toolName: 'editor_open_scene', target: '', detail: 'res://a.tscn' })
+    ])
+
+    expect(groups).toHaveLength(2)
+    expect(groups[0].steps[0].count).toBe(2)
+  })
+
+  it('打开的场景和写过的那个场景不并成一行 —— 打开不是改', () => {
+    const groups = groupChanges([
+      entry({ toolName: 'write_local_file', target: 'res://main.tscn' }),
+      entry({ toolName: 'editor_open_scene', target: '', detail: 'res://main.tscn' })
+    ])
+
+    expect(groups).toHaveLength(2)
+  })
+
+  it('保存全部、停止运行是内务，不单独占行', () => {
+    const groups = groupChanges([
+      entry({ toolName: 'editor_save_all', target: '' }),
+      entry({ toolName: 'editor_play', target: '' }),
+      entry({ toolName: 'editor_stop', target: '' })
+    ])
+
+    expect(groups.map((group) => group.steps[0].toolName)).toEqual(['editor_play'])
+  })
+
+  it('整轮只有内务时清单为空', () => {
+    expect(groupChanges([entry({ toolName: 'editor_save_all', target: '' })])).toEqual([])
+  })
+
+  it('destructive 的一律占一行，哪怕它长得像内务', () => {
+    const groups = groupChanges([
+      entry({ toolName: 'editor_save_all', target: '', risk: 'destructive' })
     ])
 
     expect(groups).toHaveLength(1)
-    expect(groups[0]).toMatchObject({ key: 'ue_run_python_script', target: '', kind: '' })
-    expect(groups[0].steps[0].count).toBe(3)
+  })
+})
+
+describe('美术风格', () => {
+  it('套用 / 存的是哪个预设进 detail，没有预设时是新的风格描述', () => {
+    expect(extractChangeDetail('art_style', { action: 'load_preset', preset: 'pixel_16' })).toBe(
+      'pixel_16'
+    )
+    expect(extractChangeDetail('art_style', { action: 'set', prompt: 'warm pixel art' })).toBe(
+      'warm pixel art'
+    )
   })
 
-  it('本地文件单独标出来 —— 那些能打开、能定位', () => {
-    const groups = groupChanges([
-      entry({ toolName: 'write_local_file', target: 'D:/proj/说明.html' }),
-      entry({ toolName: 'edit_local_file', target: 'D:/proj/说明.html' })
-    ])
+  it('detail 有长度上限 —— 它随聊天记录进 localStorage', () => {
+    const detail = extractChangeDetail('art_style', { action: 'set', prompt: 'x'.repeat(500) })
 
-    expect(groups).toHaveLength(1)
-    expect(groups[0]).toMatchObject({ local: true, kind: 'file', stepCount: 2 })
+    expect(detail.length).toBeLessThanOrEqual(121)
+    expect(detail.endsWith('…')).toBe(true)
   })
 
-  it('撤不回去的步数按组算，失败的那步没干成也就没什么可撤的', () => {
-    const groups = groupChanges([
-      entry({ toolName: 'browser_interact', target: 'ue5box.com', reversible: false }),
-      entry({ toolName: 'browser_interact', target: 'ue5box.com', reversible: false, failed: true })
-    ])
+  it('没有目标，归到「风格」这一类', () => {
+    const [group] = groupChanges([entry({ toolName: 'art_style', target: '', detail: 'pixel_16' })])
 
-    expect(groups[0]).toMatchObject({ irreversibleCount: 1, failedCount: 1, stepCount: 2 })
-  })
-
-  it('本地命令行聚合时才滤掉 —— 台账留着给统计，面板上不显示', () => {
-    const groups = groupChanges([
-      entry({ toolName: 'run_shell_command', detail: 'ls -l', reversible: false }),
-      entry({ toolName: 'material_add_node', target: '/Game/M_A' })
-    ])
-
-    expect(groups.map((group) => group.target)).toEqual(['/Game/M_A'])
-  })
-
-  it('看不出类型的内务操作打头时，类型由后面的步骤补上', () => {
-    const groups = groupChanges([
-      entry({ toolName: 'ue_save', target: '/Game/M_A' }),
-      entry({ toolName: 'material_set_param', target: '/Game/M_A' })
-    ])
-
-    expect(groups[0].kind).toBe('material')
+    expect(group).toMatchObject({ target: '', kind: 'style', local: false })
   })
 })
 
 describe('changeKindOf', () => {
-  it('按前缀认类型，第一条命中的算数', () => {
-    // material_ 必须先撞上，不能落到后面的 ue_set_property
-    expect(changeKindOf('material_set_property')).toBe('material')
-    expect(changeKindOf('ue_set_property')).toBe('actor')
-    expect(changeKindOf('ue_save_level')).toBe('level')
-    // 素材库的删除也进台账 —— 用户得看得见 agent 删了他的东西
-    expect(changeKindOf('delete_assets')).toBe('asset')
+  it('路径按扩展名认：同一个写文件工具，写的可能是脚本也可能是场景', () => {
+    expect(changeKindOf('write_local_file', 'D:/game/player.gd')).toBe('script')
+    expect(changeKindOf('write_local_file', 'D:/game/main.tscn')).toBe('scene')
+    expect(changeKindOf('edit_local_file', 'D:/game/project.godot')).toBe('config')
+    expect(changeKindOf('edit_local_file', 'D:/game/water.gdshader')).toBe('shader')
+    expect(changeKindOf('gen_sprite', 'res://assets/gen/sprites/hero.tres')).toBe('resource')
+    expect(changeKindOf('gen_sprite', 'res://assets/gen/sprites/hero.png')).toBe('image')
+    expect(changeKindOf('gen_music', 'res://assets/gen/music/bgm.wav')).toBe('audio')
+    expect(changeKindOf('import_to_project', 'res://models/tree.glb')).toBe('model')
+  })
+
+  it('扩展名认不出来时按工具名', () => {
+    expect(changeKindOf('write_local_file', 'D:/game/README')).toBe('file')
+    expect(changeKindOf('gen_sfx', 'jump')).toBe('audio')
+    expect(changeKindOf('import_to_project', 'res://art')).toBe('folder')
+    expect(changeKindOf('browser_interact', '提交')).toBe('web')
+  })
+
+  it('素材库的资产名不按扩展名认 —— 它是素材库资产，不是工程里的一张图', () => {
+    expect(changeKindOf('annotate_asset', 'hero.png')).toBe('asset')
   })
 
   it('认不出来就不标 —— 一个错的类型比没有类型更误导', () => {
-    expect(changeKindOf('ue_run_console_command')).toBe('')
-    expect(changeKindOf('mcp_ue-official_call_tool')).toBe('')
+    expect(changeKindOf('mcp_x_do', '')).toBe('')
   })
 })
 
-/**
- * 浏览器操作的台账。
- *
- * 用户该看得见 agent 打开了哪个网站、点了什么，但**看不到他输入的内容** ——
- * 那些在审批弹窗里已经当场看过一次，没有理由再长期挂在界面上。
- */
-describe('浏览器操作', () => {
-  const BROWSER_RISKS = {
-    // 打开网页是只读的：它什么都没改，不该进「本轮改动」
-    browser_open: 'safe',
-    browser_interact: 'mutating',
-    browser_read: 'safe',
-    browser_navigate: 'safe',
-    browser_screenshot: 'safe'
-  } as const
-
-  it('打开网页不进台账 —— 它什么都没改，过程记录里有就够了', () => {
-    const changes = summarizeChanges(
-      [call('browser_open', { url: 'https://www.electronjs.org/docs' }), result('browser_open')],
-      BROWSER_RISKS
-    )
-
-    expect(changes).toEqual([])
-  })
-
-  it('操作网页显示元素标签，不显示输入内容', () => {
-    const changes = summarizeChanges(
-      [
-        call('browser_interact', { action: 'type', ref: 2, label: '搜索', value: '我的密码' }),
-        result('browser_interact')
-      ],
-      BROWSER_RISKS
-    )
-
-    expect(changes[0].target).toBe('搜索')
-    expect(JSON.stringify(changes)).not.toContain('我的密码')
-  })
-
-  it('点出去的那一下撤不回来 —— 它发生在别人的服务器上', () => {
+describe('isReversibleTool', () => {
+  it('命令行和网页交互撤不回来，其余可以', () => {
+    expect(isReversibleTool('run_shell_command')).toBe(false)
     expect(isReversibleTool('browser_interact')).toBe(false)
-  })
-
-  it('操作网页归到「网页」这一类', () => {
-    expect(changeKindOf('browser_interact')).toBe('web')
-  })
-
-  it('读取、滚动、截图不进台账', () => {
-    const changes = summarizeChanges(
-      [
-        call('browser_read', { mode: 'content' }),
-        result('browser_read'),
-        call('browser_screenshot', {}),
-        result('browser_screenshot')
-      ],
-      BROWSER_RISKS
-    )
-
-    expect(changes).toEqual([])
+    expect(isReversibleTool('edit_local_file')).toBe(true)
+    expect(isReversibleTool('gen_sprite')).toBe(true)
   })
 })
 
-/**
- * 引擎命令 / 脚本的台账。
- *
- * 只写「执行控制台命令 ×2」的话，用户一样也答不出来：跑的是哪两条？
- * 对工程干了什么？命令原文必须进台账。
- *
- * 用户自己电脑上的命令行（`run_shell_command`）是另一回事：它照常进台账，
- * 只是聚合时不上面板，见上面那两条。
- */
-describe('引擎命令与脚本', () => {
-  const SHELL_RISKS = {
-    run_shell_command: 'destructive',
-    ue_run_python_script: 'destructive',
-    ue_run_console_command: 'destructive'
-  } as const
-
-  it('命令原文进 detail，target 保持为空 —— 命令不是工程里的路径', () => {
-    const changes = summarizeChanges(
-      [call('ue_run_console_command', { command: 'stat fps' }), result('ue_run_console_command')],
-      SHELL_RISKS
-    )
-
-    expect(changes[0]).toMatchObject({ detail: 'stat fps', target: '' })
-  })
-
-  it('脚本同理', () => {
-    const changes = summarizeChanges(
-      [
-        call('ue_run_python_script', { script: 'print(1)' }),
-        result('ue_run_python_script'),
-        call('ue_run_console_command', { command: 'stat fps' }),
-        result('ue_run_console_command')
-      ],
-      SHELL_RISKS
-    )
-
-    expect(changes.map((change) => change.detail)).toEqual(['print(1)', 'stat fps'])
-  })
-
-  it('本地命令行进得了台账，但分不到这一区的行里', () => {
-    const changes = summarizeChanges(
-      [call('run_shell_command', { command: 'git status' }), result('run_shell_command')],
-      SHELL_RISKS
-    )
-
-    expect(changes).toHaveLength(1)
-    expect(groupChanges(changes)).toEqual([])
-  })
-
-  it('两条不同的命令是两行，各带各的命令原文', () => {
+describe('groupChanges', () => {
+  it('同一个脚本写一次改七次是一行，施工步骤合并计数收在展开区', () => {
     const groups = groupChanges([
-      {
-        toolName: 'ue_run_console_command',
-        risk: 'destructive',
-        target: '',
-        detail: 'stat fps',
-        reversible: true,
-        failed: false
-      },
-      {
-        toolName: 'ue_run_console_command',
-        risk: 'destructive',
-        target: '',
-        detail: 'r.ScreenPercentage 50',
-        reversible: true,
-        failed: false
-      }
-    ])
-
-    expect(groups).toHaveLength(2)
-    expect(groups.map((group) => group.steps[0].detail)).toEqual([
-      'stat fps',
-      'r.ScreenPercentage 50'
-    ])
-  })
-
-  it('同一条命令跑两遍才合并成一条 ×2', () => {
-    const groups = groupChanges([
-      {
-        toolName: 'ue_run_console_command',
-        risk: 'destructive',
-        target: '',
-        detail: 'stat fps',
-        reversible: true,
-        failed: false
-      },
-      {
-        toolName: 'ue_run_console_command',
-        risk: 'destructive',
-        target: '',
-        detail: 'stat fps',
-        reversible: true,
-        failed: false
-      }
+      entry({ toolName: 'write_local_file' }),
+      ...Array.from({ length: 7 }, () => entry({}))
     ])
 
     expect(groups).toHaveLength(1)
-    expect(groups[0].steps[0]).toMatchObject({ detail: 'stat fps', count: 2 })
+    expect(groups[0]).toMatchObject({ stepCount: 8, kind: 'script', local: true })
+    expect(groups[0].steps).toEqual([
+      { toolName: 'write_local_file', count: 1, failedCount: 0 },
+      { toolName: 'edit_local_file', count: 7, failedCount: 0 }
+    ])
   })
 
-  it('没带命令参数的调用退回按工具名归组，不会因此丢掉', () => {
+  it('不同文件分开，各算各的', () => {
     const groups = groupChanges([
-      {
-        toolName: 'ue_run_python_script',
-        risk: 'destructive',
-        target: '',
-        reversible: true,
-        failed: false
-      }
+      entry({ target: 'D:/game/a.gd' }),
+      entry({ target: 'D:/game/b.gd' }),
+      entry({ target: 'D:/game/a.gd' })
+    ])
+
+    expect(groups.map((group) => [group.target, group.stepCount])).toEqual([
+      ['D:/game/a.gd', 2],
+      ['D:/game/b.gd', 1]
+    ])
+  })
+
+  it('同一个磁盘文件的斜杠、大小写写法不同也并成一行', () => {
+    const groups = groupChanges([
+      entry({ target: 'D:\\Game\\player.gd' }),
+      entry({ target: 'd:/game/player.gd' })
     ])
 
     expect(groups).toHaveLength(1)
-    expect(groups[0].key).toBe('ue_run_python_script')
-  })
-})
-
-/**
- * 插件管理的台账。
- *
- * 一个工具同时管启用和停用，不把方向抽出来，界面就永远只能说含糊的
- * 「启用/停用插件」—— 用户想知道的恰恰是「启了还是停了、动的是哪个插件」。
- * 另外它的 Query 是只读查询，混进改动台账会让用户以为插件被动过。
- */
-describe('插件管理', () => {
-  const PLUGIN_RISKS = { ue_manage_plugin: 'destructive' } as const
-
-  it('插件名是 target', () => {
-    expect(extractChangeTarget({ plugin_name: 'GLTFImporter', action: 'Enable' })).toBe(
-      'GLTFImporter'
-    )
+    expect(groups[0].target).toBe('D:\\Game\\player.gd')
   })
 
-  it('Query 是只读查询，不进台账 —— 没改东西就不算改动', () => {
-    const changes = summarizeChanges(
-      [
-        call('ue_manage_plugin', { plugin_name: 'GLTFImporter', action: 'Query' }),
-        result('ue_manage_plugin'),
-        // action 缺省时工具自己也是按 Query 处理
-        call('ue_manage_plugin', { plugin_name: 'GLTFImporter' }),
-        result('ue_manage_plugin')
-      ],
-      PLUGIN_RISKS
-    )
+  it('生成的 res:// 文件和之后按磁盘路径改的是同一个，并成一行，以磁盘路径为准', () => {
+    const groups = groupChanges([
+      entry({ toolName: 'gen_sprite', target: 'res://assets/gen/sprites/hero.tres' }),
+      entry({ toolName: 'edit_local_file', target: 'D:/game/assets/gen/sprites/hero.tres' })
+    ])
 
-    expect(changes).toEqual([])
-  })
-
-  it('dry_run=true 的预演不进台账 —— 风险表按工具定级，看不见参数', () => {
-    const changes = summarizeChanges(
-      [
-        call('ue_fixup_redirectors', { path: '/Game', dry_run: true }),
-        result('ue_fixup_redirectors'),
-        call('ue_fixup_redirectors', { path: '/Game' }),
-        result('ue_fixup_redirectors')
-      ],
-      { ue_fixup_redirectors: 'destructive' }
-    )
-
-    expect(changes.map((change) => change.toolName)).toEqual(['ue_fixup_redirectors'])
-  })
-
-  // 材质清理不写 dry_run 就是预演（riskFor: dry_run === false 才 destructive），
-  // 渲染层单看参数认不出来。主进程挂在调用上的风险优先，序号照样占上
-  it('主进程按参数算出 safe 的调用不进台账，也不打乱后面的结果配对', () => {
-    const withRisk = (item: AgentProcessItem, risk: string): AgentProcessItem => ({
-      ...item,
-      data: { ...(item.data as object), risk }
+    expect(groups).toHaveLength(1)
+    expect(groups[0]).toMatchObject({
+      target: 'D:/game/assets/gen/sprites/hero.tres',
+      local: true,
+      action: 'created',
+      kind: 'resource'
     })
-    const changes = summarizeChanges(
-      [
-        withRisk(call('material_delete_unused_nodes', { material: '/Game/M' }), 'safe'),
-        result('material_delete_unused_nodes'),
-        withRisk(
-          call('material_delete_unused_nodes', { material: '/Game/M', dry_run: false }),
-          'destructive'
-        ),
-        result('material_delete_unused_nodes', true)
-      ],
-      { material_delete_unused_nodes: 'destructive' }
-    )
-
-    expect(changes).toHaveLength(1)
-    expect(changes[0]).toMatchObject({ risk: 'destructive', failed: true })
   })
 
-  it('预演成功、真删失败：真删那一行配的是它自己的结果，不是预演的', () => {
-    const changes = summarizeChanges(
-      [
-        call('ue_content_delete', { paths: ['/Game/Old/'], dry_run: true }),
-        result('ue_content_delete'),
-        call('ue_content_delete', { paths: ['/Game/Old/'] }),
-        result('ue_content_delete', true)
-      ],
-      { ue_content_delete: 'destructive' }
-    )
-
-    expect(changes).toHaveLength(1)
-    expect(changes[0].failed).toBe(true)
-  })
-
-  it('启用和停用分得清：行上写哪个插件、净结果是启了还是停了', () => {
+  it('对不上唯一一个磁盘路径时不合并 —— 分不清就别猜', () => {
     const groups = groupChanges([
-      {
-        toolName: 'ue_manage_plugin',
-        risk: 'destructive',
-        target: 'GLTFImporter',
-        detail: 'Enable',
-        reversible: true,
-        failed: false
-      },
-      {
-        toolName: 'ue_manage_plugin',
-        risk: 'destructive',
-        target: 'PythonScriptPlugin',
-        detail: 'Disable',
-        reversible: true,
-        failed: false
-      }
+      entry({ toolName: 'gen_sprite', target: 'res://icon.png' }),
+      entry({ target: 'D:/game/a/icon.png' }),
+      entry({ target: 'D:/game/b/icon.png' })
     ])
 
-    expect(groups.map((group) => [group.target, group.kind, group.action])).toEqual([
-      ['GLTFImporter', 'plugin', 'enabled'],
-      ['PythonScriptPlugin', 'plugin', 'disabled']
-    ])
+    expect(groups).toHaveLength(3)
   })
 
-  it('先停后启，净结果是它现在开着；两步都在展开区里', () => {
+  it('失败时只有名字的那次，并到同名的完整路径上', () => {
     const groups = groupChanges([
-      {
-        toolName: 'ue_manage_plugin',
-        risk: 'destructive',
-        target: 'GLTFImporter',
-        detail: 'Disable',
-        reversible: true,
-        failed: false
-      },
-      {
-        toolName: 'ue_manage_plugin',
-        risk: 'destructive',
-        target: 'GLTFImporter',
-        detail: 'Enable',
-        reversible: true,
-        failed: false
-      }
+      entry({ toolName: 'gen_music', target: 'level1_bgm', failed: true }),
+      entry({ toolName: 'gen_music', target: 'res://assets/gen/music/level1_bgm.wav' })
     ])
 
     expect(groups).toHaveLength(1)
-    expect(groups[0].action).toBe('enabled')
-    expect(groups[0].steps.map((step) => step.detail)).toEqual(['Disable', 'Enable'])
+    expect(groups[0]).toMatchObject({
+      target: 'res://assets/gen/music/level1_bgm.wav',
+      stepCount: 2,
+      failedCount: 1,
+      action: 'created'
+    })
   })
 
-  it('失败的启停不改变净结果', () => {
+  it('名字对得上好几个文件时不合并（hero.png 和 hero.tres 都叫 hero）', () => {
     const groups = groupChanges([
-      {
-        toolName: 'ue_manage_plugin',
-        risk: 'destructive',
-        target: 'GLTFImporter',
-        detail: 'Disable',
-        reversible: true,
-        failed: true
-      }
+      entry({ toolName: 'gen_sprite', target: 'hero', failed: true }),
+      entry({ toolName: 'gen_sprite', target: 'res://assets/gen/sprites/hero.png' }),
+      entry({ toolName: 'gen_sprite', target: 'res://assets/gen/sprites/hero.tres' })
+    ])
+
+    expect(groups).toHaveLength(3)
+  })
+
+  it('改已有文件是「修改」；写出新文件、生成、导入是「新建」', () => {
+    const groups = groupChanges([
+      entry({ target: 'D:/game/a.gd' }),
+      entry({ toolName: 'write_local_file', target: 'D:/game/b.gd', created: true }),
+      entry({ toolName: 'gen_sfx', target: 'res://sfx/jump.wav' }),
+      entry({ toolName: 'import_to_project', target: 'res://art/a.png' })
+    ])
+
+    expect(groups.map((group) => group.action)).toEqual([
+      'modified',
+      'created',
+      'created',
+      'created'
+    ])
+  })
+
+  it('新写出来的文件之后又改了几次，净结果仍是新建', () => {
+    const groups = groupChanges([
+      entry({ toolName: 'write_local_file', created: true }),
+      entry({}),
+      entry({})
+    ])
+
+    expect(groups[0].action).toBe('created')
+  })
+
+  it('失败的那一步不改变净结果', () => {
+    const groups = groupChanges([
+      entry({ toolName: 'gen_sfx', target: 'res://sfx/jump.wav', failed: true })
     ])
 
     expect(groups[0].action).toBe('modified')
-    expect(groups[0].failedCount).toBe(1)
+  })
+
+  it('删掉的是「删除」', () => {
+    const groups = groupChanges([
+      entry({ toolName: 'delete_note', target: '设计笔记', risk: 'destructive' })
+    ])
+
+    expect(groups[0]).toMatchObject({ action: 'deleted', kind: 'note' })
+  })
+
+  it('撤不回去的步数按组算，失败的那步没干成也就没什么可撤的', () => {
+    const groups = groupChanges([
+      entry({ toolName: 'import_to_project', target: 'res://art/a.png', reversible: false }),
+      entry({
+        toolName: 'import_to_project',
+        target: 'res://art/a.png',
+        reversible: false,
+        failed: true
+      })
+    ])
+
+    expect(groups[0]).toMatchObject({ irreversibleCount: 1, failedCount: 1 })
+  })
+
+  it('本地命令行聚合时才滤掉 —— 台账留着给统计，面板上不显示', () => {
+    const groups = groupChanges([
+      entry({ toolName: 'run_shell_command', target: '', detail: 'ls', reversible: false }),
+      entry({})
+    ])
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0].steps[0].toolName).toBe('edit_local_file')
+  })
+
+  it('本地文件和 res:// 资源分得开 —— 前者能看对比、能在资源管理器里定位', () => {
+    const groups = groupChanges([
+      entry({}),
+      entry({ toolName: 'gen_sprite', target: 'res://assets/gen/sprites/hero.png' })
+    ])
+
+    expect(groups.map((group) => group.local)).toEqual([true, false])
   })
 })
 
-/**
- * Actor 属性改动。
- *
- * 真机截图里这一行是「Actor 修改属性」四个字，再没有别的 —— 动的是哪个 Actor、
- * 改了哪个属性、改成了什么，一个都答不出来。原因有两层：目标埋在 `targets`
- * 第二层里顶层白名单扫不到，而「改成什么」压根没被抽取过。
- */
-describe('Actor 属性与变换', () => {
-  const ACTOR_RISKS = {
-    ue_set_property: 'mutating',
-    ue_set_transform: 'mutating',
-    ue_spawn_actor: 'mutating'
-  } as const
-
-  it('目标埋在 targets 选择器里，不拆开就只剩「修改属性」四个字', () => {
-    expect(extractChangeTarget({ targets: { names: ['SM_Door'] }, properties: {} })).toBe('SM_Door')
-    expect(extractChangeTarget({ targets: { paths: ['/Game/Maps/L.L:PL.Cube_0'] } })).toBe(
-      '/Game/Maps/L.L:PL.Cube_0'
-    )
+describe('浏览器操作', () => {
+  it('操作网页显示元素标签，不显示输入内容', () => {
+    expect(extractChangeTarget({ label: '搜索框', value: '我的密码' })).toBe('搜索框')
   })
 
-  it('targets 是 JSON 字符串时照样认 —— 工具自己两种都收', () => {
-    expect(extractChangeTarget({ targets: '{"names":["PointLight_1"]}' })).toBe('PointLight_1')
-  })
+  it('点出去的那一下撤不回来，归到「网页」这一类', () => {
+    const items = [call('browser_interact', { label: '提交' }), result('browser_interact')]
+    const [change] = summarizeChanges(items, RISKS)
 
-  it('改用户选中的那些时参数里没有名字，退回空目标', () => {
-    expect(extractChangeTarget({ targets: { selection: true }, properties: {} })).toBe('')
-  })
-
-  it('属性键值对拍平成一行：这才是用户想知道的「改成什么了」', () => {
-    expect(formatChangeProperties({ Intensity: 10000 })).toBe('Intensity=10000')
-    // 向量 / 颜色压成一组数字，键名（r/g/b）是位置约定，写出来只是噪音
-    expect(formatChangeProperties({ LightColor: { r: 255, g: 0, b: 0 } })).toBe(
-      'LightColor=(255, 0, 0)'
-    )
-    expect(formatChangeProperties({ bHidden: true, Mobility: 'Movable' })).toBe(
-      'bHidden=true, Mobility=Movable'
-    )
-  })
-
-  it('变换参数按嵌套路径展开，说得出改的是位置还是缩放', () => {
-    expect(
-      extractChangeDetail('ue_set_transform', {
-        operation: { set: { location: { x: 0, y: 0, z: 100 } } }
-      })
-    ).toBe('set.location=(0, 0, 100)')
-  })
-
-  it('detail 有长度上限 —— 它随聊天记录进 localStorage，不封顶会撑掉存储', () => {
-    const many = Object.fromEntries(
-      Array.from({ length: 40 }, (_, i) => [`Property${i}`, 'SomeLongValue'])
-    )
-    const text = formatChangeProperties(many)
-
-    expect(text.length).toBeLessThanOrEqual(121)
-    expect(text.endsWith('…')).toBe(true)
-  })
-
-  it('返回值里的 updated 才是事实：报错的属性不在里面，显示的就是真生效的那些', () => {
-    const changes = summarizeChanges(
-      [
-        call('ue_set_property', {
-          targets: { names: ['PointLight_1'] },
-          properties: { Intensity: 10000, NoSuchProp: 1 }
-        }),
-        resultWith('ue_set_property', {
-          count: 1,
-          actors: [
-            {
-              name: 'PointLight_1',
-              updated: { Intensity: 10000 },
-              errors: [{ property: 'NoSuchProp', error: 'not found' }]
-            }
-          ]
-        })
-      ],
-      ACTOR_RISKS
-    )
-
-    expect(changes).toHaveLength(1)
-    expect(changes[0]).toMatchObject({ target: 'PointLight_1', detail: 'Intensity=10000' })
-    // 参数里那个没改成的属性不该出现在台账上
-    expect(changes[0].detail).not.toContain('NoSuchProp')
-  })
-
-  it('一次调用改了三个 Actor 就是三行 —— 行数要等于「我的工程里变了几样东西」', () => {
-    const changes = summarizeChanges(
-      [
-        call('ue_set_property', { targets: { selection: true }, properties: { bHidden: true } }),
-        resultWith('ue_set_property', {
-          count: 3,
-          actors: [
-            { name: 'Cube_1', updated: { bHidden: true } },
-            { name: 'Cube_2', updated: { bHidden: true } },
-            { name: 'Cube_3', updated: { bHidden: true } }
-          ]
-        })
-      ],
-      ACTOR_RISKS
-    )
-
-    expect(groupChanges(changes).map((group) => group.target)).toEqual([
-      'Cube_1',
-      'Cube_2',
-      'Cube_3'
-    ])
-  })
-
-  it('一个 Actor 上什么都没改成时单独标失败，别让它混在成功的里面', () => {
-    const changes = summarizeChanges(
-      [
-        call('ue_set_property', {
-          targets: { names: ['A', 'B'] },
-          properties: { Intensity: 5 }
-        }),
-        resultWith('ue_set_property', {
-          count: 1,
-          actors: [
-            { name: 'A', updated: { Intensity: 5 } },
-            { name: 'B', updated: {}, errors: [{ property: 'Intensity', error: 'read-only' }] }
-          ]
-        })
-      ],
-      ACTOR_RISKS
-    )
-
-    expect(changes.map((change) => [change.target, change.failed])).toEqual([
-      ['A', false],
-      ['B', true]
-    ])
-  })
-
-  it('动的东西太多就退回一行，宁可粗也不要一堵墙', () => {
-    const actors = Array.from({ length: 30 }, (_, i) => ({
-      name: `Rock_${i}`,
-      updated: { bHidden: true }
-    }))
-
-    expect(extractChangeOutcomes('ue_set_property', { actors })).toEqual([])
-
-    const changes = summarizeChanges(
-      [
-        call('ue_set_property', {
-          targets: { filter: { class: 'StaticMeshActor' } },
-          properties: { bHidden: true }
-        }),
-        resultWith('ue_set_property', { count: 30, actors })
-      ],
-      ACTOR_RISKS
-    )
-
-    // 退回的那一行仍然带着参数里的属性清单，不会变回黑盒
-    expect(changes).toHaveLength(1)
-    expect(changes[0]).toMatchObject({ target: '', detail: 'bHidden=true' })
-  })
-
-  it('调用失败时没有返回值可读，退回参数里的目标，整行标未生效', () => {
-    const changes = summarizeChanges(
-      [
-        call('ue_set_property', { targets: { names: ['SM_Door'] }, properties: { Intensity: 1 } }),
-        result('ue_set_property', true)
-      ],
-      ACTOR_RISKS
-    )
-
-    expect(changes).toEqual([
-      {
-        toolName: 'ue_set_property',
-        risk: 'mutating',
-        target: 'SM_Door',
-        detail: 'Intensity=1',
-        reversible: true,
-        failed: true
-      }
-    ])
-  })
-
-  it('spawn 出来的名字以引擎为准 —— 它会自己改名，参数里那个未必是最终的', () => {
-    const changes = summarizeChanges(
-      [
-        call('ue_spawn_actor', { instances: [{ asset_id: 'Cube', name: 'Cube' }] }),
-        resultWith('ue_spawn_actor', { count: 1, created: [{ name: 'Cube_2', path: '/Game/L' }] })
-      ],
-      ACTOR_RISKS
-    )
-
-    expect(changes[0].target).toBe('Cube_2')
-    expect(groupChanges(changes)[0].action).toBe('created')
-  })
-
-  it('spawn 失败的那几项是 null，跳过它们', () => {
-    expect(
-      extractChangeOutcomes('ue_spawn_actor', { created: [null, { name: 'Cube_2' }, null] })
-    ).toEqual([{ target: 'Cube_2' }])
-  })
-
-  it('没有返回值的历史消息照旧走参数那套，不会因此丢行', () => {
-    const changes = summarizeChanges(
-      [
-        call('ue_set_property', { targets: { names: ['SM_Door'] }, properties: { Intensity: 1 } }),
-        result('ue_set_property')
-      ],
-      ACTOR_RISKS
-    )
-
-    expect(changes).toHaveLength(1)
-    expect(changes[0]).toMatchObject({ target: 'SM_Door', detail: 'Intensity=1', failed: false })
-  })
-
-  it('认不出返回值形状的工具不受影响', () => {
-    expect(extractChangeOutcomes('material_create', { actors: [{ name: 'X' }] })).toEqual([])
-    expect(extractChangeOutcomes('ue_set_property', undefined)).toEqual([])
-    expect(extractChangeOutcomes('ue_set_property', 'ok')).toEqual([])
+    expect(change).toMatchObject({ target: '提交', reversible: false })
+    expect(groupChanges([change])[0].kind).toBe('web')
   })
 })

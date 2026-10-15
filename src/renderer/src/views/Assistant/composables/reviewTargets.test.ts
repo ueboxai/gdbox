@@ -19,32 +19,32 @@ function group(patch: Partial<ChangeGroup>): ChangeGroup {
 }
 
 describe('reviewTargetsFrom', () => {
-  it('引擎里的资产带着动作和类别送去审查', () => {
+  it('工程内的资源带着动作和类别送去审查', () => {
     const targets = reviewTargetsFrom([
-      group({ target: '/Game/A/M_Wood', action: 'created', kind: 'material' })
+      group({ target: 'res://art/wood.tres', action: 'created', kind: 'resource' })
     ])
 
-    expect(targets).toEqual([{ path: '/Game/A/M_Wood', action: 'created', kind: 'material' }])
+    expect(targets).toEqual([{ path: 'res://art/wood.tres', action: 'created', kind: 'resource' }])
   })
 
-  it('硬盘上的文件不送 —— 引擎答不上来，只会换回一条假的「资产不存在」', () => {
+  it('硬盘上的文件不送 —— 审查只认 res:// 路径，只会换回一条假的「资源不存在」', () => {
     expect(
       reviewTargetsFrom([group({ target: 'D:/proj/说明.html', local: true, kind: 'file' })])
     ).toEqual([])
   })
 
-  it('Actor 名和取不到目标的万能调用都不送', () => {
+  it('素材库资产和取不到目标的调用都不送', () => {
     expect(
       reviewTargetsFrom([
-        group({ target: 'Cube', kind: 'actor' }),
-        group({ target: '', key: 'ue_run_python_script' })
+        group({ target: 'hero', kind: 'asset' }),
+        group({ target: '', key: 'editor_play' })
       ])
     ).toEqual([])
   })
 
-  it('失败的步骤照送 —— 该不该报警由引擎的实际状态说了算', () => {
+  it('失败的步骤照送 —— 该不该报警由工程的实际状态说了算', () => {
     const targets = reviewTargetsFrom([
-      group({ target: '/Game/A/BP_X', action: 'created', kind: 'blueprint', failedCount: 3 })
+      group({ target: 'res://player.gd', action: 'created', kind: 'script', failedCount: 3 })
     ])
 
     expect(targets).toHaveLength(1)
@@ -54,7 +54,7 @@ describe('reviewTargetsFrom', () => {
 describe('shouldAutoReview', () => {
   const targets = (count: number): ReturnType<typeof reviewTargetsFrom> =>
     Array.from({ length: count }, (_, i) => ({
-      path: `/Game/A/M_${i}`,
+      path: `res://art/m_${i}.tres`,
       action: 'modified' as const
     }))
 

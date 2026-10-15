@@ -15,8 +15,8 @@ import AIBubble from './AIBubble.vue'
 /**
  * 「本轮改动」上的差异信息。
  *
- * 真机截图里这一行只有「Actor 修改属性」四个字 —— 改了哪个属性、改成了什么，
- * 用户一样都看不到。**行数变少不是目标，行上说得清才是**：清单存在的全部意义
+ * 一行只写「写入文件」「打开场景」四个字，用户一样都看不到动的是谁。
+ * **行数变少不是目标，行上说得清才是**：清单存在的全部意义
  * 是「让我知道刚才我的工程被改了什么」，一个说不出改了什么的清单等于没有。
  */
 
@@ -50,9 +50,9 @@ function mountBubble(changes: ResponseMetadataChange[]): ReturnType<typeof mount
 
 function change(over: Partial<ResponseMetadataChange>): ResponseMetadataChange {
   return {
-    toolName: 'ue_set_property',
+    toolName: 'gen_sprite',
     risk: 'mutating',
-    target: 'PointLight_1',
+    target: 'res://assets/gen/sprites/hero.png',
     reversible: true,
     failed: false,
     ...over
@@ -65,7 +65,7 @@ async function expandChanges(wrapper: ReturnType<typeof mount>): Promise<void> {
 
 describe('AIBubble 本轮改动的差异信息', () => {
   it('默认只展示摘要，用户点击后才展示改动明细', async () => {
-    const wrapper = mountBubble([change({ detail: 'Intensity=10000' })])
+    const wrapper = mountBubble([change({})])
 
     expect(wrapper.find('.response-changes-header').text()).toContain('本轮改动（1）')
     expect(wrapper.find('.response-changes-item').exists()).toBe(false)
@@ -77,19 +77,33 @@ describe('AIBubble 本轮改动的差异信息', () => {
     expect(wrapper.find('.response-changes-caret').classes()).not.toContain('collapsed')
   })
 
-  it('改了哪个 Actor、改成什么，都在行上', async () => {
-    const wrapper = mountBubble([change({ detail: 'Intensity=10000' })])
+  it('生成的资源一行一个，带着类型和「新建」', async () => {
+    const wrapper = mountBubble([change({})])
     await expandChanges(wrapper)
 
     const row = wrapper.find('.response-changes-item')
-    expect(row.text()).toContain('PointLight_1')
-    expect(row.find('.response-changes-cmd').text()).toBe('Intensity=10000')
+    expect(row.text()).toContain('图片')
+    expect(row.text()).toContain('hero.png')
+    expect(row.text()).toContain('新建')
   })
 
-  it('一行只做了一件事才把差异摆到行上；二十多步的材质挑哪一步都是以偏概全', async () => {
+  it('res:// 资源给「在编辑器中打开」，素材库资产不给 —— 编辑器里没有它', async () => {
     const wrapper = mountBubble([
-      change({ toolName: 'material_add_node', target: '/Game/M_A', detail: 'x' }),
-      change({ toolName: 'material_connect_pins', target: '/Game/M_A', detail: 'y' })
+      change({}),
+      change({ toolName: 'annotate_asset', target: 'hero_concept' })
+    ])
+    await expandChanges(wrapper)
+
+    const rows = wrapper.findAll('.response-changes-item')
+    expect(rows).toHaveLength(2)
+    expect(rows[0].find('.response-changes-open').exists()).toBe(true)
+    expect(rows[1].find('.response-changes-open').exists()).toBe(false)
+  })
+
+  it('一行只做了一件事才把差异摆到行上', async () => {
+    const wrapper = mountBubble([
+      change({ toolName: 'art_style', target: '', detail: 'pixel_16' }),
+      change({ toolName: 'art_style', target: '', detail: 'pixel_16' })
     ])
     await expandChanges(wrapper)
 
@@ -99,50 +113,13 @@ describe('AIBubble 本轮改动的差异信息', () => {
     )
   })
 
-  it('展开区里逐步显示差异 —— 排查时要看的就是这个', async () => {
-    const wrapper = mountBubble([
-      change({ target: 'Cube_1', detail: 'bHidden=true' }),
-      change({ toolName: 'ue_set_transform', target: 'Cube_1', detail: 'set.location=(0, 0, 100)' })
-    ])
-
-    await expandChanges(wrapper)
-    await wrapper.find('.response-changes-toggle').trigger('click')
-
-    const steps = wrapper.findAll('.response-changes-step')
-    expect(steps).toHaveLength(2)
-    expect(steps.map((step) => step.find('.response-changes-cmd').text())).toEqual([
-      'bHidden=true',
-      'set.location=(0, 0, 100)'
-    ])
-  })
-
-  /**
-   * 插件的 detail 是启停方向（`Enable`）—— 它已经变成了这一步的文案「启用插件」
-   * 和行上的动作标签。再原样印一个英文单词只是噪音。
-   */
-  it('插件的启停方向不重复印第三遍', async () => {
-    const wrapper = mountBubble([
-      change({
-        toolName: 'ue_manage_plugin',
-        risk: 'destructive',
-        target: 'GLTFImporter',
-        detail: 'Enable'
-      })
-    ])
+  it('套用的风格预设摆在行上', async () => {
+    const wrapper = mountBubble([change({ toolName: 'art_style', target: '', detail: 'pixel_16' })])
     await expandChanges(wrapper)
 
-    expect(wrapper.find('.response-changes-item').find('.response-changes-cmd').exists()).toBe(
-      false
+    expect(wrapper.find('.response-changes-item').find('.response-changes-cmd').text()).toBe(
+      'pixel_16'
     )
-  })
-
-  it('没有差异信息的旧消息展开后照旧显示，不会因此空一块', async () => {
-    const wrapper = mountBubble([change({ toolName: 'material_create', target: '/Game/M_Wood' })])
-    await expandChanges(wrapper)
-
-    const row = wrapper.find('.response-changes-item')
-    expect(row.text()).toContain('M_Wood')
-    expect(row.find('.response-changes-cmd').exists()).toBe(false)
   })
 
   /**
@@ -163,7 +140,7 @@ describe('AIBubble 本轮改动的差异信息', () => {
   it('本地命令行不占行，同一轮里真的改了的东西照常显示', async () => {
     const wrapper = mountBubble([
       change({ toolName: 'run_shell_command', risk: 'destructive', target: '', reversible: false }),
-      change({ toolName: 'material_create', target: '/Game/M_Wood' })
+      change({})
     ])
 
     expect(wrapper.find('.response-changes-header').text()).toContain('本轮改动（1）')
@@ -172,24 +149,27 @@ describe('AIBubble 本轮改动的差异信息', () => {
 
     const rows = wrapper.findAll('.response-changes-item')
     expect(rows).toHaveLength(1)
-    expect(rows[0].text()).toContain('M_Wood')
+    expect(rows[0].text()).toContain('hero.png')
   })
 
-  /**
-   * UE 的控制台命令和 Python 脚本动的就是这个工程，它们照常占一行 ——
-   * 别把「本地命令行不显示」误读成「所有命令都不显示」。
-   */
-  it('引擎的控制台命令照常占一行，带着命令原文', async () => {
+  it('编辑器里的操作单独成区：做了什么、对哪个场景，都在行上', async () => {
     const wrapper = mountBubble([
-      change({
-        toolName: 'ue_run_console_command',
-        risk: 'destructive',
-        target: '',
-        detail: 'stat fps'
-      })
+      change({}),
+      change({ toolName: 'editor_open_scene', target: '', detail: 'res://main.tscn' })
     ])
     await expandChanges(wrapper)
 
-    expect(wrapper.find('.response-changes-cmd').text()).toBe('stat fps')
+    const rows = wrapper.findAll('.response-changes-item')
+    expect(rows).toHaveLength(2)
+    expect(rows[1].find('.response-changes-name').text()).toBe('打开场景')
+    expect(rows[1].find('.response-changes-cmd').text()).toBe('res://main.tscn')
+  })
+
+  it('全是磁盘文件时标题说「N 个文件已更改」', () => {
+    const wrapper = mountBubble([
+      change({ toolName: 'edit_local_file', target: 'D:/game/player.gd' })
+    ])
+
+    expect(wrapper.find('.response-changes-header').text()).toContain('1 个文件已更改')
   })
 })

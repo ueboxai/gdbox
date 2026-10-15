@@ -287,15 +287,15 @@
           </ul>
 
           <!--
-            引擎里的改动：一行一个资产，说清「这是什么、叫什么、现在是新的还是改过的」。
-            怎么改出来的（加了十个节点、连了九条线）点开才看 —— 那是排查用的，不是日常要读的
+            资源与资产：一行一个东西，说清「这是什么、叫什么、现在是新的还是改过的」。
+            怎么改出来的点开才看 —— 那是排查用的，不是日常要读的
           -->
-          <div v-if="engineGroups.length > 0" class="response-changes-engine">
+          <div v-if="resourceGroups.length > 0" class="response-changes-engine">
             <div v-if="fileGroups.length > 0" class="response-changes-subtitle">
-              {{ t('assistant.changes.engineTitle', { count: engineGroups.length }) }}
+              {{ t('assistant.changes.resourceTitle', { count: resourceGroups.length }) }}
             </div>
             <ul class="response-changes-list">
-              <li v-for="group in engineGroups" :key="`engine-${group.key}`">
+              <li v-for="group in resourceGroups" :key="`resource-${group.key}`">
                 <div class="response-changes-item" :class="{ failed: isAllFailed(group) }">
                   <!--
                     箭头展开施工步骤。展开后说不出新东西的行（万能工具只调了一次）
@@ -349,7 +349,7 @@
                     {{ t('assistant.changes.irreversible') }}
                   </span>
 
-                  <!-- 一行字说不清材质长什么样，剩下那一半交给编辑器本身 -->
+                  <!-- 一行字说不清场景长什么样，剩下那一半交给编辑器本身 -->
                   <button
                     v-if="canOpenInEditor(group)"
                     type="button"
@@ -369,10 +369,12 @@
                   >
                     <!-- 工具名对用户没有意义，显示这一步到底做了什么 -->
                     <span :title="step.toolName">{{ changeLabel(step) }}</span>
-                    <!-- 改成什么了：属性键值对、变换参数。插件的启停方向除外，
-                         那个已经由行上的动作标签说过一遍 -->
-                    <code v-if="stepDetail(step)" class="response-changes-cmd" :title="step.detail">
-                      {{ stepDetail(step) }}
+                    <code
+                      v-if="displayDetail(step.detail)"
+                      class="response-changes-cmd"
+                      :title="step.detail"
+                    >
+                      {{ displayDetail(step.detail) }}
                     </code>
                     <span v-if="step.count > 1" class="response-changes-repeat">
                       {{ t('assistant.changes.repeat', { count: step.count }) }}
@@ -387,21 +389,20 @@
           </div>
 
           <!--
-            控制台命令 / Python 脚本：跑了什么就原样写什么。它们动的是引擎，
-            却没有一个能打开的资产路径，混进上面任何一区都读不通；又恰恰是
-            这一类最需要原样可见 —— 一段脚本改了什么，只有原文说得清。
-            一行一条命令，重复跑同一条才合并计数。
+            编辑器里的操作：运行游戏、打开场景、选中节点。它们不改文件，
+            混进上面任何一区都会读成「改了什么」；但动了用户眼前的编辑器，得说一声。
+            一行一个操作，同一个操作对同一个场景重复做才合并计数。
             用户自己电脑上的命令行不在这里，它记进台账但不上面板
           -->
-          <div v-if="shellGroups.length > 0" class="response-changes-engine">
+          <div v-if="editorGroups.length > 0" class="response-changes-engine">
             <div
-              v-if="fileGroups.length > 0 || engineGroups.length > 0"
+              v-if="fileGroups.length > 0 || resourceGroups.length > 0"
               class="response-changes-subtitle"
             >
-              {{ t('assistant.changes.shellTitle', { count: shellGroups.length }) }}
+              {{ t('assistant.changes.editorTitle', { count: editorGroups.length }) }}
             </div>
             <ul class="response-changes-list">
-              <li v-for="group in shellGroups" :key="`shell-${group.key}`">
+              <li v-for="group in editorGroups" :key="`editor-${group.key}`">
                 <div class="response-changes-item" :class="{ failed: isAllFailed(group) }">
                   <button
                     v-if="isExpandable(group)"
@@ -419,8 +420,13 @@
                   </button>
                   <span v-else class="response-changes-toggle-placeholder" />
 
-                  <code class="response-changes-cmd" :title="group.steps[0].detail">
-                    {{ displayDetail(group.steps[0].detail) || changeLabel(group.steps[0]) }}
+                  <span class="response-changes-name">{{ changeLabel(group.steps[0]) }}</span>
+                  <code
+                    v-if="displayDetail(group.steps[0].detail)"
+                    class="response-changes-cmd"
+                    :title="group.steps[0].detail"
+                  >
+                    {{ displayDetail(group.steps[0].detail) }}
                   </code>
                   <span v-if="failureTag(group)" class="response-changes-tag failed">
                     {{ failureTag(group) }}
@@ -620,8 +626,9 @@ import {
 import {
   changeLabelKey,
   groupChanges,
-  isEngineAssetPath,
-  isMcpChange
+  isEditorAction,
+  isMcpChange,
+  isResPath
 } from '../composables/changeSummary'
 import type { ChangeGroup } from '../composables/changeSummary'
 import {
@@ -631,7 +638,7 @@ import {
 } from '../composables/agentGeneratedMedia'
 import { reviewTargetsFrom, shouldAutoReview } from '../composables/reviewTargets'
 import {
-  findSessionUproject,
+  findSessionProjectFile,
   isSessionProjectConnected,
   SESSION_PROJECT_KEY
 } from '../composables/reviewOpenProject'
@@ -1416,46 +1423,43 @@ watch([fileGroups, fileDiffSignature], () => (fileReviewGroups.value = computeRe
 const openFileReview = useFileReview()
 
 /**
- * 控制台命令 / Python 脚本单独成区。
+ * 编辑器里的操作（运行游戏、打开场景、选中节点）单独成区。
  *
- * 它们动的是引擎，但没有一个能打开、能审查的资产路径，混进「引擎里的改动」
- * 那一区会变成一堆没有名字的行；又恰恰是这一类最需要原样展示 —— 一段脚本
- * 干了什么，只有原文说得清。一个工具一类步骤，组的 steps 同名同 detail 才
- * 合并，所以每一行天然只对应一条命令。
+ * 它们不改工程里的文件，混进「资源」那一区会读成「这个场景被改了」；
+ * 但它们动了用户眼前的编辑器，得让他知道是谁干的。一行一个操作，
+ * 同一个操作对同一个场景重复做才合并计数，见 `changeSummary.ts` 的 `isEditorAction`。
  *
  * **本地命令行不在这里**：它记进台账（「用量」页照常统计），但不上面板，
  * 见 `changeSummary.ts` 的 `PANEL_HIDDEN_TOOLS`。
  */
-const SHELL_TOOLS = new Set(['ue_run_python_script', 'ue_run_console_command'])
-
-function isShellGroup(group: ChangeGroup): boolean {
-  return SHELL_TOOLS.has(group.steps[0]?.toolName ?? '')
+function isEditorGroup(group: ChangeGroup): boolean {
+  return isEditorAction(group.steps[0]?.toolName ?? '')
 }
 
-const shellGroups = computed(() =>
-  changeGroups.value.filter((group) => !group.local && isShellGroup(group))
+const editorGroups = computed(() =>
+  changeGroups.value.filter((group) => !group.local && isEditorGroup(group))
 )
 
-/** 引擎里的改动（蓝图 / 材质 / Actor / 插件），没有对应的磁盘文件可打开 */
-const engineGroups = computed(() =>
-  changeGroups.value.filter((group) => !group.local && !isShellGroup(group))
+/** 工程里的资源（`res://`，生成的、导入的）和素材库、笔记、美术风格这些没有磁盘绝对路径的改动 */
+const resourceGroups = computed(() =>
+  changeGroups.value.filter((group) => !group.local && !isEditorGroup(group))
 )
 
 const { menuItems: filePathMenuItems, runFilePathAction } = useFilePathMenu({ includeOpen: false })
 
 /**
- * 全是文件时按图里的说法写「N 个文件已更改」，混着引擎改动或命令行就退回总数。
+ * 全是文件时按图里的说法写「N 个文件已更改」，混着资源或编辑器操作就退回总数。
  *
- * 这个数现在是**东西的个数**，不是工具调用次数 —— 做一个材质是 1，不是 36。
+ * 这个数现在是**东西的个数**，不是工具调用次数 —— 一个脚本写一次改七次是 1，不是 8。
  * 前者是用户工程里的事实，后者是 agent 的施工步数，只有前者值得放进标题。
  */
 const changesTitle = computed(() =>
-  engineGroups.value.length === 0 && shellGroups.value.length === 0
+  resourceGroups.value.length === 0 && editorGroups.value.length === 0
     ? t('assistant.changes.fileCount', { count: fileGroups.value.length })
     : t('assistant.changes.title', { count: changeGroups.value.length })
 )
 
-/** 有几步是撤不回去的（网页交互、换流送方式这类），单独提示 */
+/** 有几步是撤不回去的（网页交互、覆盖导入这类），单独提示 */
 const irreversibleCount = computed(() =>
   changeGroups.value.reduce((sum, group) => sum + group.irreversibleCount, 0)
 )
@@ -1472,7 +1476,7 @@ function failureTag(group: ChangeGroup): string {
   return t('assistant.changes.partialFailed', { count: group.failedCount })
 }
 
-/** 行上显示的名字：资产路径的最后一段；万能工具没有路径，退回那一步做了什么 */
+/** 行上显示的名字：路径的最后一段；没有路径的（美术风格这类）退回那一步做了什么 */
 function groupName(group: ChangeGroup): string {
   return group.target ? basenameOf(group.target) : changeLabel(group.steps[0])
 }
@@ -1481,14 +1485,13 @@ function groupName(group: ChangeGroup): string {
  * 这一行要不要标「新建 / 删除」。
  *
  * **「修改」不标。** 这个面板叫「本轮改动」，里面每一行本来就是改动，
- * 再给每行挂一个「修改」等于把标题重复 N 遍 —— 用户刚让 agent 改的材质，
+ * 再给每行挂一个「修改」等于把标题重复 N 遍 —— 用户刚让 agent 改的脚本，
  * 标一个「修改」告诉不了他任何新东西。留下的两个标签因此才有意义：
  * 看见「新建」就是工程里多了个东西，看见「删除」就是少了个。
  *
  * 另外两种情况也不标，因为这行没指着一个具体的东西：
- * - 取不到目标的万能工具（`ue_run_python_script`）—— 说不清是「谁」被新建了；
- * - 经引擎工具集（MCP）做的 —— 那里的 target 是派发过去的工具名，不是资产，
- *   「EditorAppToolset.select_actors 修改」读起来像病句。
+ * - 取不到目标的（美术风格、编辑器操作）—— 说不清是「谁」被新建了；
+ * - 经 MCP 工具做的 —— 那里的 target 是从别人的参数里猜出来的，未必是个文件。
  */
 function showAction(group: ChangeGroup): boolean {
   return group.action !== 'modified' && group.target !== '' && !isMcpChange(group.steps[0])
@@ -1801,18 +1804,15 @@ function requestSelfCheck(checked: number): void {
   })
 }
 
-/** 正在打开的那一行，防止连点 —— 引擎那边要跑一段 Python，不是瞬时的 */
+/** 正在打开的那一行，防止连点 —— 要等编辑器那边回话，不是瞬时的 */
 const openingAsset = ref('')
 
 /**
- * 这一行能不能在编辑器里打开。
- *
- * 两道门：得是引擎内的资产路径（Actor 名和万能工具的行都不是），
- * 而且不能是关卡 —— 引擎的定位 API 对 level 类型无效，而「打开关卡」是
- * 切换用户当前的关卡，他只是想看一眼，不该被切走。
+ * 这一行能不能在编辑器里打开：得是工程内的 `res://` 路径。
+ * 素材库资产、笔记、美术风格这些行在编辑器里没有对应的东西。
  */
 function canOpenInEditor(group: ChangeGroup): boolean {
-  return group.kind !== 'level' && isEngineAssetPath(group.target)
+  return isResPath(group.target)
 }
 
 async function openInEditor(group: ChangeGroup): Promise<void> {
@@ -1841,28 +1841,14 @@ function displayDetail(detail: string | undefined): string {
 }
 
 /**
- * 展开区里那一步的差异信息。
+ * 行上直接显示的差异信息（套用的风格预设、新的风格描述）。
  *
- * 插件的 detail 是启停方向（`Enable`），已经变成了这一步的文案（「启用插件」）
- * 和行上的动作标签 —— 再原样印一个英文单词只是噪音。
- */
-function stepDetail(step: { toolName: string; detail?: string }): string {
-  if (step.toolName === 'ue_manage_plugin') return ''
-  return displayDetail(step.detail)
-}
-
-/**
- * 行上直接显示的差异信息。
- *
- * 「改了哪个 Actor」在行上，「改成什么」原来只藏在展开区里 —— 而后者恰恰是
- * 用户第一眼要问的：一行「Actor 修改属性」等于没说。
- *
- * 只在这一行确实只做了一件事时才放上去。二十多步搭出来的材质，挑哪一步的
+ * 只在这一行确实只做了一件事时才放上去。改了好几次的东西，挑哪一步的
  * detail 放到行上都是以偏概全，那种情况仍旧展开了看。
  */
 function rowDetail(group: ChangeGroup): string {
   if (group.steps.length !== 1 || group.steps[0].count !== 1) return ''
-  return stepDetail(group.steps[0])
+  return displayDetail(group.steps[0].detail)
 }
 
 /**
@@ -1870,12 +1856,11 @@ function rowDetail(group: ChangeGroup): string {
  *
  * 原来直接印工具名，于是清单长这样：
  *
- *   ue_run_python_script  未生效
- *   ue_run_python_script
- *   ue_save
+ *   gen_sprite  未生效
+ *   edit_local_file
+ *   editor_open_scene
  *
- * **对用户完全没有意义** —— 他不知道 `ue_run_python_script` 干了什么，
- * 也不知道六条一模一样的记录之间有什么区别。这个面板的存在意义是
+ * **对用户完全没有意义** —— 他不知道这些函数名各自干了什么。这个面板的存在意义是
  * 「让我知道刚才我的工程被改了什么」，印工具名回答不了这个问题。
  *
  * 有中文文案就用中文；没有就退回工具名（新增工具忘配文案时退化成今天的
@@ -2574,17 +2559,6 @@ function toggleChanges(): void {
 }
 
 .response-changes-tag.action-modified {
-  color: var(--color-text-secondary);
-  background: var(--color-bg-surface-hover);
-}
-
-/* 插件启停：启用是好消息（跟「新建」同色），停用是中性操作（跟「修改」同色） */
-.response-changes-tag.action-enabled {
-  color: var(--color-success-text);
-  background: var(--color-success-bg);
-}
-
-.response-changes-tag.action-disabled {
   color: var(--color-text-secondary);
   background: var(--color-bg-surface-hover);
 }

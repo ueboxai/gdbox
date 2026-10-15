@@ -2141,12 +2141,13 @@ export default {
     changes: {
       title: '本轮改动（{count}）',
       fileCount: '{count} 个文件已更改',
-      engineTitle: '引擎里的改动（{count}）',
-      // 控制台命令 / Python 脚本单独成区：它们没有能打开的资产路径，
-      // 动了什么只能原样写。用户自己电脑上的命令行不进这份清单
-      shellTitle: '引擎命令与脚本（{count}）',
+      // 工程里的 res:// 资源（生成的、导入的），以及素材库、笔记、美术风格
+      resourceTitle: '资源与资产（{count}）',
+      // 运行游戏、打开场景、选中节点：不改文件，但动了用户眼前的编辑器。
+      // 用户自己电脑上的命令行不进这份清单
+      editorTitle: '编辑器里的操作（{count}）',
       openButton: '打开',
-      // 引擎资产那一行的按钮：清单说不清材质长什么样，剩下那一半交给编辑器
+      // res:// 那一行的按钮：清单说不清场景长什么样，剩下那一半交给编辑器
       openInEditor: '在编辑器中打开',
       openFailed: '打开失败',
       irreversible: '不可回滚',
@@ -2154,30 +2155,32 @@ export default {
       failed: '未生效',
       /**
        * 一行一个被动过的东西，这三组词构成那一行：
-       * 「[类型] 名字 [净结果]」，例如「材质 M_GlowBreath 新建」。
+       * 「[类型] 名字 [净结果]」，例如「图片 hero.png 新建」。
        *
        * 净结果只有三种 —— 用户只会问这三个问题：这东西是新出现的、原来就有
-       * 被改了、还是没了。中间过程（加了几个节点）收在展开区里，不在这层。
+       * 被改了、还是没了。中间过程（改了几次）收在展开区里，不在这层。
        */
       kinds: {
-        material: '材质',
-        blueprint: '脚本',
-        widget: '界面',
-        level: '场景',
-        actor: '节点',
+        scene: '场景',
+        script: '脚本',
+        shader: '着色器',
+        resource: '资源',
+        image: '图片',
+        audio: '音频',
+        video: '视频',
+        model: '模型',
+        config: '配置',
+        file: '文件',
+        style: '风格',
         asset: '资产',
         folder: '文件夹',
-        file: '文件',
         note: '笔记',
-        web: '网页',
-        plugin: '插件'
+        web: '网页'
       },
       actions: {
         created: '新建',
         modified: '修改',
-        deleted: '删除',
-        enabled: '启用',
-        disabled: '停用'
+        deleted: '删除'
       },
       // 展开区里的步骤明细
       repeat: '×{count}',
@@ -2192,8 +2195,29 @@ export default {
        * 不是「调用了哪个函数」。
        */
       tools: {
-        // 引擎工具集（MCP）来的一律归一句：具体做了什么在后面的 target 里
-        mcpEngineToolset: '通过引擎工具集操作',
+        // MCP 来的一律归一句：工具名是别人起的，对用户没有意义
+        mcpEngineToolset: '通过 MCP 工具操作',
+
+        // Godot 工程
+        import_to_project: '放进工程',
+        gen_sprite: '生成精灵',
+        gen_tileset: '生成瓦片集',
+        gen_sfx: '生成音效',
+        gen_music: '生成音乐',
+        gen_voice: '合成语音',
+        art_style: '调整美术风格',
+        editor_play: '运行游戏',
+        editor_open_scene: '打开场景',
+        editor_select: '选中节点',
+        // 这两个是内务，面板上不单独占行；审批卡也按这张表取文案
+        editor_save_all: '保存全部场景',
+        editor_stop: '停止运行',
+
+        // 素材库
+        generate_image: '生成图片',
+        generate_video: '生成视频',
+        generate_3d_model: '生成 3D 模型',
+        rig_3d_model: '模型绑定骨骼',
 
         annotate_asset: '添加资产标注',
         delete_assets: '删除素材库资产',

@@ -2201,13 +2201,14 @@ export default {
     changes: {
       title: 'Changes this turn ({count})',
       fileCount: '{count} file(s) changed',
-      engineTitle: 'Changes in the engine ({count})',
-      // Console commands and Python scripts get their own section: they have no
-      // asset path to open, so the only honest thing to show is what ran.
-      // Commands run on the user's own machine never reach this list
-      shellTitle: 'Engine commands and scripts ({count})',
+      // res:// resources in the project (generated, imported), plus the asset
+      // library, notes and art style
+      resourceTitle: 'Resources and assets ({count})',
+      // Running the game, opening a scene, selecting nodes: no file changes, but
+      // the user's editor moved. Commands run on the user's own machine never reach this list
+      editorTitle: 'In the editor ({count})',
       openButton: 'Open',
-      // Button on an engine-asset row: a line of text cannot show what a material
+      // Button on a res:// row: a line of text cannot show what a scene
       // looks like, so hand that half over to the editor itself
       openInEditor: 'Open in editor',
       openFailed: 'Could not open the asset',
@@ -2216,31 +2217,33 @@ export default {
       failed: 'Not applied',
       /**
        * One row per thing that was touched: "[kind] name [outcome]",
-       * e.g. "Material M_GlowBreath Created".
+       * e.g. "Image hero.png Created".
        *
        * Only three outcomes, because users only ask three questions: is this
        * thing new, was an existing one changed, or is it gone. The intermediate
-       * steps (ten nodes added) live in the expanded detail, not up here.
+       * steps (edited five times) live in the expanded detail, not up here.
        */
       kinds: {
-        material: 'Material',
-        blueprint: 'Script',
-        widget: 'UI',
-        level: 'Scene',
-        actor: 'Node',
+        scene: 'Scene',
+        script: 'Script',
+        shader: 'Shader',
+        resource: 'Resource',
+        image: 'Image',
+        audio: 'Audio',
+        video: 'Video',
+        model: 'Model',
+        config: 'Config',
+        file: 'File',
+        style: 'Style',
         asset: 'Asset',
         folder: 'Folder',
-        file: 'File',
         note: 'Note',
-        web: 'Web',
-        plugin: 'Plugin'
+        web: 'Web'
       },
       actions: {
         created: 'Created',
         modified: 'Changed',
-        deleted: 'Deleted',
-        enabled: 'Enabled',
-        disabled: 'Disabled'
+        deleted: 'Deleted'
       },
       // Step detail inside an expanded row
       repeat: '×{count}',
@@ -2255,7 +2258,28 @@ export default {
        * in my project", not "which function was called".
        */
       tools: {
-        mcpEngineToolset: 'Via engine toolsets',
+        mcpEngineToolset: 'Via an MCP tool',
+
+        // Godot project
+        import_to_project: 'Add to project',
+        gen_sprite: 'Generate sprite',
+        gen_tileset: 'Generate tileset',
+        gen_sfx: 'Generate sound effect',
+        gen_music: 'Generate music',
+        gen_voice: 'Synthesize voice',
+        art_style: 'Adjust art style',
+        editor_play: 'Run the game',
+        editor_open_scene: 'Open scene',
+        editor_select: 'Select nodes',
+        // Housekeeping: never its own row on the panel; approval cards use this table too
+        editor_save_all: 'Save all scenes',
+        editor_stop: 'Stop the game',
+
+        // Asset library
+        generate_image: 'Generate image',
+        generate_video: 'Generate video',
+        generate_3d_model: 'Generate 3D model',
+        rig_3d_model: 'Rig 3D model',
 
         annotate_asset: 'Annotate asset',
         delete_assets: 'Delete library assets',
