@@ -308,7 +308,15 @@ export async function makeLoopingWav(
   data: Buffer,
   ext: 'mp3' | 'wav',
   targetSeconds?: number
-): Promise<{ wav: Buffer; loopStartSec: number; loopEndSec: number; score: number }> {
+): Promise<{
+  wav: Buffer
+  loopStartSec: number
+  loopEndSec: number
+  /** 写进 smpl 块的采样位置，Godot 运行时 loop_begin / loop_end 就是这两个数 */
+  loopStartSample: number
+  loopEndSample: number
+  score: number
+}> {
   const pcm = ext === 'mp3' ? await decodeMp3(data) : decodeWav(data)
   const loop = findLoop(pcm, targetSeconds)
   const baked = bakeLoop(pcm, loop)
@@ -316,6 +324,8 @@ export async function makeLoopingWav(
     wav: encodeWav(baked, loop),
     loopStartSec: loop.start / pcm.sampleRate,
     loopEndSec: loop.end / pcm.sampleRate,
+    loopStartSample: loop.start,
+    loopEndSample: loop.end,
     score: loop.score
   }
 }

@@ -113,7 +113,10 @@ export function createGenMusicTool(): UnrealAgentTool<GenMusicDetails> {
             text:
               `音乐：${file.res}\n无缝循环 ${best.loopStartSec.toFixed(2)}s → ${best.loopEndSec.toFixed(2)}s` +
               `（${length.toFixed(1)}s，接缝相似度 ${(best.score * 100).toFixed(0)}%）。` +
-              'Godot 导入时会识别循环点。请用户在资产抽屉里试听。',
+              '循环点写在 WAV 的 smpl 块里，不用改代码也不用改导入设置：.import 里的 edit/loop_mode=0 意思是「从 WAV 读循环点」，' +
+              `不是关闭循环。运行时这条 AudioStreamWAV 的 loop_mode 是 1（LOOP_FORWARD）、loop_begin=${best.loopStartSample}、` +
+              `loop_end=${best.loopEndSample}（采样数），要核实就用 godot_run 盯 "<播放器节点>:stream:loop_mode"。` +
+              '别把 loop_begin 改成 0：那会丢掉无缝接缝，从头重播时能听出断口。请用户在资产抽屉里试听。',
             details: {
               outputs: [file.res],
               loop: { start: best.loopStartSec, end: best.loopEndSec, score: best.score }
