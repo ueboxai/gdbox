@@ -1138,17 +1138,6 @@ declare global {
       filename: string
     ) => Promise<{ success: boolean; data?: string; error?: string }>
   }
-  interface AssistantAPI {
-    ask: (args: {
-      content: string
-      conversationId?: string | null
-    }) => Promise<{ success: boolean }>
-    onChunk: (listener: (chunk: string) => void) => () => void
-    onDone: (listener: () => void) => () => void
-    onError: (listener: (err: { message?: string; status?: number }) => void) => () => void
-    onConversation: (listener: (id: string) => void) => () => void
-  }
-
   // Unreal 引擎与插件 API
   interface UnrealEngineInfo {
     name: string
@@ -1620,7 +1609,6 @@ declare global {
         error?: string
       }>
     }
-    assistant: AssistantAPI
     unrealPath: UnrealPathAPI
     unrealProcess: UnrealProcessAPI
     /**
