@@ -839,6 +839,10 @@ export default {
           title: 'Box Plan authorization expired',
           desc: 'The key was revoked or deleted. Reconnect in Settings → Models.'
         },
+        line_busy: {
+          title: 'Lines are busy',
+          desc: "Retried once already, and failed calls don't use Credits. Try again later, or switch back to the default model."
+        },
         manage: 'Manage subscription',
         reconnect: 'Reconnect'
       },
