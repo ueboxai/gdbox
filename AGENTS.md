@@ -27,6 +27,11 @@ explicitly configured by the user.
 
 **Never** add telemetry, remote calls, or an account requirement to a local feature.
 
+UEBox and GDBox remain independent repositories and products. For upstream porting, use
+[gdbox-upstream-port](.agents/skills/gdbox-upstream-port/SKILL.md) and read
+[GDBox differences](docs/gdbox-differences.md) and the [porting workflow](docs/upstream-sync.md).
+Only port committed source into GDBox; do not modify UEBox or add cross-repository build/runtime dependencies.
+
 ## 2. Setup
 
 ```bash

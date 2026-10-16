@@ -24,6 +24,11 @@ English: [AGENTS.md](AGENTS.md)（两份必须同步更新，CI 会检查）
 
 **绝对不要**给本地功能加遥测、远程请求或账号强制要求。
 
+UEBox 和 GDBox 保持仓库与产品独立。移植上游更新时使用
+[gdbox-upstream-port](.agents/skills/gdbox-upstream-port/SKILL.md)，并读取
+[GDBox 差异约束](docs/gdbox-differences.md)和[移植工作流](docs/upstream-sync.md)。
+只把已提交源码移植到 GDBox；不修改 UEBox，不引入跨仓库构建或运行时依赖。
+
 ## 2. 环境准备
 
 ```bash

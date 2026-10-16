@@ -1,0 +1,55 @@
+{
+  "protected": [
+    "AGENTS.md",
+    "AGENTS.zh-CN.md",
+    "CONTEXT.md",
+    ".agents/",
+    ".github/",
+    "scripts/",
+    "package.json",
+    "pnpm-lock.yaml",
+    "electron-builder.yml",
+    "electron.vite.config.ts",
+    "src/main/userDataPath.ts",
+    "src/main/utils/PathManager.ts",
+    "src/main/services/updater/",
+    "src/renderer/src/assets/imgs/",
+    "website/"
+  ],
+  "engine": [
+    "plugin/",
+    "resources/plugins/",
+    "resources/godot/",
+    "src/main/godot/",
+    "src/main/agent-v3/tools/godot/",
+    "src/main/agent-v3/tools/godot-asset/",
+    "src/main/agent-v3/tools/adapted/ue-blueprint/",
+    "src/main/agent-v3/tools/adapted/ue-editor/",
+    "src/main/agent-v3/tools/adapted/ue-system/",
+    "src/main/agent-v3/tools/ue-content/",
+    "src/renderer/src/views/BlueprintLibrary/",
+    "src/renderer/src/views/MaterialLibrary/"
+  ],
+  "review": [
+    "src/main/agent-v3/",
+    "src/main/services/project/",
+    "src/main/services/websocket/",
+    "src/main/utils/fileProcessor/",
+    "src/main/sqliteDataBase/",
+    "src/preload/",
+    "src/renderer/src/i18n/",
+    "src/renderer/src/views/Home/",
+    "src/renderer/src/views/AssetManagement/",
+    "src/renderer/src/views/Assistant/",
+    "src/renderer/src/views/System/",
+    "resources/skills/",
+    "packages/cli/"
+  ],
+  "shared": [
+    "src/main/ai/",
+    "src/main/networkV2/",
+    "src/renderer/src/components/",
+    "src/renderer/src/assets/styles/",
+    "src/renderer/src/views/Notebook/"
+  ]
+}
