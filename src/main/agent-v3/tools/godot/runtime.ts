@@ -59,7 +59,11 @@ export function summarizeWatch(lines: string[], maxRows = 60): string {
   }
   const shown =
     rows.length > maxRows
-      ? [...rows.slice(0, maxRows - 5), `… ${rows.length - maxRows + 1} more rows …`, ...rows.slice(-4)]
+      ? [
+          ...rows.slice(0, maxRows - 5),
+          `… ${rows.length - maxRows + 1} more rows …`,
+          ...rows.slice(-4)
+        ]
       : rows
   return `time | ${keys.join(' | ')}\n${shown.join('\n')}`
 }
@@ -229,7 +233,13 @@ export function createGodotCheckTool(
     input: z.object({
       project_path: projectPathInput,
       scene: z.string().optional().describe('res:// scene to run instead of the main scene'),
-      frames: z.number().int().min(1).max(3600).optional().describe('Frames to run at 60 fps. Default 120')
+      frames: z
+        .number()
+        .int()
+        .min(1)
+        .max(3600)
+        .optional()
+        .describe('Frames to run at 60 fps. Default 120')
     }),
     async execute(args, { signal }) {
       const godot = (await requireGodot()).path
@@ -237,7 +247,15 @@ export function createGodotCheckTool(
       const frames = args.frames ?? 120
       const imported = await runImport(godot, dir, signal)
       const loaded = await checkScriptsLoad(godot, dir, checkerPath(), signal)
-      const runArgs = ['--headless', '--path', dir, '--fixed-fps', '60', '--quit-after', String(frames)]
+      const runArgs = [
+        '--headless',
+        '--path',
+        dir,
+        '--fixed-fps',
+        '60',
+        '--quit-after',
+        String(frames)
+      ]
       if (args.scene) runArgs.push(args.scene)
       const ran = await runGodot(godot, runArgs, { timeoutMs: 120_000, signal })
 
@@ -357,8 +375,17 @@ export function createGodotRunTool(
         )
         .optional(),
       watch: z.array(z.string()).max(8).optional(),
-      sample_interval: z.number().min(0.016).max(5).optional().describe('Seconds between samples. Default 0.1'),
-      screenshots: z.array(z.number().min(0)).max(3).optional().describe('Times (seconds) to capture frames')
+      sample_interval: z
+        .number()
+        .min(0.016)
+        .max(5)
+        .optional()
+        .describe('Seconds between samples. Default 0.1'),
+      screenshots: z
+        .array(z.number().min(0))
+        .max(3)
+        .optional()
+        .describe('Times (seconds) to capture frames')
     }),
     async execute(args, { signal }) {
       const godot = (await requireGodot()).path
@@ -452,7 +479,13 @@ export function createGodotScreenshotTool(
     input: z.object({
       project_path: projectPathInput,
       scene: z.string().optional().describe('res:// scene to show instead of the main scene'),
-      frames: z.number().int().min(1).max(600).optional().describe('Frame to capture at 60 fps. Default 30')
+      frames: z
+        .number()
+        .int()
+        .min(1)
+        .max(600)
+        .optional()
+        .describe('Frame to capture at 60 fps. Default 30')
     }),
     async execute(args, { signal }) {
       const godot = (await requireGodot()).path
@@ -522,8 +555,13 @@ export function createGodotPlayTool(): UnrealAgentTool<unknown> {
     async execute(args, { signal }) {
       const godot = (await requireGodot()).path
       const dir = resolveProjectDir(args.project_path)
-      const { playGame, gameLog, isGameRunning, errorsInLog } = await import('../../../godot/playGame')
-      await playGame(godot, dir, { ...(args.scene ? { scene: args.scene } : {}), ...(signal ? { signal } : {}) })
+      const { playGame, gameLog, isGameRunning, errorsInLog } = await import(
+        '../../../godot/playGame'
+      )
+      await playGame(godot, dir, {
+        ...(args.scene ? { scene: args.scene } : {}),
+        ...(signal ? { signal } : {})
+      })
       // 等几秒：脚本解析错、主场景缺失这类问题一启动就报，现在告诉用户比让他对着黑屏强
       await new Promise((resolve) => setTimeout(resolve, 4_000))
       const errors = errorsInLog(gameLog(dir))
@@ -532,9 +570,17 @@ export function createGodotPlayTool(): UnrealAgentTool<unknown> {
         running
           ? "The game window is open on the user's screen."
           : 'The game exited within a few seconds of starting.',
-        ...(errors.length ? ['Errors so far:', ...errors.map((e) => `- ${e}`)] : running ? ['No errors so far.'] : [])
+        ...(errors.length
+          ? ['Errors so far:', ...errors.map((e) => `- ${e}`)]
+          : running
+            ? ['No errors so far.']
+            : [])
       ]
-      return { text: lines.join('\n'), details: { running, errors }, ...(running ? {} : { isError: true }) }
+      return {
+        text: lines.join('\n'),
+        details: { running, errors },
+        ...(running ? {} : { isError: true })
+      }
     }
   })
 }

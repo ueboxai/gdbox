@@ -80,7 +80,11 @@ function serialized<T>(projectDir: string, work: () => Promise<T>): Promise<T> {
 }
 
 /** 跑一次导入（不管需不需要），成功就记标记。同一个工程排队 */
-export function runImport(godotPath: string, projectDir: string, signal?: AbortSignal): Promise<RunResult> {
+export function runImport(
+  godotPath: string,
+  projectDir: string,
+  signal?: AbortSignal
+): Promise<RunResult> {
   return serialized(projectDir, async () => {
     const startedAt = Date.now()
     const result = await runGodot(godotPath, ['--headless', '--path', projectDir, '--import'], {
@@ -93,7 +97,11 @@ export function runImport(godotPath: string, projectDir: string, signal?: AbortS
 }
 
 /** 需要时导入一次；返回导入结果（没导入返回 null）。 */
-export function ensureImported(godotPath: string, projectDir: string, signal?: AbortSignal): Promise<RunResult | null> {
+export function ensureImported(
+  godotPath: string,
+  projectDir: string,
+  signal?: AbortSignal
+): Promise<RunResult | null> {
   // 排上队之后再判断：前面那位可能刚好已经导完了
   return serialized(projectDir, async () => {
     if (!needsImport(projectDir)) return null

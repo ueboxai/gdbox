@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { stripVTControlCharacters } from 'node:util'
 
 /**
  * GDBox 在后台起的 Godot（检查、截图、试玩）用一份独立的用户数据目录。
@@ -17,7 +18,12 @@ export function isolatedGodotEnv(): NodeJS.ProcessEnv {
   mkdirSync(localAppData, { recursive: true })
   return process.platform === 'win32'
     ? { ...process.env, APPDATA: appData, LOCALAPPDATA: localAppData }
-    : { ...process.env, XDG_DATA_HOME: join(root, 'data'), XDG_CONFIG_HOME: join(root, 'config'), XDG_CACHE_HOME: join(root, 'cache') }
+    : {
+        ...process.env,
+        XDG_DATA_HOME: join(root, 'data'),
+        XDG_CONFIG_HOME: join(root, 'config'),
+        XDG_CACHE_HOME: join(root, 'cache')
+      }
 }
 
 export interface RunResult {
@@ -36,7 +42,11 @@ export function runGodot(
   options: { timeoutMs: number; signal?: AbortSignal; cwd?: string }
 ): Promise<RunResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(godotPath, args, { cwd: options.cwd, windowsHide: true, env: isolatedGodotEnv() })
+    const child = spawn(godotPath, args, {
+      cwd: options.cwd,
+      windowsHide: true,
+      env: isolatedGodotEnv()
+    })
     let output = ''
     let timedOut = false
     const onData = (chunk: Buffer): void => {
@@ -103,7 +113,7 @@ export function digestGodotLog(output: string): LogDigest {
   }
 
   for (const raw of output.split(/\r?\n/)) {
-    const line = raw.replace(/\x1b\[[0-9;]*m/g, '')
+    const line = stripVTControlCharacters(raw)
     const trimmed = line.trimStart()
     if (/^(SCRIPT ERROR|USER ERROR|ERROR):/.test(trimmed)) {
       flush()

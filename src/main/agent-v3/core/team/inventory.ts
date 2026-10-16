@@ -49,7 +49,8 @@ export function categorize(fileName: string): string {
 }
 
 /** 不是工程内容的文件：旁挂、工程配置本身、系统垃圾 */
-const SKIP_FILE = /\.(import|uid)$|^project\.godot$|^export_presets\.cfg$|^\.|^Thumbs\.db$|^desktop\.ini$/i
+const SKIP_FILE =
+  /\.(import|uid)$|^project\.godot$|^export_presets\.cfg$|^\.|^Thumbs\.db$|^desktop\.ini$/i
 
 /** 不往里走的目录（相对工程根，正斜杠） */
 const SKIP_DIR = /^(\.godot|\.gdbox|\.git|\.import|addons\/gdbox_link)$/i
@@ -74,7 +75,13 @@ export async function contentInventory(projectDir: string, recentCount = 10): Pr
       if (entry.isDirectory()) {
         if (SKIP_DIR.test(rel) || entry.name.startsWith('.')) continue
         // 带 .gdignore 的目录 Godot 自己也不导入
-        if (await fs.access(join(full, '.gdignore')).then(() => true, () => false)) continue
+        if (
+          await fs.access(join(full, '.gdignore')).then(
+            () => true,
+            () => false
+          )
+        )
+          continue
         await walk(full)
       } else if (!SKIP_FILE.test(entry.name)) {
         const stat = await fs.stat(full).catch(() => null)

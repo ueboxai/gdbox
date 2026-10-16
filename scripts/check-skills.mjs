@@ -145,7 +145,9 @@ function extractLinks(text) {
 /** 正文里以裸路径提到的资源文件，例如 `references/wiring.md` */
 function extractMentions(text) {
   // 前面是字母、冒号或斜杠的不算：`res://assets/gen/...` 是工程里的目录，不是技能自带的文件
-  return [...text.matchAll(/(?<![\w:/])(?:references|scripts|assets)\/[A-Za-z0-9._-]+/g)].map((m) => m[0])
+  return [...text.matchAll(/(?<![\w:/])(?:references|scripts|assets)\/[A-Za-z0-9._-]+/g)].map(
+    (m) => m[0]
+  )
 }
 
 function checkSkill(dir, skill) {

@@ -282,7 +282,9 @@ export function createSearchAssetsTool(): V2Tool {
       assetType: z
         .union([z.string(), z.array(z.string())])
         .optional()
-        .describe('Godot 资源类型，如 PackedScene、Texture2D、GDScript、Shader、AudioStreamWAV、Model3D。'),
+        .describe(
+          'Godot 资源类型，如 PackedScene、Texture2D、GDScript、Shader、AudioStreamWAV、Model3D。'
+        ),
       fileSize: z
         .object({
           min: z.number().optional().describe('最小文件大小（字节）'),

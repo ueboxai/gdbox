@@ -80,7 +80,10 @@ describe('真实工具库检索回归', () => {
         `${tool.name} 既不在点名清单里，所属组 ${toolSearchGroup(tool)} 也不是整组常驻`
       ).toBe(true)
     for (const name of ['gen_sprite', 'gen_music', 'art_style', 'generate_3d_model']) {
-      expect(search.getTools().some((tool) => tool.name === name), name).toBe(false)
+      expect(
+        search.getTools().some((tool) => tool.name === name),
+        name
+      ).toBe(false)
     }
   })
 

@@ -26,7 +26,10 @@ export function registerPlayGameIPC(): void {
     try {
       const godot = await locateGodot(appSettingsManager.getGodotPath() || undefined)
       if (!godot) {
-        return { success: false, error: '没有找到 Godot 4。请在「设置 → 项目」里指定 Godot 编辑器的位置。' }
+        return {
+          success: false,
+          error: '没有找到 Godot 4。请在「设置 → 项目」里指定 Godot 编辑器的位置。'
+        }
       }
       await playGame(godot.path, projectDirOf(projectPath), scene ? { scene } : {})
       return { success: true }

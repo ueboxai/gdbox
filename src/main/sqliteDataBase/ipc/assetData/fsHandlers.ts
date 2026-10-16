@@ -119,7 +119,7 @@ export function registerAssetFsIPC(): void {
                 name: item.name,
                 path: fullPath,
                 type: classified.type,
-                    size: item.isFile() ? stats!.size : null,
+                size: item.isFile() ? stats!.size : null,
                 modifiedTime: stats!.mtime.toISOString(),
                 depth: currentDepth,
                 relativePath: fullPath.replace(folderPath, '').replace(/^[\\/]/, '')

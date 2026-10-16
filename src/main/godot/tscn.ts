@@ -153,7 +153,14 @@ export function splitConflict(text: string): ConflictSides {
     else if (state === 'base') base.push(line)
     else theirs.push(line)
   }
-  return { ours: ours.join('\n'), theirs: theirs.join('\n'), base: sawBase ? base.join('\n') : undefined, oursLabel, theirsLabel, count }
+  return {
+    ours: ours.join('\n'),
+    theirs: theirs.join('\n'),
+    base: sawBase ? base.join('\n') : undefined,
+    oursLabel,
+    theirsLabel,
+    count
+  }
 }
 
 // ---------- 按节点比较 ----------
@@ -168,8 +175,10 @@ export interface SceneChange {
 
 function sectionKey(s: Section): string {
   if (s.kind === 'node') return `node ${nodePath(s.attrs)}`
-  if (s.kind === 'ext_resource') return `ext_resource ${unquote(s.attrs.id ?? '')} (${unquote(s.attrs.path ?? '')})`
-  if (s.kind === 'sub_resource') return `sub_resource ${unquote(s.attrs.id ?? '')} (${unquote(s.attrs.type ?? '')})`
+  if (s.kind === 'ext_resource')
+    return `ext_resource ${unquote(s.attrs.id ?? '')} (${unquote(s.attrs.path ?? '')})`
+  if (s.kind === 'sub_resource')
+    return `sub_resource ${unquote(s.attrs.id ?? '')} (${unquote(s.attrs.type ?? '')})`
   if (s.kind === 'connection') {
     const a = s.attrs
     return `connection ${unquote(a.signal ?? '')}: ${unquote(a.from ?? '')} → ${unquote(a.to ?? '')}.${unquote(a.method ?? '')}`
@@ -178,7 +187,8 @@ function sectionKey(s: Section): string {
 }
 
 export function diffScenes(before: ParsedScene, after: ParsedScene): SceneChange[] {
-  const index = (p: ParsedScene): Map<string, Section> => new Map(p.sections.map((s) => [sectionKey(s), s]))
+  const index = (p: ParsedScene): Map<string, Section> =>
+    new Map(p.sections.map((s) => [sectionKey(s), s]))
   const a = index(before)
   const b = index(after)
   const changes: SceneChange[] = []

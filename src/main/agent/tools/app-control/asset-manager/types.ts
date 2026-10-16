@@ -190,8 +190,20 @@ export const FORMAT_ALIAS_MAP: Record<string, string[]> = {
   主题: ['Theme'],
 
   // === 特效 ===
-  特效: ['ParticleProcessMaterial', 'GPUParticles2D', 'GPUParticles3D', 'CPUParticles2D', 'CPUParticles3D'],
-  粒子: ['ParticleProcessMaterial', 'GPUParticles2D', 'GPUParticles3D', 'CPUParticles2D', 'CPUParticles3D'],
+  特效: [
+    'ParticleProcessMaterial',
+    'GPUParticles2D',
+    'GPUParticles3D',
+    'CPUParticles2D',
+    'CPUParticles3D'
+  ],
+  粒子: [
+    'ParticleProcessMaterial',
+    'GPUParticles2D',
+    'GPUParticles3D',
+    'CPUParticles2D',
+    'CPUParticles3D'
+  ],
 
   // === 声音 ===
   音频: ['wav', 'mp3', 'ogg', 'AudioStreamWAV', 'AudioStreamOggVorbis', 'AudioStreamMP3'],

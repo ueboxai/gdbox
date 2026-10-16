@@ -45,12 +45,21 @@ export type NewProjectResult = { ok: true; projectDir: string } | { ok: false; e
 
 export function createEmptyProject(projectDir: string, engineVersion?: string): NewProjectResult {
   if (existsSync(projectDir)) {
-    const entries = readdirSync(projectDir).filter((name) => !/^(\.DS_Store|Thumbs\.db|desktop\.ini)$/i.test(name))
-    if (entries.includes('project.godot')) return { ok: false, error: '这个文件夹里已经有一个 Godot 工程了，请用「选择 project.godot 文件」导入它' }
+    const entries = readdirSync(projectDir).filter(
+      (name) => !/^(\.DS_Store|Thumbs\.db|desktop\.ini)$/i.test(name)
+    )
+    if (entries.includes('project.godot'))
+      return {
+        ok: false,
+        error: '这个文件夹里已经有一个 Godot 工程了，请用「选择 project.godot 文件」导入它'
+      }
     if (entries.length) return { ok: false, error: '请选一个空文件夹，或者新建一个文件夹' }
   }
   mkdirSync(projectDir, { recursive: true })
-  writeFileSync(join(projectDir, 'project.godot'), projectGodotText(basename(projectDir), engineVersion))
+  writeFileSync(
+    join(projectDir, 'project.godot'),
+    projectGodotText(basename(projectDir), engineVersion)
+  )
   writeFileSync(join(projectDir, 'icon.svg'), ICON_SVG)
   return { ok: true, projectDir }
 }

@@ -109,7 +109,12 @@ export function createImportToProjectTool(): UnrealAgentTool<unknown> {
           '。'
       ]
       if (imported.length) lines.push(...imported.map((p) => `- ${p}`))
-      if (skipped.length) lines.push('', '同名已存在（要覆盖就带 overwrite: true）：', ...skipped.map((p) => `- ${p}`))
+      if (skipped.length)
+        lines.push(
+          '',
+          '同名已存在（要覆盖就带 overwrite: true）：',
+          ...skipped.map((p) => `- ${p}`)
+        )
       if (failed.length) lines.push('', '失败：', ...failed.map((p) => `- ${p}`))
       if (missingDeps.size) {
         lines.push('', '这些场景 / 资源引用的依赖在工程里不存在，要么一起拷进来，要么改引用：')
@@ -117,7 +122,12 @@ export function createImportToProjectTool(): UnrealAgentTool<unknown> {
       }
       return {
         text: lines.join('\n'),
-        details: { imported, skipped, failed, missingDependencies: Object.fromEntries(missingDeps) },
+        details: {
+          imported,
+          skipped,
+          failed,
+          missingDependencies: Object.fromEntries(missingDeps)
+        },
         ...(imported.length === 0 && failed.length > 0 ? { isError: true } : {})
       }
     }

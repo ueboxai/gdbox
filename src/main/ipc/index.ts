@@ -165,5 +165,4 @@ export function registerAllIPC(setAppIconTheme: SetAppIconTheme): void {
 
   // 注册输入框右键菜单 IPC
   registerContextMenuIPC()
-
 }

@@ -207,7 +207,7 @@ const loadImage = (url: string): Promise<HTMLImageElement> => {
 }
 
 // 资产类型图标：暂无通用图标，返回空串让绘制走首字母 / 占位文本的回退
-const getAssetTypeIcon = (_type: string): string => ''
+const getAssetTypeIcon = (): string => ''
 
 // 生成圆角矩形路径
 const roundRect = (
@@ -358,7 +358,7 @@ const generateNodeImage = async (node: DependencyNode, thumbnailUrl?: string): P
     } catch (e) {
       // 图片加载失败，使用类型图标作为回退
       try {
-        const iconUrl = getAssetTypeIcon(node.className || '')
+        const iconUrl = getAssetTypeIcon()
         const icon = await loadImage(iconUrl)
 
         // 占满显示（可能会有裁剪，但更美观）
@@ -375,7 +375,7 @@ const generateNodeImage = async (node: DependencyNode, thumbnailUrl?: string): P
   } else {
     // 无缩略图，显示类型图标
     try {
-      const iconUrl = getAssetTypeIcon(node.className || '')
+      const iconUrl = getAssetTypeIcon()
       const icon = await loadImage(iconUrl)
 
       // 占满显示

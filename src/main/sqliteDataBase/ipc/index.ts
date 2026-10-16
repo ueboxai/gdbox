@@ -38,7 +38,6 @@ export const registerDatabaseIPC = (): void => {
   // 注册设置相关的IPC处理函数（公共数据库）
   registerSettingsIPC()
 
-
   // 注册保管库相关的IPC处理函数（公共数据库）
   registerVaultIPC()
 
@@ -106,18 +105,15 @@ export const registerDatabaseIPC = (): void => {
   registerNotebookInfographicIPC()
   registerNotebookOutputsIPC()
 
-
   // 注册3D生成任务 IPC 处理函数（公共数据库）
 
   // 注册微信公众号文章采集 IPC 处理函数
   registerWechatIPC()
 
-
   // 注册蓝图库 AI 对话 IPC 处理函数（公共数据库）
 
   // 注册蓝图库 / 材质库本地持久化 IPC 处理函数（公共数据库）
   registerLibraryStoreIpc()
-
 }
 
 // 导出所有模块的IPC注册函数，方便单独使用

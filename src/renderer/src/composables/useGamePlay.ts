@@ -35,7 +35,9 @@ export function useGamePlay(
       running.value = false
       return
     }
-    const result = (await window.api.invoke('game:status', projectPath.value).catch(() => null)) as {
+    const result = (await window.api
+      .invoke('game:status', projectPath.value)
+      .catch(() => null)) as {
       running?: boolean
     } | null
     running.value = Boolean(result?.running)
@@ -50,7 +52,12 @@ export function useGamePlay(
     const mine = projectPath.value.replace(/[\\/]project\.godot$/i, '')
     if (!sameDir(mine, status.projectDir)) return
     running.value = status.running
-    if (!status.running && status.exitCode !== null && status.exitCode !== undefined && status.exitCode !== 0) {
+    if (
+      !status.running &&
+      status.exitCode !== null &&
+      status.exitCode !== undefined &&
+      status.exitCode !== 0
+    ) {
       onCrash?.(status)
     }
   })
@@ -60,7 +67,10 @@ export function useGamePlay(
     if (!projectPath.value || starting.value) return { success: false }
     starting.value = true
     try {
-      return (await window.api.invoke('game:play', projectPath.value)) as { success: boolean; error?: string }
+      return (await window.api.invoke('game:play', projectPath.value)) as {
+        success: boolean
+        error?: string
+      }
     } finally {
       starting.value = false
     }

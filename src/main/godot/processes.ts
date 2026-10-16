@@ -20,7 +20,7 @@ function listCommandLines(): Promise<string[]> {
           '-NoProfile',
           '-NonInteractive',
           '-Command',
-          "Get-CimInstance Win32_Process -Filter \"Name LIKE 'godot%'\" | ForEach-Object { $_.CommandLine }"
+          'Get-CimInstance Win32_Process -Filter "Name LIKE \'godot%\'" | ForEach-Object { $_.CommandLine }'
         ],
         { timeout: 15_000, windowsHide: true, maxBuffer: 4 * 1024 * 1024 },
         (error, stdout) => resolve(error ? [] : stdout.split(/\r?\n/).filter(Boolean))

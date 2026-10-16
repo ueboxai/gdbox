@@ -46,7 +46,10 @@ describe('checkScene', () => {
   })
 
   it('合并后悬空的 ExtResource、缺失的父节点、缺失的文件都能查出来', () => {
-    const broken = ROOM.replace('[ext_resource type="Texture2D" path="res://wall.png" id="2_wall"]\n', '').replace(
+    const broken = ROOM.replace(
+      '[ext_resource type="Texture2D" path="res://wall.png" id="2_wall"]\n',
+      ''
+    ).replace(
       '[node name="Body" type="StaticBody2D" parent="Wall"]',
       '[node name="Body" type="StaticBody2D" parent="Walls"]'
     )
@@ -58,7 +61,10 @@ describe('checkScene', () => {
   })
 
   it('残留冲突标记直接报错', () => {
-    const conflicted = ROOM.replace('size = Vector2(16, 16)', '<<<<<<< HEAD\nsize = Vector2(16, 16)\n=======\nsize = Vector2(32, 16)\n>>>>>>> laok')
+    const conflicted = ROOM.replace(
+      'size = Vector2(16, 16)',
+      '<<<<<<< HEAD\nsize = Vector2(16, 16)\n=======\nsize = Vector2(32, 16)\n>>>>>>> laok'
+    )
     expect(checkScene('res://room.tscn', conflicted, exists)[0].message).toContain('merge conflict')
   })
 })
@@ -73,7 +79,11 @@ describe('splitConflict + diffScenes', () => {
     expect(sides.count).toBe(1)
     expect(sides.theirsLabel).toBe('feature/laok')
     const base = parseScene(ROOM)
-    expect(describeChanges(diffScenes(base, parseScene(sides.ours)))).toEqual(['changed node Wall/Body: position'])
-    expect(describeChanges(diffScenes(base, parseScene(sides.theirs)))).toEqual(['changed node Wall/Body: collision_layer'])
+    expect(describeChanges(diffScenes(base, parseScene(sides.ours)))).toEqual([
+      'changed node Wall/Body: position'
+    ])
+    expect(describeChanges(diffScenes(base, parseScene(sides.theirs)))).toEqual([
+      'changed node Wall/Body: collision_layer'
+    ])
   })
 })

@@ -33,9 +33,15 @@ describe('新建空工程', () => {
     const busy = join(root, 'busy')
     mkdirSync(busy)
     writeFileSync(join(busy, 'notes.txt'), 'x')
-    expect(createEmptyProject(busy)).toMatchObject({ ok: false, error: expect.stringContaining('空文件夹') })
+    expect(createEmptyProject(busy)).toMatchObject({
+      ok: false,
+      error: expect.stringContaining('空文件夹')
+    })
 
-    expect(createEmptyProject(empty)).toMatchObject({ ok: false, error: expect.stringContaining('导入') })
+    expect(createEmptyProject(empty)).toMatchObject({
+      ok: false,
+      error: expect.stringContaining('导入')
+    })
   })
 
   it('写出来的 project.godot 自己的解析器读得回来', () => {

@@ -69,7 +69,9 @@ export type TrayProjectCandidate = Pick<TrayRecentProject, 'projectKey' | 'name'
 
 /** 插件报的路径可能是项目目录，也可能直接是 `project.godot` —— 统一成目录再比 */
 function projectDirOf(reportedPath: string): string {
-  return basename(reportedPath).toLowerCase() === 'project.godot' ? dirname(reportedPath) : reportedPath
+  return basename(reportedPath).toLowerCase() === 'project.godot'
+    ? dirname(reportedPath)
+    : reportedPath
 }
 
 /**

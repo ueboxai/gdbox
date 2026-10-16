@@ -16,9 +16,11 @@ describe('packaged application layout', () => {
     ['arm64', 'mac-arm64']
   ])('finds the %s Mac bundle', (arch, directory) => {
     const paths = packagedAppPaths('/project', 'darwin', arch)
-    expect(paths.exe).toBe(join('/project', 'dist', directory, 'GDBox.app/Contents/MacOS/GDBox'))
+    expect(paths.exe).toBe(
+      join('/project', 'dist', directory, 'GODOT BOX.app/Contents/MacOS/GODOT BOX')
+    )
     expect(paths.asar).toBe(
-      join('/project', 'dist', directory, 'GDBox.app/Contents/Resources/app.asar')
+      join('/project', 'dist', directory, 'GODOT BOX.app/Contents/Resources/app.asar')
     )
   })
   it('rejects archives under resources/ — the Godot addon ships via extraResources, not app.asar', () => {

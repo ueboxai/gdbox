@@ -72,10 +72,7 @@ const findInput = z.object({
     .string()
     .describe('glob 模式，相对起始目录。如 "**/*.png"、"**/SKILL.md"、"scenes/**/*.tscn"'),
   limit: z.number().optional().describe(`默认 ${MAX_FILES}，最多 ${MAX_FILES_LIMIT}`),
-  include_ignored: z
-    .boolean()
-    .optional()
-    .describe('也搜默认跳过的目录（.godot/、导出目录等）')
+  include_ignored: z.boolean().optional().describe('也搜默认跳过的目录（.godot/、导出目录等）')
 })
 
 const grepInput = z.object({

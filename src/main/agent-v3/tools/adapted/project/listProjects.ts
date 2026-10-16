@@ -50,7 +50,9 @@ export function createProjectListTool(): UnrealAgentTool<unknown> {
           godotVersion: p.EngineAssociation ?? '',
           path: p.projectPath ?? '',
           onDisk: Boolean(p.projectPath && existsSync(join(p.projectPath, 'project.godot'))),
-          editorConnected: Boolean(p.projectPath && connected.has(projectComparisonKey(p.projectPath))),
+          editorConnected: Boolean(
+            p.projectPath && connected.has(projectComparisonKey(p.projectPath))
+          ),
           pinned: Boolean(p.isPinned)
         }))
       const collections = getAllProjectCollections(db).map((c) => ({
@@ -66,12 +68,18 @@ export function createProjectListTool(): UnrealAgentTool<unknown> {
               (p.onDisk ? '' : '｜盘上找不到') +
               (p.editorConnected ? '｜编辑器已连接' : '')
           )
-        : [needle ? `没有名字或路径含「${args.keyword}」的工程。` : '「我的项目」里还没有登记任何工程。']
+        : [
+            needle
+              ? `没有名字或路径含「${args.keyword}」的工程。`
+              : '「我的项目」里还没有登记任何工程。'
+          ]
       if (collections.length) {
         lines.push(
           '',
           '合集：',
-          ...collections.map((c) => `- ${c.name}（${c.collectionKey}）：${c.projects.length} 个工程`)
+          ...collections.map(
+            (c) => `- ${c.name}（${c.collectionKey}）：${c.projects.length} 个工程`
+          )
         )
       }
       return { text: lines.join('\n'), details: { projects, collections } }

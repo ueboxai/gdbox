@@ -183,7 +183,6 @@ describe('skill summaries', () => {
 })
 
 describe('load_skill', () => {
-
   it('返回 SKILL.md 正文', async () => {
     const result = await loadSkillTool.execute('c1', { name: 'ue-blueprint-graph-wiring' })
     const text = (result.content[0] as { text: string }).text
@@ -236,7 +235,6 @@ describe('load_skill', () => {
 })
 
 describe('read_skill_resource', () => {
-
   it('路径穿越被拒', async () => {
     await expect(
       readResourceTool.execute('c1', {

@@ -931,7 +931,10 @@ describe('McpServerHost 工具注解', () => {
     const listed = (await client.listTools()).tools
     const byName = new Map(listed.map((t) => [t.name, t.annotations]))
 
-    expect(byName.get('editor_scene_tree')).toMatchObject({ readOnlyHint: true, destructiveHint: false })
+    expect(byName.get('editor_scene_tree')).toMatchObject({
+      readOnlyHint: true,
+      destructiveHint: false
+    })
     expect(byName.get('gen_sprite')).toMatchObject({
       readOnlyHint: false,
       destructiveHint: false

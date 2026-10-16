@@ -61,7 +61,10 @@ export function installEditorLink(projectDir: string, sourceDir = godotResources
 
 export function isEditorLinkInstalled(projectDir: string): boolean {
   const projectFile = join(projectDir, 'project.godot')
-  if (!existsSync(join(projectDir, 'addons', 'gdbox_link', 'plugin.cfg')) || !existsSync(projectFile)) {
+  if (
+    !existsSync(join(projectDir, 'addons', 'gdbox_link', 'plugin.cfg')) ||
+    !existsSync(projectFile)
+  ) {
     return false
   }
   return parsePackedStrings(

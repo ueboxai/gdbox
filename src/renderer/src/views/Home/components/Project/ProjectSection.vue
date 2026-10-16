@@ -2122,7 +2122,7 @@ const doOpenProject = async (projectKey: string, target: string) => {
   border: none;
   border-radius: 50%;
   background: var(--color-accent-solid);
-  color: #fff;
+  color: var(--color-text-on-solid);
   font-size: 15px;
   cursor: pointer;
   opacity: 0;

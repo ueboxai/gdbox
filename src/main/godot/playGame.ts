@@ -41,7 +41,8 @@ export function setGameStatusListener(fn: ((status: GameStatus) => void) | undef
   listener = fn
 }
 
-const keyOf = (projectDir: string): string => projectDir.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()
+const keyOf = (projectDir: string): string =>
+  projectDir.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()
 
 function logPath(projectDir: string): string {
   return join(projectDir, '.gdbox', 'tmp', 'play.log')
@@ -52,7 +53,8 @@ function flushLog(projectDir: string, log: string): void {
     const dir = join(projectDir, '.gdbox', 'tmp')
     mkdirSync(dir, { recursive: true })
     // .gdbox 不让 Godot 导入
-    if (!existsSync(join(projectDir, '.gdbox', '.gdignore'))) writeFileSync(join(projectDir, '.gdbox', '.gdignore'), '')
+    if (!existsSync(join(projectDir, '.gdbox', '.gdignore')))
+      writeFileSync(join(projectDir, '.gdbox', '.gdignore'), '')
     writeFileSync(logPath(projectDir), log)
   } catch {
     // 日志写不下不影响游戏
@@ -91,8 +93,13 @@ export interface PlayOptions {
   signal?: AbortSignal
 }
 
-export async function playGame(godotPath: string, projectDir: string, options: PlayOptions = {}): Promise<{ pid: number }> {
-  if (!existsSync(join(projectDir, 'project.godot'))) throw new Error(`${projectDir} 下没有 project.godot`)
+export async function playGame(
+  godotPath: string,
+  projectDir: string,
+  options: PlayOptions = {}
+): Promise<{ pid: number }> {
+  if (!existsSync(join(projectDir, 'project.godot')))
+    throw new Error(`${projectDir} 下没有 project.godot`)
   const key = keyOf(projectDir)
   const previous = games.get(key)
   if (previous) {

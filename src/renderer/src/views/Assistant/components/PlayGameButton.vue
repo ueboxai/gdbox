@@ -105,7 +105,9 @@ async function handlePlay(): Promise<void> {
 
   &:disabled {
     cursor: progress;
-    opacity: 0.7;
+    color: var(--color-text-disabled);
+    background: var(--color-bg-surface-hover);
+    box-shadow: none;
   }
 }
 

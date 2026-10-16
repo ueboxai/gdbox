@@ -36,9 +36,15 @@ async function refreshEditor(): Promise<string> {
   try {
     const { callEditor } = await import('../agent-v3/tools/editorRpc')
     await callEditor('editor.rescan', {}, { timeoutMs: 10_000 })
-    const status = await callEditor<{ open_scenes?: string[] }>('editor.status', {}, { timeoutMs: 5_000 })
+    const status = await callEditor<{ open_scenes?: string[] }>(
+      'editor.status',
+      {},
+      { timeoutMs: 5_000 }
+    )
     for (const path of status.open_scenes ?? []) {
-      await callEditor('editor.reload_scene', { path }, { timeoutMs: 10_000 }).catch(() => undefined)
+      await callEditor('editor.reload_scene', { path }, { timeoutMs: 10_000 }).catch(
+        () => undefined
+      )
     }
     return '编辑器已重扫文件，开着的场景已从磁盘重新加载。'
   } catch {

@@ -19,10 +19,6 @@
     "errors": 2,
     "warnings": 0
   },
-  "src/main/ipc/assistant.ts": {
-    "errors": 1,
-    "warnings": 0
-  },
   "src/main/ipc/baiduyun.ts": {
     "errors": 4,
     "warnings": 0
@@ -72,11 +68,11 @@
     "warnings": 0
   },
   "src/main/networkV2/SyncClient.ts": {
-    "errors": 6,
+    "errors": 5,
     "warnings": 0
   },
   "src/main/services/asset/AssetImportService.ts": {
-    "errors": 18,
+    "errors": 17,
     "warnings": 0
   },
   "src/main/services/asset/importFeatureFlag.test.ts": {
@@ -176,7 +172,7 @@
     "warnings": 0
   },
   "src/main/sqliteDataBase/ipc/assetData.ts": {
-    "errors": 44,
+    "errors": 43,
     "warnings": 0
   },
   "src/main/sqliteDataBase/ipc/assetData/crud.ts": {
@@ -209,10 +205,6 @@
   },
   "src/main/sqliteDataBase/ipc/dragMove.ts": {
     "errors": 1,
-    "warnings": 0
-  },
-  "src/main/sqliteDataBase/ipc/product.ts": {
-    "errors": 4,
     "warnings": 0
   },
   "src/main/sqliteDataBase/ipc/settings.ts": {
@@ -272,7 +264,7 @@
     "warnings": 0
   },
   "src/main/utils/assetDependency/AssetDependencyResolver.ts": {
-    "errors": 2,
+    "errors": 1,
     "warnings": 0
   },
   "src/main/utils/assetDependency/AssetImportManager.ts": {
@@ -283,20 +275,8 @@
     "errors": 1,
     "warnings": 0
   },
-  "src/main/utils/fileProcessor/UnrealAssetProcessor.ts": {
-    "errors": 19,
-    "warnings": 0
-  },
   "src/main/utils/PathManager.ts": {
     "errors": 1,
-    "warnings": 0
-  },
-  "src/main/utils/uasset-reader-new.js": {
-    "errors": 15,
-    "warnings": 0
-  },
-  "src/main/utils/UnrealPathManager.ts": {
-    "errors": 2,
     "warnings": 0
   },
   "src/main/windowStateManager.ts": {
@@ -443,20 +423,12 @@
     "errors": 2,
     "warnings": 0
   },
-  "src/renderer/src/store/modules/blueprintLibraryStore.ts": {
-    "errors": 3,
-    "warnings": 0
-  },
   "src/renderer/src/store/modules/chatSessions.ts": {
     "errors": 3,
     "warnings": 0
   },
-  "src/renderer/src/store/modules/materialLibraryStore.ts": {
-    "errors": 2,
-    "warnings": 0
-  },
   "src/renderer/src/store/modules/tabs.ts": {
-    "errors": 16,
+    "errors": 15,
     "warnings": 0
   },
   "src/renderer/src/store/modules/webdav.ts": {
@@ -504,11 +476,11 @@
     "warnings": 0
   },
   "src/renderer/src/views/AssetManagement/components/AssetDetailsPanel.vue": {
-    "errors": 73,
+    "errors": 68,
     "warnings": 0
   },
   "src/renderer/src/views/AssetManagement/components/AssetFileList.vue": {
-    "errors": 216,
+    "errors": 212,
     "warnings": 0
   },
   "src/renderer/src/views/AssetManagement/components/AssetTree.vue": {
@@ -560,7 +532,7 @@
     "warnings": 0
   },
   "src/renderer/src/views/AssetManagement/components/modals/ImportToProjectModal.vue": {
-    "errors": 47,
+    "errors": 1,
     "warnings": 0
   },
   "src/renderer/src/views/AssetManagement/components/modals/RenameAssetModal.vue": {
@@ -691,52 +663,12 @@
     "errors": 14,
     "warnings": 0
   },
-  "src/renderer/src/views/BlueprintLibrary/BlueprintEditor.test.ts": {
-    "errors": 2,
-    "warnings": 0
-  },
-  "src/renderer/src/views/BlueprintLibrary/BlueprintGallery.test.ts": {
-    "errors": 1,
-    "warnings": 0
-  },
-  "src/renderer/src/views/BlueprintLibrary/BlueprintLibraryLayout.test.ts": {
-    "errors": 1,
-    "warnings": 0
-  },
-  "src/renderer/src/views/BlueprintLibrary/BlueprintRenderer.vue": {
-    "errors": 26,
-    "warnings": 0
-  },
-  "src/renderer/src/views/BlueprintLibrary/utils/blueprintTabRoute.ts": {
-    "errors": 1,
-    "warnings": 0
-  },
-  "src/renderer/src/views/Home/components/EngineSection.vue": {
-    "errors": 1,
-    "warnings": 0
-  },
   "src/renderer/src/views/Home/components/Project/ProjectSection.vue": {
-    "errors": 20,
+    "errors": 19,
     "warnings": 0
   },
   "src/renderer/src/views/Home/components/Project/RenameProjectModal.vue": {
     "errors": 5,
-    "warnings": 0
-  },
-  "src/renderer/src/views/MaterialLibrary/MaterialEditor.test.ts": {
-    "errors": 1,
-    "warnings": 0
-  },
-  "src/renderer/src/views/MaterialLibrary/MaterialGallery.test.ts": {
-    "errors": 2,
-    "warnings": 0
-  },
-  "src/renderer/src/views/MaterialLibrary/MaterialLibraryLayout.test.ts": {
-    "errors": 1,
-    "warnings": 0
-  },
-  "src/renderer/src/views/MaterialLibrary/utils/materialTabRoute.ts": {
-    "errors": 1,
     "warnings": 0
   },
   "src/renderer/src/views/Notebook/components/BrainstormViewer.vue": {
@@ -806,14 +738,6 @@
   "tests/fixtures/mcp/quirky-server.mjs": {
     "errors": 0,
     "warnings": 2
-  },
-  "tests/performance/benchmark_parser.ts": {
-    "errors": 8,
-    "warnings": 0
-  },
-  "tests/performance/generate_test_assets.js": {
-    "errors": 7,
-    "warnings": 0
   },
   "tests/types/vitest.d.ts": {
     "errors": 12,

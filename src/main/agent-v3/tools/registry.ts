@@ -54,7 +54,14 @@ import {
 } from './toolNames'
 import { effectiveRisk, type ToolRisk, type UnrealAgentTool } from './defineTool'
 import { fileLockForCall, needsEditorKey } from './godotLocks'
-import { acquire, describeConflicts, getLockOwner, releasePaths, sameTeam, teamRootOf } from '../core/assetLock'
+import {
+  acquire,
+  describeConflicts,
+  getLockOwner,
+  releasePaths,
+  sameTeam,
+  teamRootOf
+} from '../core/assetLock'
 import { editorKeyActive, withEditorKey } from '../core/team/editorKey'
 import { effectiveConnectionId } from '../core/projectTargetContext'
 import { UPDATE_PLAN_TOOL_NAME, WRAP_UP_TOOL_NAME } from '../../../shared/agentTurnReport'
@@ -157,7 +164,6 @@ function getLocalFileTools(): UnrealAgentTool<never>[] {
 }
 
 const REGISTRATIONS: readonly Registration[] = Object.freeze([
-
   // ── 资产库────────────────────────────────
   {
     name: 'search_assets',

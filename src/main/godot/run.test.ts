@@ -2,6 +2,19 @@ import { describe, expect, it } from 'vitest'
 import { digestGodotLog } from './run'
 
 describe('digestGodotLog', () => {
+  it('去掉终端颜色和清行序列后仍能识别错误、警告及调用位置', () => {
+    const log = [
+      '\x1b[2K\x1b[31mSCRIPT ERROR: Invalid call.\x1b[0m',
+      '\x1b[90m   at: _ready (res://player.gd:12)\x1b[0m',
+      '\x1b[33mWARNING: Node not found.\x1b[0m'
+    ].join('\n')
+    expect(digestGodotLog(log)).toEqual({
+      errors: ['SCRIPT ERROR: Invalid call.\nat: _ready (res://player.gd:12)'],
+      warnings: ['WARNING: Node not found.'],
+      exitLeakNotices: 0
+    })
+  })
+
   it('把 at: 行并进上一条报错，区分错误和警告', () => {
     const log = [
       'Godot Engine v4.7.1.stable.official',
@@ -33,7 +46,8 @@ describe('digestGodotLog', () => {
   })
 
   it('每帧重复的同一条报错合并成一条并标次数', () => {
-    const line = "SCRIPT ERROR: Invalid access to property 'x' on Nil.\n   at: _process (res://a.gd:3)"
+    const line =
+      "SCRIPT ERROR: Invalid access to property 'x' on Nil.\n   at: _process (res://a.gd:3)"
     const d = digestGodotLog([line, line, line, 'ERROR: other'].join('\n'))
     expect(d.errors).toEqual([
       "SCRIPT ERROR: Invalid access to property 'x' on Nil.\nat: _process (res://a.gd:3)\n(×3)",

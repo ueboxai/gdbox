@@ -308,7 +308,9 @@ export function acquire(
   // 哨兵不是包路径，别让 `toPackagePath` 按「截掉第一个点后面」的规则改它
   // `res://` 路径就是文件本身，扩展名不能削（player.gd 和 player.tscn 是两个文件）
   const wanted = [
-    ...new Set(paths.map((p) => (p === CURRENT_LEVEL_LOCK || p.startsWith('res://') ? p : toPackagePath(p))))
+    ...new Set(
+      paths.map((p) => (p === CURRENT_LEVEL_LOCK || p.startsWith('res://') ? p : toPackagePath(p)))
+    )
   ]
 
   const conflicts: LockConflict[] = []
@@ -378,7 +380,11 @@ export function releaseAll(owner: string): number {
  * 给工作室模式的制作人用：它那一轮就是整局，锁跟着一轮走的话，它碰过的文件到交付之前
  * 队友一个都改不了（2026-10-15 真机：制作人写完 main.tscn 就一直占着，程序要接音效线只能干等）。
  */
-export function releasePaths(connectionId: string | undefined, owner: string, paths: string[]): number {
+export function releasePaths(
+  connectionId: string | undefined,
+  owner: string,
+  paths: string[]
+): number {
   const root = rootSessionId(owner)
   const released: LockRecord[] = []
   for (const path of paths) {

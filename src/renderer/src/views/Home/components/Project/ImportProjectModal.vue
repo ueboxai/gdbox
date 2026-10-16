@@ -140,7 +140,12 @@
         <!-- 列表只认引擎最近打开过的工程；不在里面的，得有地方自己选路径 -->
         <footer class="panel-foot">
           <span class="foot-hint">{{ t('page.home.project.importProjectModal.dropHint') }}</span>
-          <button type="button" class="pick-file-btn" :disabled="picking" @click="handleCreateEmpty">
+          <button
+            type="button"
+            class="pick-file-btn"
+            :disabled="picking"
+            @click="handleCreateEmpty"
+          >
             <PhFolderPlus aria-hidden="true" />
             {{ t('page.home.project.importProjectModal.createEmpty') }}
           </button>

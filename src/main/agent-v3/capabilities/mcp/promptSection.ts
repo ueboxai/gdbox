@@ -152,7 +152,6 @@ export function buildMcpSection(
     ...statuses.map(describe)
   ]
 
-
   if (unavailable.length > 0) {
     // 这三句是整个改动的重点。模型的默认反应是「工具不在 = 我没这个能力」，
     // 必须明确告诉它这里的正确反应是什么。

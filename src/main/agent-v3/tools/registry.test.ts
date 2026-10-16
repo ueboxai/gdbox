@@ -1,4 +1,3 @@
-
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { WebContents } from 'electron'
 
@@ -29,7 +28,6 @@ import { estimateTokens } from '../../../shared/tokenBudget'
 beforeEach(() => resetToolCacheForTest())
 
 describe('rewriteCrossReferences', () => {
-
   it('不误伤无关的点号文本', () => {
     expect(rewriteCrossReferences('路径 /Game/M_Wood.M_Wood')).toBe('路径 /Game/M_Wood.M_Wood')
   })

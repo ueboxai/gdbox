@@ -218,7 +218,15 @@ export class GodotAssetProcessor extends BaseFileProcessor {
   /** 找出一个目录下所有的 Godot 工程（`project.godot`） */
   async findAllProjects(startPath: string): Promise<string[]> {
     const results = new Set<string>()
-    const IGNORE_DIRS = new Set(['node_modules', '.git', '.svn', '.hg', '.cache', '.godot', '.import'])
+    const IGNORE_DIRS = new Set([
+      'node_modules',
+      '.git',
+      '.svn',
+      '.hg',
+      '.cache',
+      '.godot',
+      '.import'
+    ])
     const MAX_DEPTH = 6
 
     const traverse = async (currentDir: string, depth: number): Promise<void> => {

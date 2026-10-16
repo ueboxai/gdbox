@@ -42,3 +42,17 @@ Godot Link、工具池、工程和资源路径、文件锁、快照规则、品�
 3. 打开偏好设置 → MCP 服务，检查 Blender 前置条件和一键接入；安装是用户点击后的操作。
 4. 对 Godot 工程调用 gen_sfx（不传 description）应继续离线生成 res://assets/gen/sfx 下的 WAV；云端音效需要用户配置来源。
 5. 后续增量使用 `pnpm upstream status`；复核本批可使用 `pnpm upstream status --no-fetch --snapshot 87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4`。
+
+## 后续门禁修复（2026-10-17）
+
+本节是最新验证结论；上面的失败项保留为修复前记录。
+
+- 项目按钮裸色改用主题语义变量；运行按钮禁用态改用禁用文字、表面色和无投影，移除 opacity。
+- 仅整理 lint 实际报告的格式问题，去掉资源依赖图的未使用参数；Godot 日志改用 Node 标准库清理终端控制字符，并补上颜色、清行和调用位置的回归测试。
+- macOS x64/arm64 路径断言对齐现有 `productName: GODOT BOX`，没有修改产品名称或实际打包路径。
+- lint 基线逐文件只降不升：errors 1594 → 1435，warnings 保持 9；颜色基线 49 → 40。未修改 ESLint 规则、测试范围、超时、覆盖率阈值或忽略项。
+- `VITEST_MAX_WORKERS=1 pnpm verify --with-build` 完整通过，退出码 0，13/13 步通过。单 worker 是本次运行的临时环境变量，用于减少并行高负载下的资源竞争，没有修改仓库默认并发配置。
+- 全量单测 837 个文件全部通过：9418 项通过，原有 2 项跳过保持不变。三侧类型检查、颜色、全量 lint 棘轮、改动行 lint、文档与技能检查均通过。
+- Windows 生产构建、发行内容和依赖闭包检查通过（51 个产物文件、212 个依赖包）；打包产物离线启动门禁通过。
+- 完整日志保留在本地 `.git/gate-repair-final-serial.log`。本次未运行 CI 专属依赖漏洞审计或 macOS 实机打包。
+- 全部修改仅在 GDBox；没有修改 UEBox，也没有新增跨仓库运行依赖。

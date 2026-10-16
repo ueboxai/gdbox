@@ -63,7 +63,9 @@ export interface SetSessionProjectDeps {
 async function registerViaLibrary(projectDir: string): Promise<SessionProjectCandidate | null> {
   const { registerProjectByUproject } = await import('../../../sqliteDataBase/ipc/project')
   const result = await registerProjectByUproject(projectDir)
-  const record = result.data as { projectName?: string; projectPath?: string; EngineAssociation?: string } | undefined
+  const record = result.data as
+    | { projectName?: string; projectPath?: string; EngineAssociation?: string }
+    | undefined
   if (!record?.projectPath) return null
   return {
     projectName: record.projectName || path.basename(record.projectPath),
@@ -158,7 +160,9 @@ export function createSetSessionProjectTool(
        * 快照和 team_status 都不知道该看哪个工程。
        */
       if (!match && path.isAbsolute(wanted) && existsSync(path.join(wanted, 'project.godot'))) {
-        match = (await (deps.registerProject ?? registerViaLibrary)(wanted).catch(() => null)) ?? undefined
+        match =
+          (await (deps.registerProject ?? registerViaLibrary)(wanted).catch(() => null)) ??
+          undefined
       }
       if (!match) {
         const known = projects.map((item) => item.projectName).filter(Boolean)

@@ -23,7 +23,9 @@ interface EditorNode {
 }
 
 /** 选中的节点写成给模型看的一小段 */
-export function describeSelection(sel: { scene: string; nodes: EditorNode[] } | null): string | null {
+export function describeSelection(
+  sel: { scene: string; nodes: EditorNode[] } | null
+): string | null {
   if (!sel || !sel.nodes.length) return null
   const nodes = sel.nodes
     .slice(0, 10)
@@ -71,7 +73,9 @@ export function createEditorPlayTool(): UnrealAgentTool<unknown> {
     risk: 'mutating',
     description:
       "Run the game inside the user's Godot editor so they can watch and play it (main scene, or a given scene). For your own verification use godot_run / godot_screenshot instead.",
-    input: z.object({ scene: z.string().optional().describe('res:// scene; default the main scene') }),
+    input: z.object({
+      scene: z.string().optional().describe('res:// scene; default the main scene')
+    }),
     async execute(args) {
       await callEditor('editor.play', { scene: args.scene ?? '' })
       return { text: `Running ${args.scene ?? 'the main scene'} in the editor.` }
@@ -113,10 +117,12 @@ export function createEditorSelectTool(): UnrealAgentTool<unknown> {
     namespace: 'godot.editor',
     risk: 'mutating',
     description:
-      "Select nodes in the user's Godot editor (paths relative to the open scene root, \".\" for the root), e.g. to point at what you are talking about.",
+      'Select nodes in the user\'s Godot editor (paths relative to the open scene root, "." for the root), e.g. to point at what you are talking about.',
     input: z.object({ paths: z.array(z.string()).min(1) }),
     async execute(args) {
-      const { selected } = await callEditor<{ selected: string[] }>('editor.select', { paths: args.paths })
+      const { selected } = await callEditor<{ selected: string[] }>('editor.select', {
+        paths: args.paths
+      })
       const missing = args.paths.filter((p) => !selected.includes(p))
       return {
         text: `Selected ${selected.join(', ') || 'nothing'}${missing.length ? `; not found: ${missing.join(', ')}` : ''}.`
@@ -168,7 +174,9 @@ export async function reloadEditedScene(params: Record<string, unknown>): Promis
     const normalized = path.replace(/\\/g, '/')
     const project = projectManager
       .getInteractiveProjects()
-      .find((p) => normalized.toLowerCase().startsWith(p.projectPath.replace(/\\/g, '/').toLowerCase() + '/'))
+      .find((p) =>
+        normalized.toLowerCase().startsWith(p.projectPath.replace(/\\/g, '/').toLowerCase() + '/')
+      )
     const resPath = normalized.startsWith('res://')
       ? normalized
       : project

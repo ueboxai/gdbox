@@ -58,7 +58,14 @@ function onPath(): Promise<string[]> {
   return new Promise((resolve) => {
     const cmd = process.platform === 'win32' ? 'where' : 'which'
     execFile(cmd, ['godot'], { timeout: 5_000, windowsHide: true }, (err, stdout) => {
-      resolve(err ? [] : stdout.split(/\r?\n/).map((s) => s.trim()).filter(Boolean))
+      resolve(
+        err
+          ? []
+          : stdout
+              .split(/\r?\n/)
+              .map((s) => s.trim())
+              .filter(Boolean)
+      )
     })
   })
 }
