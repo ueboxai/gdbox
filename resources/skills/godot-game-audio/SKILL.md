@@ -13,7 +13,7 @@ description: Gives a Godot game its sound - retro sound effects synthesised loca
 
 | 要什么 | 用 | 花钱吗 | 落到哪 |
 | --- | --- | --- | --- |
-| 跳跃、金币、受击、爆炸、射击、升级、菜单选择 | `gen_sfx` | 不花，本地合成，瞬间出 | `res://assets/gen/sfx/<name>_<n>.wav` |
+| 跳跃、金币、受击、爆炸、射击、升级、菜单选择 | `gen_sfx` | 默认免费本地合成；description 云端路线按变体收费 | `res://assets/gen/sfx/<name>_<n>.wav` |
 | 背景音乐 | `gen_music` | 花，一到几分钟 | `res://assets/gen/music/<name>.wav`（无缝循环） |
 | 对白、旁白 | `gen_voice` | 花，没改的台词跳过不收费 | `res://assets/gen/voice/<id>.wav` |
 | 检查任何一个音频 | `inspect_audio` | 不花，只读 | — |
@@ -29,7 +29,10 @@ gen_sfx(project_path: "D:/Games/MyGame", name: "jump", kind: "jump", count: 3)
 ```
 
 - `kind` 只有七种预设：jump、coin、hit、explosion、shoot、powerup、select。用户要的声音
-  不在里面（脚步、开门、环境声）时，如实说这个工具做不了，问他有没有现成的文件。
+  不在里面（脚步、开门、环境声）时可传 description 按描述生成：优先用「音效生成」绑定，
+  兼容原有 ElevenLabs 音乐来源。云端每个变体收费，默认明确传 count: 1；未绑定时
+  工具仍会按 kind 本地合成，必须把回执说明的降级告诉用户，不能把复古合成说成写实音效。
+  素材库音效或环境循环用 sound-effects 技能与 generate_sound_effect，再导入工程。
 - 默认出 3 个候选。对每个跑一遍 `inspect_audio`，把**测得的事实**列给用户：
   时长、开头静音、响度、音高走向。开头静音超过 80ms 的按下去会觉得「慢半拍」，
   这种直接排除并说明原因。
@@ -127,7 +130,8 @@ bus/3/send = &"Master"
 
 - 不用脚本自己去处理生成出来的音频（裁剪、找循环点、改格式）：生成工具已经处理好了，
   再加工只会把循环点弄丢。
-- 不自己决定重新生成要花钱的音乐和配音；音效免费，可以多出几个候选。
+- 不自己决定重新生成要花钱的音乐、配音和云端音效；只有本地 sfxr 合成免费。
+  云端音效同参数复用 .gdbox/sfx-cache 下的 WAV；结果未确认时保留回执，不自行删回执或换描述重试。
 - 不碰 `.godot/`。改 `.import` 只改那一行参数，其余原样保留（尤其是 `uid=`）。
 - 改共用的总线布局前先读现有的 `default_bus_layout.tres`，追加而不是覆盖，
   别人调好的音量和效果器不能被你冲掉。
@@ -144,6 +148,6 @@ bus/3/send = &"Master"
 
 ## Escalation
 
-- 用户要的是写实音效、环境声、带人声的歌曲：现有工具做不到，如实说明，请他提供文件；
-  文件放进工程目录即可使用。
+- 写实音效需要绑定 ElevenLabs；无绑定时说明本地合成的限制。带人声的歌曲不由这些工具生成，
+  请用户提供文件，放进工程目录使用。
 - 用户要多语言配音：每种语言一套 id 前缀（`en_intro_01`），先确认他的语音服务支持那种语言。

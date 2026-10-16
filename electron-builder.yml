@@ -68,7 +68,8 @@ extraResources:
     filter:
       - blender-mcp-source.json
       - '*.zip'
-      - 'scripts/**'
+      - 'scripts/setup_mcp.ps1'
+      - 'scripts/setup_mcp.py'
   # 不携带 FFmpeg、FBX2glTF、Poppler。FFmpeg 由用户自行安装；
   # PDF 文字提取走本地 anydoc，FBX 预览走渲染层 FBXLoader。
   # 分发说明和对应源码入口见 THIRD-PARTY-NOTICES.md。
