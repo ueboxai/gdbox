@@ -133,7 +133,7 @@ export async function generateOneImage(request: {
 
 /** 某个角色绑定的服务商和模型；没绑或绑的模型已不在时返回 undefined */
 export async function boundProvider(
-  role: 'music' | 'tts'
+  role: 'music' | 'tts' | 'sfx'
 ): Promise<{ provider: ProviderConfig; modelId: string } | undefined> {
   const settings = await readSettings()
   const binding = settings.roles[role]

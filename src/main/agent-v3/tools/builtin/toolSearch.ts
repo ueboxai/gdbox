@@ -60,12 +60,7 @@ const CORE_NAMES = new Set<string>([
  * 「用户正开着什么」的入口；两组都小。生成资源（`godot.asset`）说明长、
  * 只在要素材时用，留在折叠区由技能或 `search_tools` 加载。
  */
-export const RESIDENT_TOOL_GROUPS = new Set<string>([
-  'local',
-  'note',
-  'godot',
-  'godot.editor'
-])
+export const RESIDENT_TOOL_GROUPS = new Set<string>(['local', 'note', 'godot', 'godot.editor'])
 
 /**
  * 用户在设置页里**改不动**的那几个。
@@ -115,7 +110,7 @@ const DOMAIN_TERMS: Record<string, string> = {
   box: '盒子 对话记录 会话 状态 导入 卡住 续传 技能 开关 备份 box session status import skill backup',
   asset: '盒子素材库 保管库 标签 文件夹 asset library vault tag folder',
   project: '工程 项目 分组 置顶 整理 project organize group pin',
-  aigc: '生成 图片 视频 三维 generate image video 3d',
+  aigc: '生成 图片 视频 三维 音效 声音 generate image video 3d sound effect sfx',
   'video.production':
     '剪辑 成片 字幕 配音 台词 对白 语音合成 配乐 时间线 video edit subtitle voiceover tts speech render',
   note: '笔记 记事 待办 摘录 note todo memo',

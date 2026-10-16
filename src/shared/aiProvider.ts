@@ -303,6 +303,11 @@ export type ProviderKind =
   | 'stt'
   | 'music'
   /**
+   * 音效。和音乐分开：接口不同（同步回音频字节，没有任务），而且没绑也能用 ——
+   * 那时 Agent 用本机 FFmpeg 合成，见 sound-effects 技能。
+   */
+  | 'sfx'
+  /**
    * 网页检索。
    *
    * 这一档里的「模型」不是模型 —— 是**去哪儿搜**（Jina 的搜索接口、
@@ -349,6 +354,7 @@ export const PROVIDER_KINDS: readonly ProviderKind[] = Object.freeze([
   'tts',
   'stt',
   'music',
+  'sfx',
   'search',
   'judge'
 ])
@@ -535,6 +541,8 @@ export type ModelRole =
    */
   | 'stt'
   | 'music'
+  /** 音效。不绑不是不能用：Agent 改用本机 FFmpeg 合成 */
+  | 'sfx'
   /** 网页检索走哪条路。不绑就用内置的真浏览器 —— 社区版零配置就靠这条 */
   | 'search'
   /**
@@ -560,6 +568,7 @@ export const MODEL_ROLES: readonly ModelRole[] = Object.freeze([
   'tts',
   'stt',
   'music',
+  'sfx',
   'search',
   'judge'
 ])
@@ -584,6 +593,7 @@ export const ROLE_KIND: Readonly<Record<ModelRole, ProviderKind>> = Object.freez
   tts: 'tts',
   stt: 'stt',
   music: 'music',
+  sfx: 'sfx',
   search: 'search',
   judge: 'judge'
 })
@@ -692,11 +702,12 @@ export function disallowedRoles(source: RoleBindingSource, patch: RoleBindingsPa
  */
 export function unsavedRoles(saved: RoleBindings, patch: RoleBindingsPatch): ModelRole[] {
   return (Object.entries(patch) as [ModelRole, ModelBinding | null][])
-    .filter(
-      ([role, binding]) =>
-        binding &&
-        (saved[role]?.providerId !== binding.providerId || saved[role]?.modelId !== binding.modelId)
-    )
+    .filter(([role, binding]) => {
+      if (!binding) return false
+      // 「Agent」已并进「对话」那一格（主进程 `ai/store.ts` 的 mergeMainModel），写进去的在 chat 上
+      const stored = role === 'agent' ? (saved.agent ?? saved.chat) : saved[role]
+      return stored?.providerId !== binding.providerId || stored?.modelId !== binding.modelId
+    })
     .map(([role]) => role)
 }
 
@@ -1009,6 +1020,10 @@ export type ProbeErrorCode =
   | 'modelNotFound'
   | 'rateLimited'
   | 'badRequest'
+  /** 当前协议下被拒，换成 `suggestedProtocol` 就通了（换着发试出来的，不是读报错猜的） */
+  | 'protocolMismatch'
+  /** 带工具就被拒、不带就通：这个模型或网关不接受工具调用，当不了智能体 */
+  | 'toolsRejected'
   | 'unreachable'
   /** 没归上类。原文照带，猜错了反而掩盖真实原因 */
   | 'unknown'
@@ -1041,7 +1056,15 @@ export interface ProbeFailure {
    * 5xx 的服务端错误码、400 / 403 的拒绝理由、以及没归上类的。
    */
   raw?: string
+  /** `protocolMismatch` 时：换成哪个协议试通了 */
+  suggestedProtocol?: ProviderProtocol
 }
+
+/**
+ * 通了，但有一项用不了。界面显示成提示而不是绿勾。
+ * - `thinkingRejected`：带思考档位被拒、不带就通 ——「自动」能用，开思考会 400
+ */
+export type ProbeCaveat = 'thinkingRejected'
 
 export type ListModelsResult =
   | { ok: true; models: ModelConfig[] }
@@ -1055,7 +1078,7 @@ export type ListModelsResult =
  * 验过了，而实际上第一次真生成才知道对不对。
  */
 export type TestProviderResult =
-  | { ok: true; skipped?: ProbeSkipCode }
+  | { ok: true; skipped?: ProbeSkipCode; caveat?: ProbeCaveat }
   | { ok: false; error: ProbeFailure }
 
 /** Music providers have distinct request and task formats. */

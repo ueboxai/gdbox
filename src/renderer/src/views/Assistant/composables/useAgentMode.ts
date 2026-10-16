@@ -883,6 +883,7 @@ export function useAgentMode(params: UseAgentModeParams) {
             : null,
           approvalMode: toApprovalMode(permissionMode),
           thinkingLevel: aiConfigStore.agentThinkingLevel,
+          fastMode: aiConfigStore.agentFastMode,
           skillLearning: aiConfigStore.skillLearningMode,
           editorScreenshotEnabled: aiConfigStore.editorScreenshotEnabled,
           sessionModel,

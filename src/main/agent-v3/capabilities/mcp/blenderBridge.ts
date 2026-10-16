@@ -273,7 +273,7 @@ async function explain(deps: BlenderLaunchDeps, exe: string, userOpened: boolean
   if (!found.installed) {
     return (
       '官方 Blender Lab 插件没装进 Blender —— 扩展目录里没有它。' +
-      '装一次即可持久生效：按 blender-ue-pipeline 技能的设置指引，Windows 跑 setup_mcp.ps1，macOS 跑 setup_mcp.py。'
+      '装一次即可持久生效：到偏好设置 → MCP 服务，点击「一键接入 Blender」。'
     )
   }
   if (!found.enabled) {

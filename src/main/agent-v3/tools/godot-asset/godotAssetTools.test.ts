@@ -21,6 +21,7 @@ const resolveImageBinding = vi.fn()
 const readSettings = vi.fn()
 const generateTaskMusic = vi.fn()
 const requestSpeech = vi.fn()
+const generateSoundEffect = vi.fn()
 
 vi.mock('../../../ai/imageGeneration', () => ({
   generateImages: (...args: unknown[]) => generateImages(...args),
@@ -29,6 +30,9 @@ vi.mock('../../../ai/imageGeneration', () => ({
 vi.mock('../../../ai/store', () => ({ readSettings: () => readSettings() }))
 vi.mock('../../../ai/music', () => ({
   generateTaskMusic: (...args: unknown[]) => generateTaskMusic(...args)
+}))
+vi.mock('../../../ai/soundEffect', () => ({
+  generateSoundEffect: (...args: unknown[]) => generateSoundEffect(...args)
 }))
 vi.mock('../../../ai/speech', () => ({
   requestSpeech: (...args: unknown[]) => requestSpeech(...args)
@@ -142,6 +146,7 @@ beforeEach(() => {
   readSettings.mockReset().mockResolvedValue(SETTINGS)
   generateTaskMusic.mockReset()
   requestSpeech.mockReset()
+  generateSoundEffect.mockReset()
 })
 
 describe('元数据', () => {
@@ -279,6 +284,51 @@ describe('gen_tileset', () => {
 })
 
 describe('gen_sfx 与 inspect_audio', () => {
+  it.each(['sfx', 'music'] as const)(
+    '云端 %s 来源生成 WAV，保留 Godot 工程路径和回执缓存',
+    async (role) => {
+      const project = newProject()
+      readSettings.mockResolvedValue({
+        providers: [
+          {
+            id: 'eleven',
+            kind: role,
+            musicApi: 'elevenlabs-music',
+            models: [{ id: 'bound-model' }]
+          }
+        ],
+        roles: { [role]: { providerId: 'eleven', modelId: 'bound-model' } }
+      })
+      generateSoundEffect.mockImplementation(async (...args: unknown[]) => {
+        const dir = args[4] as string
+        mkdirSync(dir, { recursive: true })
+        const path = join(dir, 'cached.wav')
+        writeFileSync(path, loopableSong())
+        return { path, seconds: 27, reused: false }
+      })
+      const result = await run('gen_sfx', {
+        project_path: project,
+        name: 'Coin',
+        kind: 'coin',
+        description: 'coin chime',
+        count: 1
+      })
+      expect(detailsOf(result).outputs).toEqual(['res://assets/gen/sfx/coin.wav'])
+      expect(generateSoundEffect).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: role }),
+        role === 'sfx' ? 'bound-model' : 'eleven_text_to_sound_v2',
+        { prompt: 'coin chime', loop: false, seconds: undefined },
+        0,
+        join(project, '.gdbox', 'sfx-cache'),
+        undefined
+      )
+      expect(existsSync(join(project, '.gdbox', '.gdignore'))).toBe(true)
+      expect(readFileSync(join(project, 'assets/gen/sfx/coin.wav')).toString('ascii', 0, 4)).toBe(
+        'RIFF'
+      )
+    }
+  )
+
   it('本地合成多个候选，不碰任何模型服务；inspect_audio 能量出来', async () => {
     const project = newProject()
     const result = await run('gen_sfx', {

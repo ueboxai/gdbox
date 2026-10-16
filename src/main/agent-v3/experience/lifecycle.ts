@@ -18,7 +18,7 @@
  * 阈值是初值，要拿评测数据校准（设计稿第 9 节）。
  */
 
-import type { ExperienceEntry, ExperienceStatus } from './experienceFile'
+import type { ExperienceEntry, ExperienceStatus, RetireReason } from './experienceFile'
 
 export interface EntryStats {
   /** 出场次数，以及出场后同一工具随后成功的次数 */
@@ -83,16 +83,26 @@ function canPromote(stats: EntryStats): boolean {
   return measured > 0
 }
 
+export interface OutcomeResult {
+  stats: EntryStats
+  status: ExperienceStatus
+  /** 这一次刚退休时才有 */
+  retiredBecause?: RetireReason
+}
+
 export function applyOutcome(
   entry: Pick<ExperienceEntry, 'status' | 'pinned'>,
   before: EntryStats,
   outcome: Outcome,
   now: string = new Date().toISOString()
-): { stats: EntryStats; status: ExperienceStatus } {
+): OutcomeResult {
   const stats = { ...before }
   let status = entry.status
-  const retire = (): void => {
-    if (!entry.pinned) status = 'retired'
+  let retiredBecause: RetireReason | undefined
+  const retire = (reason: RetireReason): void => {
+    if (entry.pinned) return
+    status = 'retired'
+    retiredBecause = reason
   }
 
   if (outcome.arm === 'holdout') {
@@ -111,31 +121,42 @@ export function applyOutcome(
         stats.adoptedFail += 1
         // 照着做了还是同一个错：经验错了的直接证据，当场降级
         if (status === 'proven') status = 'trial'
-        else if (stats.adoptedFail >= TRIAL_ADOPTED_FAIL_LIMIT) retire()
+        else if (stats.adoptedFail >= TRIAL_ADOPTED_FAIL_LIMIT) retire('failed')
       }
     } else {
       stats.ignoredStreak += 1
       // 一直摆在眼前却没人照做：要么写得不好，要么不对路。留着只占位置
-      if (stats.ignoredStreak >= IGNORED_STREAK_LIMIT) retire()
+      if (stats.ignoredStreak >= IGNORED_STREAK_LIMIT) retire('ignored')
     }
   }
 
-  if (status === 'retired') return { stats, status }
+  if (status === 'retired') return { stats, status, ...(retiredBecause ? { retiredBecause } : {}) }
 
   const measured = lift(stats)
   const enoughSamples = stats.shown + stats.holdout >= RETIRE_MIN_SAMPLES
   // 样本够了、有对照，而出场并不比不出场好：它没用
   if (measured !== undefined && measured <= 0 && enoughSamples && !entry.pinned) {
-    return { stats, status: 'retired' }
+    return { stats, status: 'retired', retiredBecause: 'no-lift' }
   }
 
   if (status === 'trial' && canPromote(stats)) status = 'proven'
   return { stats, status }
 }
 
-/** 容量满时谁先走：钉住的不走；试用先于转正；同档里提升（或采纳成功数）低的先走 */
+/** 出场、对照都还没有过：没有任何证据说它好或不好 */
+function untested(stats: EntryStats): boolean {
+  return stats.shown === 0 && stats.holdout === 0
+}
+
+/**
+ * 容量满时谁先走：钉住的不走；试用先于转正；同档里提升（或采纳成功数）低的先走。
+ *
+ * 还没出过场的试用排在「出过场却一次没成」的后面：没出场是因为那个错还没再犯，
+ * 不是它没用。早先它们是 0 分、排最前，结果新来一条就挤掉最老的那条，等于只留最近几条
+ */
 export function evictionScore(entry: ExperienceEntry, stats: EntryStats): number {
   if (entry.pinned) return Number.POSITIVE_INFINITY
   const base = entry.status === 'proven' ? 1000 : 0
+  if (entry.status !== 'proven' && untested(stats)) return base + 0.5
   return base + (lift(stats) ?? 0) * 100 + stats.adoptedOk
 }

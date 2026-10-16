@@ -203,14 +203,15 @@ describe('createBlenderLauncher', () => {
       return outcome.ok ? '' : outcome.reason
     }
 
-    it('插件没装：直接说没装，并指到 setup 脚本', async () => {
+    it('插件没装：直接说没装，并指到 GDBox 一键接入', async () => {
       const reason = await reasonOf(
         makeDeps({
           diagnose: vi.fn().mockResolvedValue({ installed: false, enabled: false, online: true })
         })
       )
       expect(reason).toContain('没装')
-      expect(reason).toContain('setup_mcp.ps1')
+      expect(reason).toContain('一键接入 Blender')
+      expect(reason).not.toContain('blender-ue-pipeline')
     })
 
     it('装了没启用：说去勾启用，不叫人重装', async () => {

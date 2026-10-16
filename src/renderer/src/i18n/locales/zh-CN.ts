@@ -236,6 +236,26 @@ export default {
       unsupported: '当前平台暂无安装脚本，仅支持 Windows 和 macOS。',
       failed: '检查失败：{error}。如刚更新过 GDBox，请重启应用后重试。',
       hint: '将安装官方 Blender Lab 服务与 Blender 插件，并自动填写 MCP 配置。需要联网。',
+      // 缺 Git / Python 时主按钮换成这个，用 winget 装（仅 Windows）
+      installPrereqs: '安装 {names}',
+      installingPrereqs: '正在安装 {names}，需要几分钟…',
+      nameJoiner: ' 和 ',
+      prereqsUacHint: '安装 Git 时 Windows 会请求管理员权限，请在弹出的窗口中点击「是」。',
+      prereqsInstalled: '{names} 已安装。',
+      // 自动安装失败之后才出现
+      askAi: '交给 AI 排查',
+      askAiFailed: '无法提交给 AI：{reason}',
+      /*
+       * 交给 AI 的那条消息。winget 的原话不翻译，原样给。
+       * 缺 Git 的机器上 AI 没有 shell 工具，所以要说清楚：跑不了命令就教用户手动装，
+       * 不然模型会回一句「我没有这个能力」就停了。
+       */
+      aiPrompt: `帮我在这台 Windows 电脑上装好 {names}，用于接入 Blender。GDBox 自动安装失败了（Python 先试过国内镜像，再试过 winget），原始输出如下：
+
+{detail}
+
+要求：Git 装好后命令行里能直接运行 git；Python 需要 3.11 或更高版本，命令行里能运行 py 或 python。
+请先根据上面的输出判断失败原因。如果你能运行命令，就直接装好并验证；如果不能，就一步步告诉我怎么手动装。最后提醒我重新打开「设置 → MCP」，Blender 一栏会重新检测。`,
       // 缺什么点名说，别合成一句「环境不满足」—— 那正是安装脚本原来的
       // 失败样子（一句 Command failed: git），用户看不出要去装什么
       prereq: {
@@ -448,6 +468,7 @@ export default {
         video: '视频生成',
         model3d: '3D 生成',
         music: '音乐生成',
+        sfx: '音效生成',
         tts: '语音合成',
         stt: '语音识别',
         realtime: '实时语音',
@@ -534,6 +555,8 @@ export default {
       saved: '已保存',
       saveFailed: '保存失败',
       testOk: '连接成功（{model}）',
+      testOkThinkingRejected:
+        '连接成功（{model}），但开启思考后请求被拒绝。使用该模型时，思考档位请保持「自动」或设为「关」。',
       imported: '已导入，新增 {count} 个模型',
       importFailed: '导入失败',
       oauthOk: '授权成功，请保存设置',
@@ -558,6 +581,8 @@ export default {
       modelNotFound: '模型不存在。请确认模型 ID 是否正确，或使用「导入模型」获取可用列表。',
       rateLimited: '触发限流或额度不足。',
       badRequest: '请求被拒绝（400），请检查模型 ID、API 地址和接口协议。',
+      protocolMismatch: '当前接口协议下请求被拒绝，改为 {protocol} 后测试通过。请修改接口协议。',
+      toolsRejected: '该模型不接受工具调用，无法在对话中操作编辑器。',
       unreachable: '无法连接该地址。请检查 API 地址是否正确、本机服务是否已启动。',
       unknown: '连接失败，服务商未返回原因。',
       listUnsupportedGenerative: '此服务商不支持获取模型列表，请按其文档填写模型 ID。',
@@ -594,19 +619,19 @@ export default {
       unset: '未设置',
       // 行内只留「选之前要知道的」，长文收进 More（一个 ? 图标的 tooltip）
       moreLabel: '查看详细说明',
-      chat: '对话',
-      chatDesc: '助手与各处对话窗口的默认模型。',
-      chatMerged: 'Agent、视觉、轻量任务同样使用此模型。',
+      chat: '主模型',
+      chatDesc: '对话与 Agent 共用，输入框里切换的就是它；其他用途未单独设置时也用它。',
+      chatMerged: '视觉、轻量任务同样使用此模型。',
       chatSplit: '分别设置',
       agent: 'Agent',
       agentDesc: '处理多步任务；未选择时使用对话模型。',
       vision: '视觉',
       // 这几条渲染成纯文本，不要写 Markdown 强调符，会原样显示出来
-      visionDesc: '对话或 Agent 模型无法识图时，使用此模型。',
+      visionDesc: '主模型无法识图时，使用此模型。',
       visionMore: '主模型支持识图时无需配置；否则请选择视觉模型，两者都不支持时无法发送图片。',
       visionMissing: '图片请求会报错',
       summary: '轻量任务',
-      summaryDesc: '用于总结、起标题、判断意图等；未选择时使用对话或 Agent 模型。',
+      summaryDesc: '用于总结、起标题、判断意图等；未选择时使用主模型。',
       embedding: '嵌入',
       embeddingDesc: '为知识库内容建立索引，供助手检索。',
       embeddingMore: '更换模型会自动重建索引；使用 Ollama 本地模型可避免云端费用。',
@@ -628,15 +653,19 @@ export default {
       musicDesc: '为视频生成背景音乐；未配置时可无配乐成片。',
       musicMore: '使用所选服务商生成纯音乐。生成可能收费，商用权限以服务商套餐为准。',
       musicMissing: '不自动生成配乐',
+      sfx: '音效生成',
+      sfxDesc: '为游戏生成脚步、点击、爆炸等音效；未配置时用本机 FFmpeg 合成。',
+      sfxMore:
+        '选择 ElevenLabs 时按描述生成写实音效，可能收费；未配置时 Agent 用本机 FFmpeg 合成合成器类音效，需先安装 FFmpeg。两种方式都输出Godot 可直接使用的 WAV。',
       ttsDesc: '朗读 AI 回复，使用 AI 合成声音。',
       ttsMore:
         '内置豆包 TTS 2.0 与阿里云 Qwen-Audio；也可接入本机运行的 Kokoro、CosyVoice 等 OpenAI 兼容合成服务（添加服务商 → 本机语音合成）。音色可在模型设置中修改。',
       ttsMissing: '回复朗读不可用',
       realtimeDesc: '选择实时语音模型，用于语音通话。',
       realtimeMore:
-        '支持 OpenAI gpt-realtime 系列和豆包 Seeduplex，普通对话模型不能绑在此处。未设置时，若已配置语音识别与语音合成，通话改由对话模型应答，响应稍慢。',
+        '支持 OpenAI gpt-realtime 系列和豆包 Seeduplex，普通对话模型不能绑在此处。未设置时，若已配置语音识别与语音合成，通话改由主模型应答，响应稍慢。',
       realtimeMissing: '语音通话不可用',
-      realtimeViaPipeline: '未设置时，通话由对话模型应答（经语音识别与语音合成），响应稍慢。',
+      realtimeViaPipeline: '未设置时，通话由主模型应答（经语音识别与语音合成），响应稍慢。',
       stt: '语音识别',
       sttDesc: '按下语音热键说话，转写为文字填入搜索框。未配置时使用实时语音通道。',
       sttMore:
@@ -669,7 +698,7 @@ export default {
         chat: '对话',
         visual: '生图与视频',
         voice: '语音',
-        creative: '音乐与 3D',
+        creative: '音频与 3D',
         retrieval: '检索与工具'
       },
       access: {
@@ -686,6 +715,7 @@ export default {
         image: '图片生成',
         embedding: '嵌入（知识库检索）',
         music: '音乐生成',
+        sfx: '音效生成',
         tts: '语音合成',
         stt: '语音识别（听写）',
         realtime: '实时语音（语音通话）',
@@ -2278,7 +2308,9 @@ export default {
       declined: '已交由 AI 决定',
       cancelled: '未回答',
       skippedOne: '此问题未选择',
-      delegatedOne: '由 AI 决定'
+      delegatedOne: '由 AI 决定',
+      autoCountdown: '全部权限模式下，{time} 后按推荐项继续',
+      autoAnswered: '已按推荐项继续'
     },
     // 每轮回复下方的 token 用量
     tokenUsage: {
@@ -2715,6 +2747,7 @@ export default {
         prepare_task_video: '整理视频素材',
         read_task_video_context: '读取任务过程',
         generate_task_music: '制作配乐',
+        generate_sound_effect: '生成音效',
         generate_speech: '合成语音',
         render_task_video: '制作任务视频',
         analyze_video: '分析视频',
@@ -3267,8 +3300,18 @@ export default {
         effectValue: '提示 {shown} 次，采用 {adopted} 次，成功 {ok} 次',
         lift: '未提示时成功率 {without}%，提示后 {with}%',
         liftUnknown: '对照样本不足，暂无法计算提升',
+        retiredBecause: '淘汰原因',
         source: '来源',
         pin: '固定保留，不自动淘汰'
+      },
+      retireReason: {
+        capacity: '经验数量达到上限，按效果排序被移出',
+        replaced: '同一 API 已有更新的经验',
+        failed: '按此做法执行后仍报相同错误',
+        ignored: '连续多次提示均未被采用',
+        'no-lift': '对照结果显示提示后成功率未提高',
+        refuted: '编辑器核实该成员实际存在',
+        'script-bug': '属于脚本自身的错误，不是引擎规则'
       },
       deleteTitle: '删除这条经验？',
       deleteContent: '删除后不再提示。再次遇到相同问题时，可能重新学习。',
@@ -3504,7 +3547,8 @@ export default {
       godot: 'Godot 编辑器',
       godotFound: '已找到 Godot {version}',
       godotNotFound: '没有找到 Godot 4',
-      godotNotFoundDesc: '指定 Godot 编辑器的可执行文件后，才能从 GDBox 打开工程，AI 也才能检查和试玩游戏。',
+      godotNotFoundDesc:
+        '指定 Godot 编辑器的可执行文件后，才能从 GDBox 打开工程，AI 也才能检查和试玩游戏。',
       godotAuto: '自动查找（PATH、winget、scoop、Steam）',
       godotChoose: '指定…',
       godotUseAuto: '改回自动查找',
@@ -5210,7 +5254,9 @@ export default {
       highDesc: '高强度推理',
       xhighDesc: '超高强度推理',
       maxDesc: '最高强度推理',
-      clamped: '{model} 不支持 {chosen} 档位，本次按 {actual} 执行'
+      clamped: '{model} 不支持 {chosen} 档位，本次按 {actual} 执行',
+      fast: '快速',
+      fastDesc: '响应更快，额度消耗约 2 倍'
     },
     approval: {
       readOnlyLabel: '只读',
@@ -5265,7 +5311,12 @@ export default {
     steerOtherProject: '另一个工程',
     queueAction: '排队',
     queueCancel: '取消此条',
-    queueSteerNow: '立即发送',
+    queueSteerNow: '现在插话',
+    queueLabel: '本轮结束后发',
+    queueEdit: '撤回重新编辑',
+    queueMore: '还有 {count} 条',
+    queueCollapse: '收起',
+    placeholderQueued: '再发一条也会排在后面',
     /** 只有图片、没打字时排队用的占位。标签上总得有一行字，否则是个空壳 */
     queueUntitled: '（附件）',
     sourceType: {
@@ -6526,7 +6577,14 @@ export default {
       done: '同步完成',
       failed: '同步失败',
       doneContent: '全量同步完成：{assets} 个资产、{folders} 个文件夹',
-      failedContent: '网络库同步失败，请重试'
+      failedContent: '网络库同步失败，请重试',
+      // 同步进度（主进程只发阶段代号，文案在这里）
+      phase: {
+        preparing: '正在准备同步',
+        folders: '正在同步文件夹（{current}/{total}）',
+        assets: '正在同步资产（{current}/{total}）',
+        sweep: '正在核对本地资产'
+      }
     },
     scan: {
       done: '扫描完成'

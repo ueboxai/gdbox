@@ -47,7 +47,7 @@ export const BLENDER_SERVER_ID = 'blender'
  * **必须与两个安装脚本里的 `$revision` / `REVISION` 一字不差** ——
  * 安装目录名取它的前 8 位，对不上就会把已经装好的那份当成「别人的目录」
  * 拒绝复用，然后在旁边再装一份。
- * 脚本在 `resources/skills/blender-ue-pipeline/scripts/`。
+ * 脚本在 `resources/blender-mcp/scripts/`。
  */
 export const BLENDER_MCP_REVISION = '4309a39646e644261624bfcd2bca669b343b7621'
 

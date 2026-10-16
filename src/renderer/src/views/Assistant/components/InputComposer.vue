@@ -1,53 +1,77 @@
 <template>
-  <div
-    class="input-composer"
-    :class="{ 'drag-over': isDragging }"
-    @dragover.prevent="handleDragOver"
-    @dragleave.prevent="handleDragLeave"
-    @drop.prevent="handleDrop"
-  >
+  <div class="input-composer-shell">
     <!--
-      排着队等下一轮的跟进消息。
-      放在最上面：它是「已经交出去、但还没发生」的东西，和下面那些「还在手上、
-      跟着这次发送一起走」的附件不是一类，混在一排里用户分不清哪条已经算数了。
+      排着队等下一轮的跟进消息，贴在输入框顶边，像别在本子上的便签。
+      放在输入框**外面**：它是「已经交出去、但还没发生」的东西，和框里那些
+      「还在手上、跟着这次发送一起走」的字和附件不是一类，塞在框里用户分不清
+      哪条已经算数了。
+      多条时只露队头（下一条就发它），其余收成「还有 N 条」，免得把输入框顶得老高。
     -->
-    <div v-if="queuedFollowUps.length > 0" class="queued-followup-row">
-      <div v-for="item in queuedFollowUps" :key="item.id" class="source-pill queued-pill">
-        <div class="pill-icon">
-          <PhListPlus />
-        </div>
-        <span class="pill-title" :title="item.text">{{ item.text }}</span>
-        <button
-          class="pill-remove"
-          :aria-label="t('assistantInputComposer.queueCancel')"
-          @click.stop="handleCancelQueued(item.id)"
-        >
-          <PhX />
-        </button>
+    <div v-if="queuedFollowUps.length > 0" class="queued-tray">
+      <div v-for="item in visibleQueued" :key="item.id" class="queued-item">
+        <span class="queued-label">
+          <PhClock />
+          {{ t('assistantInputComposer.queueLabel') }}
+        </span>
+        <span class="queued-text" :title="item.text">{{ item.text }}</span>
         <!--
           排上之后随时能改主意：用户看着 agent 正往错的方向跑，这会儿
-          「等你跑完」正是他不想要的。没有这条出路的话他只能取消掉标签、
-          再把同一句话重打一遍。
-          放在整行最右边：正文才是这一条的主体，按钮挤在文字旁边会把正文压成几个字。
+          「等你跑完」正是他不想要的。
           带不走的附件（Excel、PDF、@ 来源）那条不给这个按钮，点下去东西会静悄悄
           少一半。图能带走，只贴了图的那条照给。
         -->
-        <button
-          v-if="item.canSteer"
-          class="pill-action"
-          :aria-label="t('assistantInputComposer.queueSteerNow')"
-          @click.stop="handleSteerQueued(item.id)"
-        >
-          <PhChatCircle />
-          <span>{{ t('assistantInputComposer.queueSteerNow') }}</span>
+        <button v-if="item.canSteer" class="queued-steer" @click.stop="handleSteerQueued(item.id)">
+          {{ t('assistantInputComposer.queueSteerNow') }}
         </button>
+        <!-- 改：退回输入框重新编辑。只有纯文字的那条给 —— 附件放不回去，退回去等于丢了 -->
+        <AppTooltip v-if="item.canEdit" :title="t('assistantInputComposer.queueEdit')">
+        <button
+            class="queued-icon-btn"
+            :aria-label="t('assistantInputComposer.queueEdit')"
+            @click.stop="handleEditQueued(item.id, item.text)"
+        >
+            <PhPencilSimple />
+        </button>
+        </AppTooltip>
+        <AppTooltip :title="t('assistantInputComposer.queueCancel')">
+          <button
+            class="queued-icon-btn"
+            :aria-label="t('assistantInputComposer.queueCancel')"
+            @click.stop="handleCancelQueued(item.id)"
+          >
+            <PhX />
+          </button>
+        </AppTooltip>
       </div>
+      <button
+        v-if="queuedFollowUps.length > 1"
+        class="queued-more"
+        @click.stop="queuedExpanded = !queuedExpanded"
+      >
+        {{
+          queuedExpanded
+            ? t('assistantInputComposer.queueCollapse')
+            : t('assistantInputComposer.queueMore', { count: queuedFollowUps.length - 1 })
+        }}
+      </button>
     </div>
 
+    <div
+      class="input-composer"
+      :class="{ 'drag-over': isDragging }"
+      @dragover.prevent="handleDragOver"
+      @dragleave.prevent="handleDragLeave"
+      @drop.prevent="handleDrop"
+    >
     <!-- 图片预览区域 -->
     <div v-if="pendingImages.length > 0" class="image-preview-row">
       <div v-for="(img, index) in pendingImages" :key="index" class="image-preview-item">
-        <img :src="img.preview" alt="preview" class="preview-img" @click="openImagePreview(img)" />
+          <img
+            :src="img.preview"
+            alt="preview"
+            class="preview-img"
+            @click="openImagePreview(img)"
+          />
         <div v-if="img.uploading" class="upload-overlay">
           <PhCircleNotch class="icon-spin" />
         </div>
@@ -393,6 +417,7 @@
           >
             <PhLightbulb class="thinking-trigger-icon" />
             <span class="mode-trigger-label">{{ currentThinkingLabel }}</span>
+              <PhLightning v-if="fastModeOn" class="fast-mode-icon" weight="fill" />
             <PhCaretDown class="mode-trigger-arrow" :class="{ open: showThinkingDropdown }" />
             <span class="mode-trigger-glow" />
           </AppButton>
@@ -431,6 +456,26 @@
                   })
                 }}
               </div>
+                <!-- 「快速」只有支持的模型才露出来（目前是 ChatGPT 订阅），见主进程 supportsFastMode -->
+                <button
+                  v-if="thinkingSupport?.fastMode"
+                  type="button"
+                  class="mode-option fast-mode-option"
+                  :class="{ active: fastModeOn }"
+                  :aria-pressed="fastModeOn"
+                  @click="aiConfigStore.setAgentFastMode(!fastModeOn)"
+                >
+                  <span class="thinking-level-name">
+                    <PhLightning class="fast-mode-icon" weight="fill" />
+                    {{ t('assistantInputComposer.thinking.fast') }}
+                  </span>
+                  <span class="mode-option-desc">{{
+                    t('assistantInputComposer.thinking.fastDesc')
+                  }}</span>
+                  <div v-if="fastModeOn" class="mode-option-check">
+                    <PhCheck />
+                  </div>
+                </button>
             </div>
           </Transition>
         </div>
@@ -728,6 +773,7 @@
       <span>{{ t('assistant.composer.dropFilesHere') }}</span>
     </div>
   </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -763,8 +809,8 @@ import {
   PhArrowUp,
   PhCaretDown,
   PhChartBar,
-  PhChatCircle,
   PhCheck,
+  PhClock,
   PhCircleNotch,
   PhCpu,
   PhEye,
@@ -775,11 +821,9 @@ import {
   PhLightbulb,
   PhLightning,
   PhLink,
-  // 「加到列表末尾」——排队按钮要表达的正是这个动作，不是「等一会儿」（沙漏）
-  // 也不是「回退」（逆时针钟）
-  PhListPlus,
   PhMicrophone,
   PhNotePencil,
+  PhPencilSimple,
   PhPaperclip,
   PhSealCheck,
   PhSliders,
@@ -954,8 +998,10 @@ const props = defineProps<{
   queuedFollowUps?: ReadonlyArray<{
     id: string
     text: string
-    /** 能不能「立即插话」。带着插话通道送不走的附件（Excel、PDF、@ 来源）就不能 */
+    /** 能不能「现在插话」。带着插话通道送不走的附件（Excel、PDF、@ 来源）就不能 */
     canSteer: boolean
+    /** 能不能退回输入框改。只有纯文字的能 —— 附件放不回输入框，退回去等于丢了 */
+    canEdit: boolean
   }>
 }>()
 
@@ -1263,6 +1309,10 @@ const thinkingLevel = computed(() => aiConfigStore.agentThinkingLevel)
 /** 选的档位当前模型没有时，内核会夹到最近的一档 —— 界面得说出来 */
 const effectiveThinkingLevel = computed(() =>
   resolveEffectiveLevel(thinkingLevel.value, thinkingSupport.value)
+)
+/** 开着、而且当前模型认这个开关，触发器上才亮那个闪电 */
+const fastModeOn = computed(
+  () => aiConfigStore.agentFastMode && thinkingSupport.value?.fastMode === true
 )
 const thinkingClamped = computed(() => effectiveThinkingLevel.value !== thinkingLevel.value)
 
@@ -2048,6 +2098,10 @@ const placeholderText = computed(() => {
   // 生成中且能插话时换提示语：不换的话输入框看起来只是"还不能发"，
   // 用户不会想到这时候打的字会被送进正在跑的那一轮
   if (props.isGenerating && isAgentMode.value) {
+    // 已经排着一条、又是排队档：再发的也是排在后面，照实说
+    if (queuedFollowUps.value.length > 0 && followUpBehavior.value === 'queue') {
+      return t('assistantInputComposer.placeholderQueued')
+    }
     return t('assistant.composer.placeholderSteer')
   }
   if (isImageGenerationMode.value) {
@@ -2928,8 +2982,35 @@ function handleSteerQueued(id: string): void {
   emit('steer-queued', id)
 }
 
+/**
+ * 排着的这条退回输入框重新改：字放回去（接在用户正在打的字前面），队里那条摘掉。
+ * 只给纯文字的那条，所以标签上的正文就是原话，不用回页面要 payload。
+ */
+function handleEditQueued(id: string, text: string): void {
+  const current = content.value.trim()
+  content.value = current
+    ? `${text}
+
+${content.value}`
+    : text
+  emit('cancel-queued', id)
+  focus()
+}
+
 /** 排着的消息。父组件没传就是空 —— 模板里不用到处判空 */
 const queuedFollowUps = computed(() => props.queuedFollowUps ?? [])
+
+/** 多条时默认只露队头（下一条就发它），其余收起来 */
+const queuedExpanded = ref(false)
+const visibleQueued = computed(() =>
+  queuedExpanded.value ? queuedFollowUps.value : queuedFollowUps.value.slice(0, 1)
+)
+watch(
+  () => queuedFollowUps.value.length,
+  (n) => {
+    if (n <= 1) queuedExpanded.value = false
+  }
+)
 
 /**
  * 键盘处理
@@ -3708,6 +3789,19 @@ onMounted(() => {
 }
 
 /* 厂商别名后面跟的档位原名 */
+.fast-mode-option {
+  border-top: 1px solid var(--color-border-subtle);
+  margin-top: 4px;
+}
+
+.fast-mode-icon {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  vertical-align: -1px;
+  color: var(--color-warning-text);
+}
+
 .thinking-alias {
   margin-left: 4px;
   font-family: var(--font-mono, monospace);
@@ -4125,41 +4219,102 @@ onMounted(() => {
 }
 
 /*
- * 一条排队消息占一整行，不跟别的标签挤在一排。
- * 它是用户自己刚打的一句话 —— 缩成「总结下…」等于没显示，他分不清排着的
- * 是哪一条，也就没法判断要不要撤回。
+ * 排队条：贴在输入框顶边，比输入框两边各缩进一点，底边不画 —— 看起来像
+ * 从输入框背后探出来的一张便签，而不是框里又套了个框。
  */
-.queued-followup-row {
+.queued-tray {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--color-border-subtle);
+  margin: 0 16px;
+  padding: 4px 6px 4px 12px;
+  border-radius: 12px 12px 0 0;
+  background: var(--color-bg-surface);
+  box-shadow: inset 0 0 0 1px var(--shadow-highlight);
+}
+
+.queued-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  font-size: 12px;
+}
+
+/* 「本轮结束后发」：说清这条是什么状态，替掉原来那个看不懂的列表图标 */
+.queued-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* 正文吃掉整行剩下的宽度，按钮被推到最右边 */
+.queued-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /*
- * 「立即发送」。用强调色，因为它是这一行里唯一会**当场改变 agent 行为**的按钮 ——
- * 旁边的 ✕ 只是撤回一条还没发生的事。
+ * 「现在插话」。用强调色描边，因为它是这一行里唯一会**当场改变 agent 行为**的
+ * 按钮 —— 旁边的改和删只是动一条还没发生的事。
  */
-.pill-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 1px 6px;
-  border: none;
-  border-radius: 10px;
+.queued-steer {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border: 1px solid var(--color-accent-border);
+  border-radius: 6px;
   background: transparent;
   color: var(--color-accent-text);
   font-size: 12px;
   line-height: 1.5;
   white-space: nowrap;
   cursor: pointer;
-  flex-shrink: 0;
   transition: background 0.15s ease;
 
   &:hover {
     background: var(--color-accent-bg);
+  }
+}
+
+.queued-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--color-bg-surface-hover);
+    color: var(--color-text-primary);
+  }
+}
+
+.queued-more {
+  align-self: flex-start;
+  padding: 2px 0 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--color-text-secondary);
   }
 }
 
@@ -4202,38 +4357,6 @@ onMounted(() => {
       background: var(--color-accent-bg);
       color: var(--color-text-primary);
     }
-  }
-}
-
-/*
- * 排队的消息用中性底色，不用强调色。
- * 强调色在这个输入框里已经被 @提及 和绑定的知识库占着了，那两样是「这次发送
- * 带上的东西」；排着的消息是「还没发生的下一次」，视觉上要退后一层。
- *
- * 必须排在 `.source-pill` 后面：它是那条规则的变体，两边选择器权重一样，
- * 谁在后面谁说了算。写在前面的话下面这个 `max-width: none` 会被基类的 200px
- * 顶掉，正文照旧被压成「记得打…」。
- */
-.queued-pill {
-  background: var(--color-bg-surface);
-  /* 撑满整行 —— 覆盖 .source-pill 给「@提及」用的 200px */
-  max-width: none;
-
-  &:hover {
-    background: var(--color-bg-surface-hover);
-  }
-
-  /* 正文吃掉整行剩下的宽度，两颗按钮被推到最右边 */
-  .pill-title {
-    flex: 1;
-    min-width: 0;
-    max-width: none;
-  }
-
-  .pill-title,
-  .pill-icon,
-  .pill-remove {
-    color: var(--color-text-secondary);
   }
 }
 

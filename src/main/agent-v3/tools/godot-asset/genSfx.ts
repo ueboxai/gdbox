@@ -1,19 +1,26 @@
 /**
  * gen_sfx：本地 sfxr 合成复古游戏音效，离线、免费、瞬间出。
  *
- * 给了 description、并且「音乐」绑的是 ElevenLabs 时，改用它的音效接口按描述生成（同一把密钥，
- * 见 `ai/soundEffect.ts`），出来的 MP3 转成 WAV。没绑或不是 ElevenLabs 就用本地合成 ——
+ * 给了 description 时优先使用「音效生成」角色，兼容已有 ElevenLabs 音乐来源。
+ * 云端 WAV 与回执缓存在 .gdbox/ 下，防止重试重复扣费。没绑则用本地合成 ——
  * 不让「没配音效服务」挡住出声。模型听不见结果，所以一次出几个候选让用户挑。
  */
 
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { z } from 'zod'
 
 import { defineTool, type UnrealAgentTool } from '../defineTool'
 import { ProjectAssets } from '../../../godot/aigc/projectAssets'
 import { makeSfx, SFX_KINDS } from '../../../godot/aigc/sfxr'
-import { generateSoundEffect, supportsSoundEffects } from '../../../ai/soundEffect'
-import { decodeMp3, encodeWav } from '../../../godot/aigc/musicLoop'
-import { boundProvider, modelUsed, projectPathInput, requireProjectDir, SPENDING_NOTE } from './shared'
+import { generateSoundEffect } from '../../../ai/soundEffect'
+import {
+  boundProvider,
+  modelUsed,
+  projectPathInput,
+  requireProjectDir,
+  SPENDING_NOTE
+} from './shared'
 
 const Input = z.object({
   project_path: projectPathInput,
@@ -23,8 +30,15 @@ const Input = z.object({
     .string()
     .max(450)
     .optional()
-    .describe('按描述用 AI 生成，英文效果最好，如 "short metallic coin pickup chime"。只有用户绑了 ElevenLabs 音乐来源时生效'),
-  seconds: z.number().min(0.5).max(22).optional().describe('按描述生成时的时长（秒）。不给由服务商决定'),
+    .describe(
+      '按描述用 AI 生成，英文效果最好，如 "short metallic coin pickup chime"。绑定了音效生成或 ElevenLabs 音乐来源时生效'
+    ),
+  seconds: z
+    .number()
+    .min(0.5)
+    .max(22)
+    .optional()
+    .describe('按描述生成时的时长（秒）。不给由服务商决定'),
   count: z.number().int().min(1).max(5).optional().describe('候选个数，默认 3')
 })
 
@@ -42,7 +56,7 @@ export function createGenSfxTool(): UnrealAgentTool<GenSfxDetails> {
     description:
       '本地合成复古游戏音效（sfxr，离线、不花钱），写成 res://assets/gen/sfx/<name>_<n>.wav（count=1 时为 <name>.wav）。' +
       '你听不见结果：可用 inspect_audio 量一下，再请用户在资产抽屉里试听挑选。' +
-      '给 description 且用户的「音乐」绑的是 ElevenLabs 时改为按描述 AI 生成（花用户额度，' +
+      '给 description 且用户绑了音效生成或 ElevenLabs 音乐来源时改为按描述 AI 生成（新参数花用户额度，同参数复用，' +
       SPENDING_NOTE +
       '）；否则仍是本地合成，回话里会说明用的是哪一种。',
     input: Input,
@@ -52,19 +66,33 @@ export function createGenSfxTool(): UnrealAgentTool<GenSfxDetails> {
       const name = ProjectAssets.slug(args.name)
       const count = args.count ?? 3
 
-      const bound = args.description ? await boundProvider('music') : undefined
-      if (args.description && bound && supportsSoundEffects(bound.provider)) {
+      const bound = args.description
+        ? ((await boundProvider('sfx')) ?? (await boundProvider('music')))
+        : undefined
+      if (
+        args.description &&
+        bound &&
+        (bound.provider.kind === 'sfx' || bound.provider.musicApi === 'elevenlabs-music')
+      ) {
+        const model = bound.provider.kind === 'sfx' ? bound.modelId : 'eleven_text_to_sound_v2'
         const outputs: string[] = []
         for (let i = 0; i < count; i++) {
           ctx.report({ text: `正在生成第 ${i + 1}/${count} 个音效…` })
-          const mp3 = await generateSoundEffect(bound.provider, args.description, args.seconds, ctx.signal)
+          const generated = await generateSoundEffect(
+            bound.provider,
+            model,
+            { prompt: args.description, seconds: args.seconds, loop: false },
+            i,
+            join(assets.metaPath(), 'sfx-cache'),
+            ctx.signal
+          )
           const file = assets.path('sfx', count === 1 ? `${name}.wav` : `${name}_${i + 1}.wav`)
-          assets.write(file.abs, encodeWav(await decodeMp3(mp3)))
+          assets.write(file.abs, readFileSync(generated.path))
           outputs.push(file.res)
         }
         assets.record({
           tool: 'gen_sfx',
-          ...modelUsed(bound.provider, 'sound-generation'),
+          ...modelUsed(bound.provider, model),
           prompt: args.description,
           params: { seconds: args.seconds, count },
           outputs
@@ -75,7 +103,7 @@ export function createGenSfxTool(): UnrealAgentTool<GenSfxDetails> {
         }
       }
       const fallback = args.description
-        ? '（没有可用的 AI 音效服务 —— 要按描述生成，请用户在偏好设置里把「音乐」绑到 ElevenLabs；这次用的是本地合成）\n'
+        ? '（没有可用的 AI 音效服务 —— 要按描述生成，请用户在偏好设置里配置「音效生成」或把「音乐」绑到 ElevenLabs；这次用的是本地合成）\n'
         : ''
       // 记下种子：用户挑中第几个，以后能原样再合成一次
       const seed = Math.floor(Math.random() * 1e9)

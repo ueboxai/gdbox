@@ -3116,6 +3116,8 @@ declare global {
         approvalMode?: AgentV3ApprovalMode
         /** 思考程度。不传等于 auto（不指定，随模型默认） */
         thinkingLevel?: AgentV3ThinkingLevel
+        /** 「快速」：Codex 订阅走 priority 档，别的模型忽略 */
+        fastMode?: boolean
         /** 技能沉淀档位。不传等于 ask（想沉淀时先问用户） */
         skillLearning?: AgentV3SkillLearning
         /**
@@ -3386,6 +3388,8 @@ declare global {
         levels: AgentV3ThinkingLevel[]
         levelMap: Record<string, string | null>
         modelId: string
+        /** 这个模型能不能开「快速」（目前只有 ChatGPT 订阅） */
+        fastMode: boolean
       } | null>
       /** 这条对话绑定的模型（执行记录里那份）。没绑过为 null */
       sessionModel: (args: {
@@ -3590,6 +3594,13 @@ declare global {
           blenderPath?: string
           statuses?: McpServerStatus[]
         }>
+        /** 用 winget 装 Blender 接入缺的 Git / Python。装完主进程会刷新 PATH 再探一次 */
+        blenderInstallPrereqs: (args: { ids: Array<'git' | 'python'> }) => Promise<{
+          success: boolean
+          message: string
+          /** winget 的退出码和原话，「交给 AI 排查」时原样带上 */
+          error?: string
+        }>
       }
       /** 把虚幻引擎能力对外暴露成 MCP server */
       mcpServer: {
@@ -3702,6 +3713,15 @@ declare global {
     source: string
     verified?: { date: string; engine?: string }
     status: 'trial' | 'proven' | 'retired'
+    /** 退休的才有；这个字段出现之前退休的旧经验没有 */
+    retiredBecause?:
+      | 'capacity'
+      | 'replaced'
+      | 'failed'
+      | 'ignored'
+      | 'no-lift'
+      | 'refuted'
+      | 'script-bug'
     pinned?: boolean
     engines?: string[]
     notFor?: string[]

@@ -14,7 +14,7 @@
  */
 
 import { errorFingerprint, isEnvironmentalError, normalizeError } from './errorSignature'
-import type { ExpectedAction, ExperienceEntry } from './experienceFile'
+import type { ExpectedAction, ExperienceEntry, RetireReason } from './experienceFile'
 import { applyOutcome, emptyStats, type Outcome } from './lifecycle'
 import {
   editOf,
@@ -199,6 +199,7 @@ export function createExperienceRuntime(deps: ExperienceRuntimeDeps): Experience
 
         // 读和改放在同一次排队的更新里：同一条经验的两次结论同时落地时，分开读写会丢掉一次
         let status = current.status
+        let retiredBecause: RetireReason | undefined
         await store.updateLedger((all) => {
           const result = applyOutcome(
             current,
@@ -207,9 +208,10 @@ export function createExperienceRuntime(deps: ExperienceRuntimeDeps): Experience
             now()
           )
           status = result.status
+          retiredBecause = result.retiredBecause
           return { ...all, [item.entry.id]: result.stats }
         })
-        next = { ...next, status }
+        next = { ...next, status, ...(retiredBecause ? { retiredBecause } : {}) }
 
         if (JSON.stringify(next) !== JSON.stringify(current)) {
           await store.updateTool(item.tool, (entries) =>

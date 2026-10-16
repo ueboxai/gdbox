@@ -28,7 +28,11 @@ import { buildUserInstructionsSection } from '../capabilities/userInstructions'
 import type { SkillMetadata } from '../../agent-v3/capabilities/skillsService/SkillsService'
 import type { McpClientManager } from '../capabilities/mcp/McpClientManager'
 import { buildMcpSection, installableIntegrations } from '../capabilities/mcp/promptSection'
-import { createAskUserTool, type AskUserToolDeps } from '../tools/builtin/askUser'
+import {
+  createAskUserTool,
+  UNATTENDED_ANSWER_MS,
+  type AskUserToolDeps
+} from '../tools/builtin/askUser'
 import { createVoiceReportTool, type VoiceReportToolDeps } from '../tools/builtin/voiceReport'
 import { createUpdatePlanTool, createWrapUpTool } from '../tools/builtin/turnReport'
 import {
@@ -227,6 +231,8 @@ export interface SessionContext {
   alwaysAllowed?: Set<string>
   /** 思考程度。省略等同 auto —— 不指定，随模型自己的默认 */
   thinkingLevel?: ThinkingLevelChoice
+  /** 模型菜单里的「快速」（Codex 订阅的 priority 档），见 `supportsFastMode` */
+  fastMode?: boolean
   modelRequest?: ModelRequest
   /** 向用户发起审批。省略则等同 yolo（无人值守场景，如定时任务） */
   requestApproval?: ApprovalDeps['request']
@@ -450,7 +456,13 @@ function resolveCandidateTools(ctx: SessionContext): UnrealAgentTool<never>[] {
     tools.push(
       createAskUserTool({
         sessionId: ctx.sessionId,
-        request: ctx.requestQuestion
+        request: ctx.requestQuestion,
+        // 用户亲手选了「全部权限」才倒计时；没有审批通道的会话不算（那是没人能批，不是让放手）
+        autoAnswerAfterMs: () => {
+          const mode =
+            typeof ctx.approvalMode === 'function' ? ctx.approvalMode() : ctx.approvalMode
+          return ctx.requestApproval && mode === 'yolo' ? UNATTENDED_ANSWER_MS : undefined
+        }
       }) as unknown as UnrealAgentTool<never>
     )
     // 任务清单和收尾提问：同样只有人看着界面时才有意义，条件跟反问一致
@@ -676,7 +688,7 @@ export async function createUnrealAgent(ctx: SessionContext): Promise<CreatedAge
     ctx.auditorJudges
   )
     ctx.toolSearchEnabled = false
-  const runtime = await resolveAgentModel(ctx.modelRequest, ctx.thinkingLevel)
+  const runtime = await resolveAgentModel(ctx.modelRequest, ctx.thinkingLevel, ctx.fastMode)
   const { selection, models, summaryModel } = runtime
   // 工作室模式：模型请求按网关的实际反应自适应排队、卡死重发（见 `core/team/requestGate.ts`）。
   // 子 agent 经 `...parent` 继承这个开关，队员、验收员、`task` 子任务共用同一个名额池。
@@ -1441,27 +1453,38 @@ function teamToolsFor(
   })
 }
 
-/** 取子 agent 最后一条 assistant 消息的文本作为返回值 */
+/**
+ * 子 agent 的结论：**最后一条** assistant 消息的文本。
+ *
+ * 只认最后一条，不往前找。最后一条被截断（`length`：输出额度全花在思考上、一个字没写）
+ * 或者没有文字时，往前找到的只会是半路的自言自语（「让我读一下契约」），
+ * 拿它当结论交回去，界面上就成了一份「成果」，制作人也以为这件活干完了。
+ * 这种情况算没交回：抛出去，派活方按「停下了」记账、能重开。
+ */
 function extractFinalText(messages: AgentMessage[], seedCount: number): string {
-  for (let i = messages.length - 1; i >= seedCount; i--) {
-    const message = messages[i] as { role?: string; content?: unknown }
-    if (message.role !== 'assistant') continue
-
-    const content = message.content
-    if (typeof content === 'string') return content
-    if (!Array.isArray(content)) continue
-
-    const text = content
-      .filter((block): block is { type: 'text'; text: string } => {
-        const b = block as { type?: string; text?: unknown }
-        return b.type === 'text' && typeof b.text === 'string'
-      })
-      .map((block) => block.text)
-      .join('')
-
-    if (text) return text
+  const last = messages
+    .slice(seedCount)
+    .findLast((m) => (m as { role?: string }).role === 'assistant') as
+    | { content?: unknown; stopReason?: string }
+    | undefined
+  if (last?.stopReason === 'length') {
+    throw new Error('回复超出模型的输出上限被截断，没有交回结论')
   }
-  return '(子 agent 没有产出文本结论)'
+  const content = last?.content
+  const text =
+    typeof content === 'string'
+      ? content
+      : Array.isArray(content)
+        ? content
+            .filter((block): block is { type: 'text'; text: string } => {
+              const b = block as { type?: string; text?: unknown }
+              return b.type === 'text' && typeof b.text === 'string'
+            })
+            .map((block) => block.text)
+            .join('')
+        : ''
+  if (!text.trim()) throw new Error('最后一条回复没有文字，没有交回结论')
+  return text
 }
 
 /**
