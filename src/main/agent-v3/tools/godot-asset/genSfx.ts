@@ -14,13 +14,7 @@ import { defineTool, type UnrealAgentTool } from '../defineTool'
 import { ProjectAssets } from '../../../godot/aigc/projectAssets'
 import { makeSfx, SFX_KINDS } from '../../../godot/aigc/sfxr'
 import { generateSoundEffect } from '../../../ai/soundEffect'
-import {
-  boundProvider,
-  modelUsed,
-  projectPathInput,
-  requireProjectDir,
-  SPENDING_NOTE
-} from './shared'
+import { boundProvider, modelUsed, projectPathInput, requireProjectDir } from './shared'
 
 const Input = z.object({
   project_path: projectPathInput,
@@ -57,7 +51,7 @@ export function createGenSfxTool(): UnrealAgentTool<GenSfxDetails> {
       '本地合成复古游戏音效（sfxr，离线、不花钱），写成 res://assets/gen/sfx/<name>_<n>.wav（count=1 时为 <name>.wav）。' +
       '你听不见结果：可用 inspect_audio 量一下，再请用户在资产抽屉里试听挑选。' +
       '给 description 且用户绑了音效生成或 ElevenLabs 音乐来源时改为按描述 AI 生成（新参数花用户额度，同参数复用，' +
-      SPENDING_NOTE +
+      '结果不满意时用 ask_user 说明问题并给出选项，不要自己决定重新付费生成；用户明确说重来就直接做。' +
       '）；否则仍是本地合成，回话里会说明用的是哪一种。',
     input: Input,
     execute: async (args, ctx) => {

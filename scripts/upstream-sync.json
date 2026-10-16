@@ -6,16 +6,22 @@
   "base": "b6b4aabe",
   "entries": {
     "018aa584": {
-      "status": "todo",
-      "note": "P2 Blender 官方源码随包、pip 走国内镜像。GDBox 保留 Blender→glb 管线，有用；但改的是 blender-ue-pipeline 技能和 package.json，要手工搬，排在 c3a20c69 之后"
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入锁定官方 Blender MCP 源码随包和 Python/pip 镜像回退；安装脚本移到 resources/blender-mcp/scripts，保留 GDBox 安装目录，不恢复 blender-ue-pipeline。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
     },
     "048ff2d1": {
       "status": "skip",
       "note": "只是 prettier 换行；跟着前置提交搬时本仓自己格式化"
     },
     "0ce932d4": {
-      "status": "todo",
-      "note": "P2 网络资产库撑住几十万行（分页落盘、查询进 worker、补索引）。值得要，但 39 个文件、5 处冲突，单独开一批手工搬"
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入大规模网络资产库分批对账、worker 查询/WAL 检查点、索引与统计维护、列表去抖；保留 Godot 资产处理和旧库先补列后建索引，不恢复已删除的 UE projectTool/contentHandler。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
     },
     "1e3a11f8": {
       "status": "ported",
@@ -30,8 +36,11 @@
       "note": "UE Python API 执行前检查设计稿，GDBox 没有 Python 执行工具"
     },
     "23f1c9ea": {
-      "status": "todo",
-      "note": "P1 经验系统去掉每工具 5 条上限、没出过场的不再排在淘汰最前——通用。API 事实那一层是为 ue_run_python_script，GDBox 用不上；手工只搬通用部分"
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入取消单工具五条上限、未出场条目的淘汰保护、退休原因、旧退休记录修复及升为通用时保留 symbol/avoid；保留 Godot 识别/探针/对照逻辑，不迁入 UE Python 专属事实桶与复查机制。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
     },
     "2aedf1ab": {
       "status": "ported",
@@ -42,12 +51,18 @@
       "note": "本仓已有同样的改动"
     },
     "3327e56b": {
-      "status": "todo",
-      "note": "P1 快照标签用交回报告的第一句。teamTools 小冲突"
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "经核对 GDBox 已有报告首句作为快照标签的同等实现，保留现状；团队测试通过。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
     },
     "361d2ebd": {
-      "status": "todo",
-      "note": "P2 手册措辞，干净，顺手带上"
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入语音手册措辞更新。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
     },
     "3de02a25": {
       "status": "ported",
@@ -78,8 +93,11 @@
       "note": "主进程分叉时已删，本次删 preload 和类型声明"
     },
     "7732f361": {
-      "status": "todo",
-      "note": "P1 全部权限下 ask_user 到点按推荐项继续；设置里对话/Agent 合成一个主模型。干净"
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入全部权限下 ask_user 推荐项倒计时、主模型角色合并与旧设置迁移；保留 Godot Agent 提示词和工具池。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
     },
     "8b3052f9": {
       "status": "ported",
@@ -100,12 +118,18 @@
       "note": "本仓已有同样的改动"
     },
     "c3a20c69": {
-      "status": "todo",
-      "note": "P2 Blender 缺 Git/Python 一键 winget 安装。agentV3.ts 冲突"
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入 Blender 前置依赖安装、PATH 刷新与失败交给 Agent 处理；使用 GDBox 身份。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
     },
     "ce7149d0": {
-      "status": "todo",
-      "note": "P1 排队消息挪到输入框顶上（现在插话/撤回重新编辑/删除）。InputComposer.vue 冲突，上游那次带了大面积重排，手工合"
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入框外追问队列、展开、立即插话、撤回编辑与删除；保留 GDBox 输入框内容。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
     },
     "e4b85d02": {
       "status": "ported",
@@ -113,8 +137,11 @@
       "note": "P0 对话页消息区铺满整页、滚动条贯通。干净"
     },
     "e55fea06": {
-      "status": "todo",
-      "note": "P2 网络库变更日志为空时不再每次全量对账。依赖 0ce932d4，同一批搬"
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入空 change_log 后续修复，避免重复触发全量对账。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
     },
     "e728d43f": {
       "status": "skip",
@@ -138,6 +165,55 @@
     "fa3b3ebd": {
       "status": "skip",
       "note": "上游自己的 lint 基线，两边基线各管各的"
+    },
+    "78576f2b22f6b96296884b1e55f38289c5343a58": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "补齐 Anthropic 自建渠道的模型目录回落与 adaptive thinking，保留 GDBox 依赖版本。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "161cd757b810b47a2a30fad7180c69b49ab7587a": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入 Codex 快速模式 UI、设置、IPC 和 priority 请求参数。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "4ac8a1ecc4c813fc93eba318f0b977ffeba4ec86": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入空白/截断子任务结论判失败及团队成果筛选，保留 Godot 锁、快照和工程绑定。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "f9841ed9249f0ebbe9241db34a10c3d743621e56": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入音效生成角色、素材库工具、PCM/WAV 与防重复扣费；适配 Godot 技能，gen_sfx 共用云端实现，兼容 ElevenLabs 音乐来源，保留离线 sfxr 和 res:// 工程落盘。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "183a2832f788ed8a22fe1af69a0a92afdd958e8e": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入带工具与思考档位的实际连接探测；与 87b8e842 后续修复一起交付。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入失败后按实际请求测试协议/思考/工具兼容性，不按报错措辞猜测。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "917ae97ce45ded0b8408ebbbf9fcc66ac9bd25b5": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "格式整理随相关文件移植完成，不扩大到无关文件。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
     }
   }
 }
