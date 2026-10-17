@@ -1,6 +1,7 @@
 /** @vitest-environment node */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createModels } from '@earendil-works/pi-ai'
+import type { AgentMessage } from '@earendil-works/pi-agent-core'
 import {
   fauxAssistantMessage,
   fauxProvider,
@@ -52,6 +53,52 @@ beforeEach(() => {
 })
 
 describe('真实子任务运行边界', () => {
+  it.each([false, true])('每轮交回含工具结果的记忆，结束时交最终版（取消=%s）', async (stop) => {
+    const controller = new AbortController()
+    const checkpoints: AgentMessage[][] = []
+    let duringSecond: AgentMessage[][] = []
+    buildTools.mockReturnValue([
+      defineTool({
+        name: 'read_state',
+        namespace: 'asset',
+        description: 'read',
+        input: z.object({ step: z.number() }),
+        risk: 'safe',
+        execute: async ({ step }) => {
+          if (step === 2) {
+            duringSecond = checkpoints.slice()
+            if (stop) controller.abort()
+          }
+          return { text: `read ${step}` }
+        }
+      })
+    ])
+    faux.setResponses([
+      fauxAssistantMessage([fauxToolCall('read_state', { step: 1 }, { id: 'r1' })]),
+      fauxAssistantMessage([fauxToolCall('read_state', { step: 2 }, { id: 'r2' })]),
+      fauxAssistantMessage('done')
+    ])
+    const running = runSubAgent(parent, {
+      prompt: 'read twice',
+      seedMessages: [],
+      signal: controller.signal,
+      keepMessages: (messages) => checkpoints.push(messages.slice())
+    })
+    if (stop) await expect(running).rejects.toMatchObject({ name: 'AbortError' })
+    else await expect(running).resolves.toMatchObject({ text: 'done' })
+
+    expect(duringSecond).toHaveLength(1)
+    expect(duringSecond[0]?.at(-1)).toMatchObject({ role: 'toolResult', toolCallId: 'r1' })
+    expect(checkpoints.length).toBeGreaterThan(duringSecond.length)
+    expect(checkpoints.at(-1)?.length).toBeGreaterThan(duringSecond[0]!.length)
+    if (!stop) {
+      expect(checkpoints.at(-1)?.at(-1)).toMatchObject({
+        role: 'assistant',
+        content: [{ type: 'text', text: 'done' }]
+      })
+    }
+  })
+
   it.each([false, true])(
     '父会话运行中收紧只读，子任务后续不能写入（免审批=%s）',
     async (withoutApproval) => {

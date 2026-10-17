@@ -485,6 +485,24 @@ describe('团队工具', () => {
     }
   })
 
+  it('记忆写盘失败时报告失败，不声称已经保存这件活的进度', async () => {
+    const save = vi.spyOn(store, 'saveHistory').mockRejectedValue(new Error('disk full'))
+    const t = tools({
+      runMember: async ({ keepMessages }) => {
+        keepMessages([{ role: 'user', content: '做到一半', timestamp: 1 }])
+        return ok('好了')
+      }
+    })
+    await t.team_hire!({ name: '程序', role: '写玩法' })
+    await expect(t.team_send!({ to: '程序', message: '长活' })).rejects.toThrow('disk full')
+    expect(save).toHaveBeenCalledOnce()
+    expect(await store.history('程序')).toEqual([])
+    expect((await store.jobs()).at(-1)).toMatchObject({
+      outcome: 'stopped',
+      reason: 'disk full'
+    })
+  })
+
   it('同一个队员的两件活排队，不同队员并行', async () => {
     const running = new Set<string>()
     let overlapSame = false
@@ -970,7 +988,7 @@ describe('队员记忆按轮存盘', () => {
     expect(disk).toEqual(['a', 'b', 'c'])
     await vi.advanceTimersByTimeAsync(5000)
     expect(calls).toEqual([['a'], ['a', 'b', 'c']])
-    expect(memory.kept).toBe(true)
+    expect(memory.saved).toBe(true)
   })
 
   it('中途写失败不挡后面；最终版写失败报给调用方', async () => {
@@ -982,12 +1000,15 @@ describe('队员记忆按轮存盘', () => {
     }, 1000)
     memory.keep([msg('a')])
     await vi.advanceTimersByTimeAsync(1000)
+    expect(memory.saved).toBe(false)
     fail = false
     memory.keep([msg('a'), msg('b')])
     await expect(memory.flush()).resolves.toBeUndefined()
     expect(saved).toEqual([2])
+    expect(memory.saved).toBe(true)
     fail = true
     await expect(memory.flush()).rejects.toThrow('disk full')
+    expect(memory.saved).toBe(true)
   })
 
   it('一份都没交过：什么都不写', async () => {
@@ -995,6 +1016,6 @@ describe('队员记忆按轮存盘', () => {
     const memory = createMemorySaver(save, 1000)
     await memory.flush()
     expect(save).not.toHaveBeenCalled()
-    expect(memory.kept).toBe(false)
+    expect(memory.saved).toBe(false)
   })
 })

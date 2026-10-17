@@ -360,10 +360,10 @@ export function formatMail(title: string, mails: TeamMail[]): string {
 }
 
 /**
- * 干活途中按轮存盘，从第一次交来的那一轮起最多隔这么久落一次。
+ * 干活途中按轮存盘，从第一次交来的那一轮起隔这么久安排一次写入。
  *
  * 只是合并写盘：一件活里工具一轮接一轮，记忆是整份 JSON，每轮都整份重写太浪费；
- * 隔一会儿只写最新那份。崩了最多丢这一小段，和模型怎么干活无关
+ * 隔一会儿只写最新那份。崩溃仍可能丢失当前轮、待写和写入失败的进度
  */
 export const MEMORY_SAVE_INTERVAL_MS = 2_000
 
@@ -379,17 +379,22 @@ export function createMemorySaver(
 ): {
   keep: (messages: AgentMessage[]) => void
   flush: () => Promise<void>
-  /** 交过至少一份（落没落盘另说） */
-  readonly kept: boolean
+  /** 本次工作至少有一份记忆成功落盘，才能提示可接着做 */
+  readonly saved: boolean
 } {
   let latest: AgentMessage[] | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
   let chain: Promise<void> = Promise.resolve()
+  let saved = false
+  const persist = async (snapshot: AgentMessage[]): Promise<void> => {
+    await save(snapshot)
+    saved = true
+  }
   const write = (): void => {
     const snapshot = latest
     if (!snapshot) return
     // 中途那几次写失败不要紧，下一次写的是更全的一份
-    chain = chain.then(() => save(snapshot)).catch(() => undefined)
+    chain = chain.then(() => persist(snapshot)).catch(() => undefined)
   }
   return {
     keep(messages) {
@@ -406,12 +411,12 @@ export function createMemorySaver(
       const snapshot = latest
       if (!snapshot) return chain
       // 最终版写失败要让调用方知道，和改之前一样
-      const final = chain.then(() => save(snapshot))
+      const final = chain.then(() => persist(snapshot))
       chain = final.catch(() => undefined)
       return final
     },
-    get kept() {
-      return latest !== undefined
+    get saved() {
+      return saved
     }
   }
 }
@@ -538,7 +543,7 @@ function createSendTool(
         remember('unfinished')
         const why = error instanceof Error ? error.message : String(error)
         // 制作人决定重派时要知道：它记得干到哪了，可以让它接着上次的往下干
-        const reason = memory.kept ? `${why}；${MEMORY_KEPT_NOTE}` : why
+        const reason = memory.saved ? `${why}；${MEMORY_KEPT_NOTE}` : why
         // 停下的活也记已经花掉的：钱是真花了
         await settleJob({ outcome: 'stopped', reason })
         throw error
