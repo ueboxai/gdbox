@@ -1,7 +1,8 @@
 /**
  * gen_sfx：本地 sfxr 合成复古游戏音效，离线、免费、瞬间出。
  *
- * 给了 description 时优先使用「音效生成」角色，兼容已有 ElevenLabs 音乐来源。
+ * 给了 description 且绑了「音效生成」时按描述云端生成。音乐来源不借来用：音效是单独的
+ * 接口和模型，借音乐的绑定只会把音乐模型发给音效接口、被服务商拒收。
  * 云端 WAV 与回执缓存在 .gdbox/ 下，防止重试重复扣费。没绑则用本地合成 ——
  * 不让「没配音效服务」挡住出声。模型听不见结果，所以一次出几个候选让用户挑。
  */
@@ -25,7 +26,7 @@ const Input = z.object({
     .max(450)
     .optional()
     .describe(
-      '按描述用 AI 生成，英文效果最好，如 "short metallic coin pickup chime"。绑定了音效生成或 ElevenLabs 音乐来源时生效'
+      '按描述用 AI 生成，英文效果最好，如 "short metallic coin pickup chime"。绑定了音效生成时生效'
     ),
   seconds: z
     .number()
@@ -50,7 +51,7 @@ export function createGenSfxTool(): UnrealAgentTool<GenSfxDetails> {
     description:
       '本地合成复古游戏音效（sfxr，离线、不花钱），写成 res://assets/gen/sfx/<name>_<n>.wav（count=1 时为 <name>.wav）。' +
       '你听不见结果：可用 inspect_audio 量一下，再请用户在资产抽屉里试听挑选。' +
-      '给 description 且用户绑了音效生成或 ElevenLabs 音乐来源时改为按描述 AI 生成（新参数花用户额度，同参数复用，' +
+      '给 description 且用户绑了音效生成时改为按描述 AI 生成（新参数花用户额度，同参数复用，' +
       '结果不满意时用 ask_user 说明问题并给出选项，不要自己决定重新付费生成；用户明确说重来就直接做。' +
       '）；否则仍是本地合成，回话里会说明用的是哪一种。',
     input: Input,
@@ -60,15 +61,9 @@ export function createGenSfxTool(): UnrealAgentTool<GenSfxDetails> {
       const name = ProjectAssets.slug(args.name)
       const count = args.count ?? 3
 
-      const bound = args.description
-        ? ((await boundProvider('sfx')) ?? (await boundProvider('music')))
-        : undefined
-      if (
-        args.description &&
-        bound &&
-        (bound.provider.kind === 'sfx' || bound.provider.musicApi === 'elevenlabs-music')
-      ) {
-        const model = bound.provider.kind === 'sfx' ? bound.modelId : 'eleven_text_to_sound_v2'
+      const bound = args.description ? await boundProvider('sfx') : undefined
+      if (args.description && bound) {
+        const model = bound.modelId
         const outputs: string[] = []
         for (let i = 0; i < count; i++) {
           ctx.report({ text: `正在生成第 ${i + 1}/${count} 个音效…` })
@@ -97,7 +92,7 @@ export function createGenSfxTool(): UnrealAgentTool<GenSfxDetails> {
         }
       }
       const fallback = args.description
-        ? '（没有可用的 AI 音效服务 —— 要按描述生成，请用户在偏好设置里配置「音效生成」或把「音乐」绑到 ElevenLabs；这次用的是本地合成）\n'
+        ? '（没有绑定「音效生成」—— 要按描述生成，请用户在偏好设置 → 模型来源里添加「ElevenLabs 音效」并绑到「音效生成」；这次用的是本地合成）\n'
         : ''
       // 记下种子：用户挑中第几个，以后能原样再合成一次
       const seed = Math.floor(Math.random() * 1e9)

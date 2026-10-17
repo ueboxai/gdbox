@@ -29,8 +29,8 @@ gen_sfx(project_path: "D:/Games/MyGame", name: "jump", kind: "jump", count: 3)
 ```
 
 - `kind` 只有七种预设：jump、coin、hit、explosion、shoot、powerup、select。用户要的声音
-  不在里面（脚步、开门、环境声）时可传 description 按描述生成：优先用「音效生成」绑定，
-  兼容原有 ElevenLabs 音乐来源。云端每个变体收费，默认明确传 count: 1；未绑定时
+  不在里面（脚步、开门、环境声）时可传 description 按描述生成：要先绑「音效生成」，
+  「音乐」绑的 ElevenLabs 不算。云端每个变体收费，默认明确传 count: 1；未绑定时
   工具仍会按 kind 本地合成，必须把回执说明的降级告诉用户，不能把复古合成说成写实音效。
   素材库音效或环境循环用 sound-effects 技能与 generate_sound_effect，再导入工程。
 - 默认出 3 个候选。对每个跑一遍 `inspect_audio`，把**测得的事实**列给用户：
