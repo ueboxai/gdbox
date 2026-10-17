@@ -43,6 +43,9 @@ const ZH = `GDBox CLI —— 从终端调用 GDBox 的 Godot 能力
   tools show <name>         某个工具的完整描述和参数定义
   tools call <name>         调用一个工具
   screenshot                无头运行游戏，把画面存成 PNG 文件
+  team list / team status [id]  列出外部团队 / 看某个团队的交付闸
+  team use <id>             把当前目录绑到这个外部团队
+  team gate / team round    收尾检查 / 新一轮清零；Claude Code hook 里加 --hook
 
 示例：
   gdbox ask "检查主场景里的脚本有没有报错"
@@ -72,6 +75,7 @@ const ZH = `GDBox CLI —— 从终端调用 GDBox 的 Godot 能力
   --scene <res://...>       截图拍哪个场景，默认主场景
   --frames <n>              截图前跑多少帧（60 fps），默认 30
   --overwrite               截图允许覆盖已存在的文件
+  --hook                    team gate/round 按 Claude Code hook 的约定读写
   --config <path>           GDBox 的配置文件，装在别处时用；
                             或设 GDBOX_HOST_CONFIG
   --timeout <seconds>       整条命令的期限，默认 120
@@ -124,6 +128,9 @@ Commands:
   tools show <name>         Full description and input schema for one tool
   tools call <name>         Call one tool
   screenshot                Run the game headless, save the frame as a PNG
+  team list / team status [id]  External teams / one team's delivery gate
+  team use <id>             Bind the current directory to an external team
+  team gate / team round    Finish check / new round; add --hook in hooks
 
 Examples:
   gdbox ask "check the main scene's scripts for errors"
@@ -153,6 +160,7 @@ Options (before or after the command):
   --scene <res://...>       Scene to capture; default the main scene
   --frames <n>              Frames to run first (60 fps), default 30
   --overwrite               Let the screenshot replace an existing file
+  --hook                    team gate/round: speak the Claude Code hook format
   --config <path>           GDBox's config file if installed elsewhere;
                             or set GDBOX_HOST_CONFIG
   --timeout <seconds>       Deadline for the whole command, default 120

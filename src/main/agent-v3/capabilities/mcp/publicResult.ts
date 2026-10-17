@@ -33,7 +33,9 @@ const SERIALIZERS: Record<string, (details: Record<string, unknown>) => Record<s
   godot_run: serializeCheck,
   godot_screenshot: serializeScreenshot,
   editor_scene_tree: serializeSceneTree,
-  project_list: serializeProjectList
+  project_list: serializeProjectList,
+  team_gate: serializeTeamGate,
+  team_list: serializeTeamList
 }
 
 /**
@@ -116,4 +118,40 @@ function serializeProjectList(details: Record<string, unknown>): Record<string, 
 
 function serializeSceneTree(details: Record<string, unknown>): Record<string, unknown> {
   return { scene: str(details.scene), tree: obj(details.tree) }
+}
+
+// ── team_gate / team_list ───────────────────────────────────────────────────
+
+function num(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+/** 外部团队的交付闸。`gdbox team gate`（Claude Code 的 Stop hook）靠它判拦不拦 */
+function serializeTeamGate(details: Record<string, unknown>): Record<string, unknown> {
+  return {
+    teamId: str(details.teamId),
+    objective: str(details.objective),
+    verdict: str(details.verdict),
+    verdictAt: num(details.verdictAt),
+    lastWriteAt: num(details.lastWriteAt),
+    deliveries: num(details.deliveries),
+    passed: bool(details.passed),
+    ended: bool(details.ended)
+  }
+}
+
+function serializeTeamList(details: Record<string, unknown>): Record<string, unknown> {
+  const teams = arr(details.teams)
+  return {
+    teams: teams
+      ? teams.map((team) => {
+          const t = (team ?? {}) as Record<string, unknown>
+          return {
+            ...serializeTeamGate(t),
+            projectPath: str(t.projectPath),
+            createdAt: num(t.createdAt)
+          }
+        })
+      : null
+  }
 }

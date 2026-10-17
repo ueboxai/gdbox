@@ -135,6 +135,17 @@ describe('TeamBoardPanel 摘要行', () => {
     expect(running.find('.team-board-end').attributes('disabled')).toBeDefined()
   })
 
+  it('外部团队（Claude Code 当大脑）：照实标出来；结束了的不能再结束', () => {
+    const external = docked({ team: { ...team, external: true } })
+    expect(external.text()).toContain('Claude Code 驱动')
+    expect(external.find('.team-board-end').attributes('disabled')).toBeUndefined()
+    expect(docked().text()).not.toContain('Claude Code 驱动')
+
+    const ended = docked({ team: { ...team, external: true, ended: true } })
+    expect(ended.find('.team-board-end').attributes('disabled')).toBeDefined()
+    expect(ended.find('.team-board-end').text()).toBe('已结束')
+  })
+
   it('团队用量：收起时跟在摘要后面，右侧面板里点开按人看；没价目的不显示金额', async () => {
     const usage = (total: number, cost: number): TeamUsage => ({
       input: total,

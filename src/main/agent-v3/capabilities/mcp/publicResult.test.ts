@@ -25,8 +25,36 @@ describe('toStructuredContent', () => {
       'godot_check',
       'godot_run',
       'godot_screenshot',
-      'project_list'
+      'project_list',
+      'team_gate',
+      'team_list'
     ])
+  })
+
+  it('交付闸：缺的字段给 null，不补成「没验过」', () => {
+    expect(
+      toStructuredContent('team_gate', {
+        teamId: 'ext-1',
+        objective: '做个塔防',
+        verdict: 'pass',
+        verdictAt: 100,
+        deliveries: 1,
+        passed: true,
+        ended: false
+      })
+    ).toEqual({
+      teamId: 'ext-1',
+      objective: '做个塔防',
+      verdict: 'pass',
+      verdictAt: 100,
+      lastWriteAt: null,
+      deliveries: 1,
+      passed: true,
+      ended: false
+    })
+    expect(toStructuredContent('team_list', { teams: [{ teamId: 'ext-1' }] })).toMatchObject({
+      teams: [{ teamId: 'ext-1', verdict: null, passed: null, projectPath: null }]
+    })
   })
 
   it('检查结果带报错清单和计数', () => {

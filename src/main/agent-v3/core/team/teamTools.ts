@@ -821,7 +821,7 @@ async function autoSnapshot(
   }
 }
 
-function createSnapshotTool(snapshots: TeamSnapshots): UnrealAgentTool<unknown> {
+export function createSnapshotTool(snapshots: TeamSnapshots): UnrealAgentTool<unknown> {
   const snapshotInput = z.object({
     action: z
       .enum(['list', 'save', 'rollback'])

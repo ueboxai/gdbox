@@ -11,6 +11,14 @@ import { runAsk } from './commands/ask.js'
 import { runDoctor } from './commands/doctor.js'
 import { runProjectsList } from './commands/projects.js'
 import { runScreenshot } from './commands/screenshot.js'
+import {
+  runTeamGate,
+  runTeamHook,
+  runTeamList,
+  runTeamRound,
+  runTeamStatus,
+  runTeamUse
+} from './commands/team.js'
 import { runToolsCall, runToolsList, runToolsShow } from './commands/tools.js'
 import { failure, writeJson, type Envelope } from './envelope.js'
 import { exitCodeFor, toGdboxError, GdboxError } from './errors.js'
@@ -38,6 +46,8 @@ export interface RunIO {
    * 走 stderr，不碰 stdout 上那唯一一个 JSON。
    */
   progress?: (message: string) => void
+  /** 读标准输入。`--hook` 时 Claude Code 把 hook 输入（JSON）从这里交进来 */
+  readStdin?: () => Promise<string>
 }
 
 export async function run(
@@ -68,6 +78,9 @@ export async function run(
   if (parsed.help || parsed.command.length === 0) {
     return { exitCode: 0, stdout: `${helpText(lang)}\n`, stderr: '' }
   }
+
+  // hook 模式不出信封：Claude Code 只认它自己的约定（见 commands/team.ts）
+  if (parsed.hook) return runHook(parsed, env, io)
 
   try {
     return output(await dispatch(parsed, env, io), parsed.json)
@@ -126,6 +139,9 @@ async function dispatch(parsed: ParsedArgs, env: NodeJS.ProcessEnv, io: RunIO): 
         ...(parsed.frames ? { frames: parsed.frames } : {})
       })
 
+    case 'team':
+      return dispatchTeam(parsed, sub, shared)
+
     default:
       throw unknownCommand([
         'ask "<要做的事>"',
@@ -134,9 +150,69 @@ async function dispatch(parsed: ParsedArgs, env: NodeJS.ProcessEnv, io: RunIO): 
         'tools list',
         'tools show <name>',
         'tools call <name>',
-        'screenshot'
+        'screenshot',
+        'team list|status|use|gate|round'
       ])
   }
+}
+
+async function dispatchTeam(
+  parsed: ParsedArgs,
+  sub: string | undefined,
+  shared: { configPath?: string; timeoutSeconds?: number; env: NodeJS.ProcessEnv }
+): Promise<Envelope> {
+  const teamId = parsed.command[2]
+  // --project 在这里指「哪个目录的 .gdbox/team.json」，默认当前目录
+  const options = {
+    ...shared,
+    ...(teamId ? { teamId } : {}),
+    ...(parsed.project ? { cwd: parsed.project } : {})
+  }
+  switch (sub) {
+    case 'list':
+      return runTeamList(shared)
+    case 'status':
+      return runTeamStatus(options)
+    case 'use':
+      return runTeamUse(options)
+    case 'gate':
+      return runTeamGate(options)
+    case 'round':
+      return runTeamRound(options)
+    default:
+      throw unknownCommand([
+        'team list',
+        'team status [id]',
+        'team use <id>',
+        'team gate [id]',
+        'team round'
+      ])
+  }
+}
+
+/** `team gate|round --hook`：永远退出码 0，只有拦的时候 stdout 有一个 hook JSON */
+async function runHook(parsed: ParsedArgs, env: NodeJS.ProcessEnv, io: RunIO): Promise<RunResult> {
+  const [group, sub] = parsed.command
+  if (group !== 'team' || (sub !== 'gate' && sub !== 'round')) {
+    return output(
+      toEnvelope(new GdboxError('INVALID_ARGUMENT', '--hook 只用于 team gate 和 team round。')),
+      parsed.json
+    )
+  }
+  const stdin = io.readStdin ? await io.readStdin().catch(() => '') : ''
+  const result = await runTeamHook(
+    sub,
+    {
+      env,
+      ...(parsed.configPath ? { configPath: parsed.configPath } : {}),
+      ...(parsed.timeoutSeconds ? { timeoutSeconds: parsed.timeoutSeconds } : {}),
+      ...(parsed.command[2] ? { teamId: parsed.command[2] } : {}),
+      ...(parsed.project ? { cwd: parsed.project } : {})
+    },
+    stdin
+  )
+  markSettled()
+  return { exitCode: 0, ...result }
 }
 
 async function dispatchTools(

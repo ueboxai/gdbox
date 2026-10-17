@@ -31,7 +31,7 @@ Read-only unless you pass `--allow-write`. No setup step. Exit codes are meaning
 
 ## 命令一览
 
-一共七条：
+常用的七条，外加外部团队的 `team` 一组（见下文「外部团队」）：
 
 | 命令                    | 作用                                            |
 | ----------------------- | ----------------------------------------------- |
@@ -138,6 +138,22 @@ gdbox tools call editor_scene_tree --args '{\"max_depth\":3}'
 ```bat
 gdbox tools call editor_scene_tree --args "{""max_depth"":3}"
 ```
+
+## 外部团队
+
+让 Claude Code 当大脑跑 GDBox 的团队模式（盒子只当工作室，不调模型）时用。
+打法和插件见 [claude-plugin/README.md](claude-plugin/README.md)。
+
+```bash
+gdbox team list --json              # 外部团队：id、目标、验收结论
+gdbox team status ext-… --json      # 某个团队的交付闸现状
+gdbox team use ext-…                # 把当前目录绑到这个团队（写 .gdbox/team.json）
+gdbox team gate --hook              # Claude Code 的 Stop hook：没过验收就拦
+gdbox team round --hook             # UserPromptSubmit hook：新一轮清零
+```
+
+- `--hook` 时不出信封，按 Claude Code hook 的约定输出；任何意外都放行、退出码 0。
+- `--project <目录>` 在这组命令里指「哪个目录的 `.gdbox/team.json`」，默认当前目录。
 
 ## 截图
 

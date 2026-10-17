@@ -75,7 +75,12 @@ describe('帮助文本和实现保持同步', () => {
     'tools list',
     'tools show',
     'tools call',
-    'screenshot'
+    'screenshot',
+    'team list',
+    'team status',
+    'team use',
+    'team gate',
+    'team round'
   ]
 
   it.each(LANGS)('%s 列出了每一条命令', (lang) => {
@@ -98,7 +103,8 @@ describe('帮助文本和实现保持同步', () => {
     '--scene',
     '--frames',
     '--overwrite',
-    '--allow-write'
+    '--allow-write',
+    '--hook'
   ]
 
   it.each(LANGS)('%s 列出了每一个选项', (lang) => {

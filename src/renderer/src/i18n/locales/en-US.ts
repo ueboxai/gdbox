@@ -29,6 +29,7 @@ export default {
     model3dStudio: '3D Studio',
     aigcStudio: 'AIGC Studio',
     serverManagement: 'Server Management',
+    externalTeams: 'External Teams',
     appName: 'GODOT BOX'
   },
   // Sidebar tool customization: pinned list and the "More" group
@@ -2520,6 +2521,13 @@ First work out why the install failed from the output above. If you can run comm
       assistant: 'Assistant'
     },
     teamBoard: {
+      external: {
+        label: 'Driven by Claude Code',
+        hint: 'The brain is in Claude Code: GDBox cannot see which models the teammates use or what they spend. It keeps the board, mail, snapshots and acceptance record.',
+        endHint:
+          'Mark this team as ended. GDBox cannot stop Claude Code; if it is still running, stop it there.',
+        ended: 'Ended'
+      },
       ui: {
         quest: 'Quest',
         crew: 'Crew',
@@ -4578,6 +4586,25 @@ First work out why the install failed from the output above. If you can run comm
       good: 'Good result. Keep it up',
       keepGoing: 'Room for improvement. Reviewing the docs is recommended',
       encourage: 'Knowledge builds over time. Review your mistakes and try again'
+    }
+  },
+  externalTeams: {
+    title: 'External Teams',
+    intro:
+      'Teams where Claude Code is the brain and GDBox is the studio. The thinking runs on Claude Code; GDBox keeps the board, mail, snapshots and acceptance record.',
+    empty: 'No external teams yet',
+    emptyHint:
+      'Install the gdbox-team plugin in Claude Code and ask it to build a game with a GDBox team. The team shows up here.',
+    members: '{n} people',
+    pick: 'Pick a team to see its board',
+    endedNotice: 'Marked as ended. If Claude Code is still running it, stop it in Claude Code.',
+    status: {
+      ended: 'Ended',
+      passed: 'Passed',
+      stale: 'Changed since check',
+      failed: 'Failed check',
+      blocked: 'Check blocked',
+      pending: 'Not checked'
     }
   },
   serverManagement: {

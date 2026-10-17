@@ -37,6 +37,8 @@ export interface ParsedArgs {
   overwrite: boolean
   /** 这次允许调用会改动工程的工具。CLI 没有审批弹窗，这个开关顶替它 */
   allowWrite: boolean
+  /** `team gate|round` 作为 Claude Code hook 跑：读 stdin 的 hook 输入，按 hook 的约定输出 */
+  hook: boolean
 }
 
 const OPTIONS = {
@@ -55,7 +57,8 @@ const OPTIONS = {
   scene: { type: 'string' },
   frames: { type: 'string' },
   overwrite: { type: 'boolean' },
-  'allow-write': { type: 'boolean' }
+  'allow-write': { type: 'boolean' },
+  hook: { type: 'boolean' }
 } as const
 
 export function parse(argv: string[]): ParsedArgs {
@@ -89,7 +92,8 @@ export function parse(argv: string[]): ParsedArgs {
     ...(values.scene ? { scene: values.scene } : {}),
     ...(values.frames ? { frames: parseFrames(values.frames) } : {}),
     overwrite: values.overwrite === true,
-    allowWrite: values['allow-write'] === true
+    allowWrite: values['allow-write'] === true,
+    hook: values.hook === true
   }
 }
 
