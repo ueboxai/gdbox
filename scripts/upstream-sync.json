@@ -283,6 +283,13 @@
       "snapshot": "d1c2fc5731cdea7bfd6b12294b87715a7a3fe7a3",
       "note": "迁入所有 MCP 服务测试统一规避 fetch 禁用端口的准备逻辑；不改断言、超时和生产服务。",
       "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "653f8284ea1b100bbc8045adefa722cb1e610f68": {
+      "status": "ported",
+      "local": "5413cba79a2b68048abf6d331f1fa244f3c9fd08",
+      "snapshot": "653f8284ea1b100bbc8045adefa722cb1e610f68",
+      "note": "整体迁入 Codex 生图来源：codex-images 适配器（Responses image_generation 工具、事件流取图、比例写进提示词、一次一张并发）、目录 chatgpt-image 沿用 ChatGPT 登录、令牌续期按 id 去重；无 UE 专属部分，originator 与本仓 oauth.ts 一致仍为 unreal-box。",
+      "verification": "verify:changed 10/10 通过（相关单测 311 文件 4170 项）；src/main/ai 与模型设置页 72 文件 1331 项通过。真实出图只在 UEBox 侧用同一份适配器代码实调过（2 张并发 + 参考图改图 16:9），GDBox 应用内未手动走设置页添加来源。"
     }
   }
 }
