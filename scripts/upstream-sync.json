@@ -214,6 +214,75 @@
       "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
       "note": "格式整理随相关文件移植完成，不扩大到无关文件。",
       "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "5fc07da742b415baa02cc1d60fffca8ffe6cc6a0": {
+      "status": "ported",
+      "local": "d88945c2d4cd262aec2b1b2e8e392d0b4b07f88a",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "迁入视频分析失败后的 Chromium/FFmpeg 关键帧回退及 Windows 自动 shell 排除 WSL；补齐初始化失败、临时资源清理与零图片结果失败处理，保留 Godot 和原有对象存储路径。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "eb6d1a14c3a85fb8f8552ddcc6d8b7a11b38ab97": {
+      "status": "ported",
+      "local": "d88945c2d4cd262aec2b1b2e8e392d0b4b07f88a",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "基础逐轮记忆已在 875ecea 迁入；本批补齐实际保存成功才提示可续接，并保留团队用量、Godot 工程绑定、文件锁和快照规则。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "0b8b0814fddacda950aa7b093584373db711f16c": {
+      "status": "ported",
+      "local": "f3f7631e5b6572902f486ec3033efd81712b4dd4",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "核对已迁入的 goal/team 单运行循环与验收事件，补记来源，本批整体验证。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "14f4aff8518c8bae132082b9d429f5ec3ca344d4": {
+      "status": "ported",
+      "local": "0a5e6e937091d2a2bda872269226f836984468ed",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "核对已迁入的团队实际用量统计与双语任务板；本批修正格式并整体验证。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "c8d4672b002336e02963ad9d78c93ef2896b1165": {
+      "status": "ported",
+      "local": "d88945c2d4cd262aec2b1b2e8e392d0b4b07f88a",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "核对上游团队循环与用量合并的解决逻辑，现有 f3f7631/0a5e6e9 已覆盖，无重复迁入。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "183173867dca29a168a7cb0c9c542ba4e5951586": {
+      "status": "ported",
+      "local": "d88945c2d4cd262aec2b1b2e8e392d0b4b07f88a",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "核对团队用量与逐轮记忆合并的解决逻辑，GDBox 同时保留 keepUsage 与 keepMessages、结算逻辑及引擎差异。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "a025193802391cc4a90df26f51192ebfec9d1589": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "与已移植的 183a2832 稳定 patch-id 完全相同，补记重写后的上游 SHA，不重复迁入。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "4bafc802bba265bfe9bf0a18479f004f698289c5": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "与已移植的 87b8e842 稳定 patch-id 完全相同，补记重写后的上游 SHA，不重复迁入。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "1900472adb6676929206a5a3f57d533ad842a5db": {
+      "status": "skip",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "UE 专属 ue_autoplay 视觉验收和关键帧回放，不覆盖 Godot 的试玩工具。",
+      "verification": "已审查提交范围，未迁入。"
+    },
+    "b8fe0a5924fae513a2f592c4a9181017ba22fd83": {
+      "status": "ported",
+      "local": "d88945c2d4cd262aec2b1b2e8e392d0b4b07f88a",
+      "snapshot": "d1c2fc5731cdea7bfd6b12294b87715a7a3fe7a3",
+      "note": "迁入所有 MCP 服务测试统一规避 fetch 禁用端口的准备逻辑；不改断言、超时和生产服务。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
     }
   }
 }
