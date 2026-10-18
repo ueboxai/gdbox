@@ -290,6 +290,20 @@
       "snapshot": "653f8284ea1b100bbc8045adefa722cb1e610f68",
       "note": "整体迁入 Codex 生图来源：codex-images 适配器（Responses image_generation 工具、事件流取图、比例写进提示词、一次一张并发）、目录 chatgpt-image 沿用 ChatGPT 登录、令牌续期按 id 去重；无 UE 专属部分，originator 与本仓 oauth.ts 一致仍为 unreal-box。",
       "verification": "verify:changed 10/10 通过（相关单测 311 文件 4170 项）；src/main/ai 与模型设置页 72 文件 1331 项通过。真实出图只在 UEBox 侧用同一份适配器代码实调过（2 张并发 + 参考图改图 16:9），GDBox 应用内未手动走设置页添加来源。"
+    },
+    "14cc053dec9513563a16509cd16548f85c9558d6": {
+      "status": "ported",
+      "local": "fd0dfff56f95c14e0c80ca620c8a091f7591333a",
+      "snapshot": "144d68440278033b63129973bf3451db5acca686",
+      "note": "手工适配迁入音色设计：百炼声音设计接口、合成按次传音色与演法、design_voice/adopt_voice/list_voices（归 godot.asset，带 project_path、校验 project.godot）、音色表放工程 .gdbox/voices.json（试听在 .gdbox/voices/，不进 res://）、音色 ID 前缀 gdbox；另给 gen_voice 每句台词加 role/style。generate_speech 同步。",
+      "verification": "GDBox verify:changed 10/10 通过（相关单测 119 文件 1765 项，含新增 voiceDesign 6 项）。百炼真实调用只在 UEBox dev 盒子真机走过（设计→试听→确认→配音、拒绝不入表），GDBox 应用内未真机走查。"
+    },
+    "98f2b0bec29d0638944c7796bcda183b13d4ce7f": {
+      "status": "ported",
+      "local": "fd0dfff56f95c14e0c80ca620c8a091f7591333a",
+      "snapshot": "144d68440278033b63129973bf3451db5acca686",
+      "note": "试听挂播放器：design_voice 回执 path+title，agentGeneratedMedia 认 design_voice；与上一条合在同一个本地提交。",
+      "verification": "ChatAudioPlayer 单测通过；同上，未在 GDBox 应用内真机看播放器。"
     }
   }
 }
