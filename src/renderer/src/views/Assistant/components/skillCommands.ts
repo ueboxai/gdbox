@@ -62,3 +62,8 @@ export function filterSkillCommands(
 export function skillMention(name: string): string {
   return `$${name} `
 }
+
+/** 从加号选择时保留正文；斜杠查询只是筛选词，不拼回消息。 */
+export function skillMenuDraft(value: string, fromPlus: boolean): string {
+  return fromPlus && parseSkillSlashQuery(value) === null ? value.trimStart() : ''
+}

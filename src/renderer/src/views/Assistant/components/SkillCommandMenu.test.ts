@@ -150,4 +150,50 @@ describe('SkillCommandMenu', () => {
     await wrapper.setProps({ loading: true })
     expect(menu.onKeydown(new KeyboardEvent('keydown', { key: 'Enter' }))).toBe(true)
   })
+
+  it('从「+」打开时「添加文件」排第一，命令和技能的下标顺延', async () => {
+    const wrapper = mount(SkillCommandMenu, {
+      props: { skills, query: '', showAttach: true }
+    })
+    const menu = wrapper.vm as unknown as ExposedMenu
+    const options = wrapper.findAll('[role="option"]')
+
+    expect(options).toHaveLength(1 + COMMAND_COUNT + skills.length)
+    expect(options[0].classes()).toContain('attach-item')
+
+    expect(menu.onKeydown(new KeyboardEvent('keydown', { key: 'Enter' }))).toBe(true)
+    expect(wrapper.emitted('attach')).toHaveLength(1)
+
+    await options[1 + COMMAND_COUNT].trigger('click')
+    expect(wrapper.emitted('select')?.[0]?.[0]).toEqual(skills[0])
+  })
+})
+
+describe('plus menu keyboard navigation', () => {
+  it('can attach while skills are still loading', () => {
+    const wrapper = mount(SkillCommandMenu, {
+      props: { skills: [], query: 'unmatched', showAttach: true, loading: true }
+    })
+    const menu = wrapper.vm as unknown as ExposedMenu
+    menu.onKeydown(new KeyboardEvent('keydown', { key: 'Enter' }))
+    expect(wrapper.emitted('attach')).toHaveLength(1)
+    expect(wrapper.emitted('select-command')).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('moves from attachment to command and wraps back from the first option', async () => {
+    const wrapper = mount(SkillCommandMenu, {
+      props: { skills, query: '', showAttach: true }
+    })
+    const menu = wrapper.vm as unknown as ExposedMenu
+    menu.onKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }))
+    menu.onKeydown(new KeyboardEvent('keydown', { key: 'Enter' }))
+    expect(wrapper.emitted('select-command')?.[0]?.[0]).toMatchObject(BUILTIN_SLASH_COMMANDS[0])
+    menu.onKeydown(new KeyboardEvent('keydown', { key: 'ArrowUp' }))
+    menu.onKeydown(new KeyboardEvent('keydown', { key: 'ArrowUp' }))
+    await nextTick()
+    menu.onKeydown(new KeyboardEvent('keydown', { key: 'Enter' }))
+    expect(wrapper.emitted('select')?.[0]?.[0]).toEqual(skills[1])
+    wrapper.unmount()
+  })
 })

@@ -5414,6 +5414,9 @@ First work out why the install failed from the output above. If you can run comm
       empty: 'No matching command or skill',
       groupCommands: 'Commands',
       groupSkills: 'Skills',
+      attach: 'Add files',
+      attachHint: 'Images, documents, spreadsheets, audio and video',
+      plusTooltip: 'Add files, commands and skills',
       source: {
         user: 'User',
         plugin: 'Plugin',

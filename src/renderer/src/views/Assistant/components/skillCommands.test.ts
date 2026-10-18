@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { AgentV3SkillSummary } from '@/api/agentV3'
-import { filterSkillCommands, parseSkillSlashQuery, skillMention } from './skillCommands'
+import {
+  skillMenuDraft,
+  filterSkillCommands,
+  parseSkillSlashQuery,
+  skillMention
+} from './skillCommands'
 
 const skills: AgentV3SkillSummary[] = [
   {
@@ -71,5 +76,17 @@ describe('skill slash commands', () => {
 
   it('选择后写入模型可识别的显式技能标记', () => {
     expect(skillMention('ue-project-audit')).toBe('$ue-project-audit ')
+  })
+})
+
+describe('plus menu draft preservation', () => {
+  it('keeps multiline prose when choosing from plus', () => {
+    expect(skillMenuDraft('  做一个场景\n  保留缩进', true)).toBe('做一个场景\n  保留缩进')
+    expect(skillMenuDraft('/goal 已写好的需求', true)).toBe('/goal 已写好的需求')
+  })
+  it('does not append an unfinished slash query to the selected command', () => {
+    expect(skillMenuDraft('/goa', true)).toBe('')
+    expect(skillMenuDraft('/', true)).toBe('')
+    expect(skillMenuDraft('/goa', false)).toBe('')
   })
 })
