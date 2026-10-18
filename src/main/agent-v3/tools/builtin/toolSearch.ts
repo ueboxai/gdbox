@@ -105,7 +105,7 @@ const DOMAIN_TERMS: Record<string, string> = {
   'godot.editor':
     '编辑器 选中 场景树 节点 打开场景 运行游戏 停止 保存 editor selection scene tree node open play stop save',
   'godot.asset':
-    '生成 精灵 帧动画 序列帧 绿幕 抠图 特效 瓦片 地图块 音效 音乐 循环 配音 语音 听 声音 sprite animation spritesheet green screen vfx tileset tile sfx sound music loop voice audio',
+    '生成 精灵 帧动画 序列帧 绿幕 抠图 特效 瓦片 地图块 音效 音乐 循环 配音 语音 音色 角色声音 听 声音 sprite animation spritesheet green screen vfx tileset tile sfx sound music loop voice audio',
   'godot.style': '美术风格 画风 调色板 像素 风格 art style palette pixel',
   box: '盒子 对话记录 会话 状态 导入 卡住 续传 技能 开关 备份 box session status import skill backup',
   asset: '盒子素材库 保管库 标签 文件夹 asset library vault tag folder',

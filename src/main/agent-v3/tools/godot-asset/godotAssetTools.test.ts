@@ -35,7 +35,10 @@ vi.mock('../../../ai/soundEffect', () => ({
   generateSoundEffect: (...args: unknown[]) => generateSoundEffect(...args)
 }))
 vi.mock('../../../ai/speech', () => ({
-  requestSpeech: (...args: unknown[]) => requestSpeech(...args)
+  requestSpeech: (...args: unknown[]) => requestSpeech(...args),
+  supportsSpeechInstruction: (modelId: string) => modelId.startsWith('qwen-audio-3.0-tts-'),
+  instructionWidth: (text: string) =>
+    Array.from(text).reduce((n, c) => n + (c.charCodeAt(0) > 0xff ? 2 : 1), 0)
 }))
 
 import { encodeWav, type Pcm } from '../../../godot/aigc/musicLoop'
@@ -150,9 +153,12 @@ beforeEach(() => {
 })
 
 describe('元数据', () => {
-  it('八个工具，命名空间和风险等级按约定', () => {
+  it('十一个工具，命名空间和风险等级按约定', () => {
     expect(tools.map((t) => t.name).sort()).toEqual(
       [
+        'adopt_voice',
+        'design_voice',
+        'list_voices',
         'art_style',
         'gen_music',
         'gen_sfx',
@@ -441,7 +447,7 @@ describe('gen_voice', () => {
       onAudio({ base64: Buffer.alloc(samples * 2).toString('base64') })
     }
 
-  it('逐条写 WAV；音色按条换在模型配置上；没变的台词第二次不再合成', async () => {
+  it('逐条写 WAV；音色按条传；没变的台词第二次不再合成', async () => {
     const project = newProject()
     requestSpeech.mockImplementation(speakPcm(24000))
     const lines = [
@@ -453,9 +459,8 @@ describe('gen_voice', () => {
       'res://assets/gen/voice/intro_01.wav',
       'res://assets/gen/voice/intro_02.wav'
     ])
-    const provider = requestSpeech.mock.calls[0][0] as { models: { ttsVoice?: string }[] }
-    expect(provider.models[0].ttsVoice).toBe('hero_voice')
-    expect((requestSpeech.mock.calls[1][0] as typeof provider).models[0].ttsVoice).toBe('narrator')
+    expect(requestSpeech.mock.calls[0][5]).toEqual({ voice: 'hero_voice', instruction: undefined })
+    expect(requestSpeech.mock.calls[1][5]).toEqual({ voice: 'narrator', instruction: undefined })
     const wav = readFileSync(join(project, 'assets/gen/voice/intro_01.wav'))
     expect(wav.toString('ascii', 0, 4)).toBe('RIFF')
     expect(wav.readUInt32LE(24)).toBe(24000)
