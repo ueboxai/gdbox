@@ -114,7 +114,10 @@ describe('experience runtime', () => {
       await rt.after(fail)
       await rt.flush()
     }
-    expect((await store.readTool(entry.tool))[0].status).toBe('retired')
+    expect((await store.readTool(entry.tool))[0]).toMatchObject({
+      status: 'retired',
+      retiredBecause: 'failed'
+    })
   })
 
   it('原始账只记要记的工具，报错归一化，出场的经验 id 也记下', async () => {
