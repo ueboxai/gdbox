@@ -304,6 +304,67 @@
       "snapshot": "144d68440278033b63129973bf3451db5acca686",
       "note": "试听挂播放器：design_voice 回执 path+title，agentGeneratedMedia 认 design_voice；与上一条合在同一个本地提交。",
       "verification": "ChatAudioPlayer 单测通过；同上，未在 GDBox 应用内真机看播放器。"
+    },
+    "21eee3f52c0eb9dfd9896eff5a501734d456cdae": {
+      "status": "ported",
+      "local": "76b88a639d5eff0449105d61740fafc88fbdfd86",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "迁入套餐主模型绑定保护和旧绑定还原，不引入账号要求或新依赖。",
+      "verification": "H 盘独立工作区：verify:changed 10/10（339 文件、4440 项）；完整单测 849 文件、9589 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包、离线启动通过（服务端请求 0）。完整 verify --with-build 被既有 5413cba7 的 5 个未改文件共 7 条格式警告阻断，未改基线；之后单独完成测试、打包和启动检查。未实调付费模型、语音服务或真实远程资产库。详见 docs/upstream-port-2026-10-18.md。"
+    },
+    "eeb7aec64703a938d3c04c36caf53b6b51afd6b2": {
+      "status": "ported",
+      "local": "470ba924d893346214f9f9cfb2c4cbd68dbeccaa",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "迁入按音频话段识别插话、临时转写错误容错与连续失败反馈，保持已有服务配置入口。",
+      "verification": "H 盘独立工作区：verify:changed 10/10（339 文件、4440 项）；完整单测 849 文件、9589 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包、离线启动通过（服务端请求 0）。完整 verify --with-build 被既有 5413cba7 的 5 个未改文件共 7 条格式警告阻断，未改基线；之后单独完成测试、打包和启动检查。未实调付费模型、语音服务或真实远程资产库。详见 docs/upstream-port-2026-10-18.md。"
+    },
+    "075505003b4747a45a732ea2136ac61f101ea380": {
+      "status": "ported",
+      "local": "9fcde0fa6102b2604797078591aa9f8bad9166be",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "迁入扩展名归一化、存量分块迁移和批量变更完成后刷新；保留 GDBox 旧库先补列后建索引与 Godot 资源语义。",
+      "verification": "H 盘独立工作区：verify:changed 10/10（339 文件、4440 项）；完整单测 849 文件、9589 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包、离线启动通过（服务端请求 0）。完整 verify --with-build 被既有 5413cba7 的 5 个未改文件共 7 条格式警告阻断，未改基线；之后单独完成测试、打包和启动检查。未实调付费模型、语音服务或真实远程资产库。详见 docs/upstream-port-2026-10-18.md。"
+    },
+    "26f69d2db0c1f41f2ec6c02638d26a8d7c406af7": {
+      "status": "ported",
+      "local": "9fcde0fa6102b2604797078591aa9f8bad9166be",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "迁入语音状态条布局修复，不覆盖 GDBox 对话和工程行为。",
+      "verification": "H 盘独立工作区：verify:changed 10/10（339 文件、4440 项）；完整单测 849 文件、9589 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包、离线启动通过（服务端请求 0）。完整 verify --with-build 被既有 5413cba7 的 5 个未改文件共 7 条格式警告阻断，未改基线；之后单独完成测试、打包和启动检查。未实调付费模型、语音服务或真实远程资产库。详见 docs/upstream-port-2026-10-18.md。"
+    },
+    "144d68440278033b63129973bf3451db5acca686": {
+      "status": "ported",
+      "local": "9fcde0fa6102b2604797078591aa9f8bad9166be",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "迁入多来源目录回退及 reasoning effort 修复，保留 GDBox 工具集。",
+      "verification": "H 盘独立工作区：verify:changed 10/10（339 文件、4440 项）；完整单测 849 文件、9589 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包、离线启动通过（服务端请求 0）。完整 verify --with-build 被既有 5413cba7 的 5 个未改文件共 7 条格式警告阻断，未改基线；之后单独完成测试、打包和启动检查。未实调付费模型、语音服务或真实远程资产库。详见 docs/upstream-port-2026-10-18.md。"
+    },
+    "29518d64ff51672cee42d7f98164c68035589a1d": {
+      "status": "ported",
+      "local": "9fcde0fa6102b2604797078591aa9f8bad9166be",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "迁入已发消息编辑框随内容增高，上限 520px。",
+      "verification": "H 盘独立工作区：verify:changed 10/10（339 文件、4440 项）；完整单测 849 文件、9589 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包、离线启动通过（服务端请求 0）。完整 verify --with-build 被既有 5413cba7 的 5 个未改文件共 7 条格式警告阻断，未改基线；之后单独完成测试、打包和启动检查。未实调付费模型、语音服务或真实远程资产库。详见 docs/upstream-port-2026-10-18.md。"
+    },
+    "fd5acc176152840d3b24ae6692ac10cad99b9354": {
+      "status": "ported",
+      "local": "9fcde0fa6102b2604797078591aa9f8bad9166be",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "迁入加号命令技能菜单和添加文件入口；使用 GDBox 主题尺寸，补充正文保留、斜杠筛选词去重、键盘导航和加载中添加文件测试。",
+      "verification": "H 盘独立工作区：verify:changed 10/10（339 文件、4440 项）；完整单测 849 文件、9589 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包、离线启动通过（服务端请求 0）。完整 verify --with-build 被既有 5413cba7 的 5 个未改文件共 7 条格式警告阻断，未改基线；之后单独完成测试、打包和启动检查。未实调付费模型、语音服务或真实远程资产库。详见 docs/upstream-port-2026-10-18.md。"
+    },
+    "508b82a8a3c7291adb7653fcb999652f46313d46": {
+      "status": "todo",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "团队工程整组需独立适配 Godot 工程、插件登录/凭据与协议，不能仅迁入界面；本批未迁入，关联后续修复一起评估。",
+      "verification": "仅审查依赖与提交范围，尚未实施或验证。"
+    },
+    "d1edeb8cbe2d4333cbb4fa6e30cc076cc82a9487": {
+      "status": "todo",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "团队工程整组需独立适配 Godot 工程、插件登录/凭据与协议，不能仅迁入界面；本批未迁入，关联后续修复一起评估。",
+      "verification": "仅审查依赖与提交范围，尚未实施或验证。"
     }
   }
 }
