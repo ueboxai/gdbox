@@ -699,7 +699,7 @@ First work out why the install failed from the output above. If you can run comm
       search: 'Web search',
       searchDesc: 'Choose a web search service. Uses the built-in browser if unconfigured.',
       searchMore:
-        'The built-in browser requires no setup. You can also use Jina or self-hosted SearXNG; charges depend on the service.',
+        'The built-in browser requires no setup. You can also use Jina, DeepSeek or self-hosted SearXNG; charges depend on the service.',
       searchMissing: 'Web search unavailable',
       judge: 'Structured judgement',
       judgeDesc:
@@ -2599,6 +2599,8 @@ First work out why the install failed from the output above. If you can run comm
       selfReportedHint:
         'Marked by the teammate, not checked by GDBox — the acceptance verdict is what counts',
       objective: 'Goal',
+      latestRequest: 'Latest request: ',
+      latestRequestLabel: 'Latest request',
       noTasks: 'The task board is empty',
       evidence: 'Evidence: ',
       readOnlyHint: 'Read-only: inspects the project without changing it',

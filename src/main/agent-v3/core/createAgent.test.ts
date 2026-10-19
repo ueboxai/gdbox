@@ -33,6 +33,30 @@ function fakeTool(
 }
 
 describe('resolveTools —— 动态工具过滤', () => {
+  it.each([false, true])('外部 MCP 可提问但没有盒子专属清单和收尾按钮（外部=%s）', (external) => {
+    const ctx: SessionContext = {
+      sessionId: 'external-tools',
+      ueConnected: false,
+      externalClient: external,
+      requestQuestion: async () => ({ action: 'decline' })
+    }
+    const names = resolveTools(ctx).map((tool) => tool.name)
+    expect(names).toContain('ask_user')
+    expect(names.includes('update_plan')).toBe(!external)
+    expect(names.includes('wrap_up')).toBe(!external)
+    const prompt = buildSystemPrompt(ctx)
+    if (external) {
+      expect(prompt).toContain('starts fresh')
+      expect(prompt).toContain('Name the files you touched')
+      expect(prompt).not.toContain('show the user a task list')
+    } else {
+      expect(prompt).toContain('inherits this conversation in full')
+      expect(prompt).toContain('show the user a task list')
+    }
+    expect(prompt).toContain('player.gd')
+    expect(prompt).not.toContain('M_GlowBreath')
+  })
+
   it('编辑器没连时不给 godot.editor 工具，但保留无头 Godot 和盒子本地能力', () => {
     // V2 是把 16 个专家塞进 Router prompt 让模型选；V3 直接不给它看 ——
     // 模型看不到的工具不会被误调，也不占 token。

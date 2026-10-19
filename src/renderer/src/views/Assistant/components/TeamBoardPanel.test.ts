@@ -90,6 +90,20 @@ const labelOf = (wrapper: VueWrapper, selector: string): string[] =>
 
 afterEach(() => setOfficeStyle('v2'))
 
+describe('团队最新要求', () => {
+  it.each(['v1', 'v2'] as const)('任务板 %s 显示最新要求，悬停保留全文', (style) => {
+    setOfficeStyle(style)
+    const latestRequest = `${'上下文'.repeat(60)}主角换成猫`
+    const wrapper = docked({ team: { ...team, latestRequest } })
+    const line = wrapper.find(`[title="${latestRequest}"]`)
+    expect(line.exists()).toBe(true)
+    expect(line.text()).toContain('最新要求')
+    expect(line.text()).toContain('…')
+    expect(line.text()).toContain('主角换成猫')
+    wrapper.unmount()
+  })
+})
+
 describe('TeamBoardPanel 摘要行', () => {
   it('输入框上方一行：几个人、到哪一步、交回几份；点它要求在右侧面板打开', async () => {
     const wrapper = mount(TeamBoardPanel, { props: { team, running: true } })

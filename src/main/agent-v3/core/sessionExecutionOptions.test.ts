@@ -17,6 +17,20 @@ import {
 afterAll(() => rmSync(root, { recursive: true, force: true }))
 
 describe('会话执行配置', () => {
+  it('团队最新要求跨进程保留，继续执行不丢失', async () => {
+    const team = {
+      objective: '塔防',
+      latestRequest: '改成 2D 俯视',
+      verdict: null,
+      deliveries: 0,
+      nudges: 0
+    }
+    await saveExecutionOptions('team-latest', { mode: 'agent', team })
+    const loaded = await loadExecutionOptions('team-latest')
+    expect(loaded?.team).toEqual(team)
+    expect(resumeExecutionOptions(loaded).team?.latestRequest).toBe(team.latestRequest)
+  })
+
   it('目标、复核次数和上次卡点可以跨进程重新读取', async () => {
     const goal = {
       objective: '完成用户目标',

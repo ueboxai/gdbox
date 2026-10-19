@@ -61,6 +61,7 @@ const LOGO_ALIAS = {
 
   // 网页检索里的 Jina 也是同一家的另一个入口
   'jina-search': 'jina',
+  'deepseek-search': 'deepseek',
 
   // 向量化条目同理（见 CURATED 里的「向量化」一段）
   'ollama-embedding': 'ollama',
@@ -440,8 +441,8 @@ export const CURATED = [
   },
 
   // ── 网页检索 ──
-  // 这一组的「模型」不是模型，是**去哪儿搜**。三条各缺一样东西，都是真实情况：
-  // 内置浏览器没有地址也没有密钥，SearXNG 只有地址，只有 Jina 三样齐全。
+  // 这一组的「模型」不是模型，是**去哪儿搜**。几条各缺一样东西，都是真实情况：
+  // 内置浏览器没有地址也没有密钥，SearXNG 只有地址，Jina 和 DeepSeek 三样齐全。
   {
     id: 'builtin-browser',
     group: 'search',
@@ -463,6 +464,13 @@ export const CURATED = [
     group: 'search',
     baseUrl: 'https://s.jina.ai',
     displayName: 'Jina AI（网页检索）'
+  },
+  {
+    id: 'deepseek-search',
+    group: 'search',
+    // 不带 /v1：接口路径是 /v1/tools/search，由 deepseekSearch.ts 自己拼
+    baseUrl: 'https://api.deepseek.com',
+    displayName: 'DeepSeek（网页检索）'
   },
 
   // ── 结构化判定 ──
@@ -1036,6 +1044,15 @@ const MANUAL_ENTRIES = {
       's.jina.ai': { id: 's.jina.ai', name: '网页搜索（s.jina.ai）' }
     }
   },
+  'deepseek-search': {
+    name: 'DeepSeek',
+    env: ['DEEPSEEK_API_KEY'],
+    doc: 'https://platform.deepseek.com/api_keys',
+    models: {
+      // 接口没有模型之分，只有一个 /v1/tools/search。和对话那条 DeepSeek 共用一把 Key
+      search: { id: 'search', name: '网页搜索（/v1/tools/search）' }
+    }
+  },
   'openai-embedding': {
     name: 'OpenAI',
     env: ['OPENAI_API_KEY'],
@@ -1561,6 +1578,9 @@ const MANUAL_ENTRIES = {
       // 别名，跟着厂商滚动。默认给这个 —— 判定的问题是我们写死在代码里的，
       // 版本锁死收益不大，而新版本修的正是 jaggedness 上那些已知短板。
       'jev-latest': { id: 'jev-latest', name: 'Jev（最新）' },
+      // 2026-10-14 发布：https://typesafe.ai/blog/jev-1-14
+      'jev-preview': { id: 'jev-preview', name: 'Jev Preview' },
+      'jev-1.14.0': { id: 'jev-1.14.0', name: 'Jev 1.14.0' },
       // 要可复现的判定时绑这个：同一份 state 同一组问题，换了版本答案会变
       'jev-1.13.0': { id: 'jev-1.13.0', name: 'Jev 1.13（锁定版本）' }
     }

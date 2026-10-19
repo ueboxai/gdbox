@@ -91,6 +91,7 @@ import type {
 } from '../../shared/agentRunRejection'
 import {
   createUnrealAgent,
+  NoConclusionError,
   runSubAgent,
   type EngineFacts,
   type SessionContext
@@ -572,15 +573,22 @@ function attachGoalLoop(
     isReadOnlyCall: (toolName, args) =>
       effectiveRisk(tools.find((tool) => tool.name === toolName)?.unrealBox, args) === 'safe',
     runAudit: async (input) => {
-      const result = await runSubAgent(ctx, {
-        prompt: buildAuditPrompt(input),
-        auditorJudges: AUDITOR_HARD_JUDGES,
-        withoutApproval: true,
-        seedMessages: [],
-        ...(input.signal ? { signal: input.signal } : {}),
-        ...(input.onProgress ? { onProgress: input.onProgress } : {})
-      })
-      return result.text
+      try {
+        const result = await runSubAgent(ctx, {
+          prompt: buildAuditPrompt(input),
+          auditorJudges: AUDITOR_HARD_JUDGES,
+          withoutApproval: true,
+          seedMessages: [],
+          ...(input.signal ? { signal: input.signal } : {}),
+          ...(input.onProgress ? { onProgress: input.onProgress } : {})
+        })
+        return result.text
+      } catch (error) {
+        // 审计员被截断或没写字：没有裁决，交给目标循环按「复核未给出裁决」收住，
+        // 别让它变成主对话这一轮的报错
+        if (error instanceof NoConclusionError) return error.message
+        throw error
+      }
     },
     followUp: (text) => agent.followUp({ role: 'user', content: text, timestamp: 0 }),
     report
@@ -627,6 +635,7 @@ async function prepareTeam(
   liveTeams.set(ctx.sessionId, live)
   ctx.team = {
     objective: team.objective,
+    ...(team.latestRequest ? { latestRequest: team.latestRequest } : {}),
     store,
     live,
     // 队员交回改动时存一份工程快照，制作人用 team_snapshot 列出来、退回
@@ -676,6 +685,7 @@ async function readTeamState(sessionId: string): Promise<TeamStateView | null> {
   ])
   return {
     objective: team.objective,
+    ...(team.latestRequest ? { latestRequest: team.latestRequest } : {}),
     verdict: team.verdict,
     ...(team.verdictAt !== undefined ? { verdictAt: team.verdictAt } : {}),
     verdictStale: verdictIsStale(team.verdictAt, team.lastWriteAt, activity),
@@ -2309,7 +2319,12 @@ export function registerAgentV3IPC(): void {
           : teamObjective
             ? startTeamRound(newTeamState(teamObjective))
             : previousOptions?.team
-              ? startTeamRound(previousOptions.team)
+              ? // 沿用老团队的这一轮，记下用户刚说的话：验收员看不到对话，靠它知道目标改过什么。
+                // 截取的口径同上面的 `goal.latestRequest`
+                startTeamRound({
+                  ...previousOptions.team,
+                  latestRequest: tailOf(promptText, LATEST_REQUEST_MAX_CHARS)
+                })
               : undefined
 
       /*
