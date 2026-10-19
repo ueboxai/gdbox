@@ -2678,6 +2678,34 @@ First work out why the install failed from the output above. If you can run comm
         checkupNoTools:
           'The model did not call a tool after two requests and cannot be used as a teammate'
       },
+      dismiss: {
+        action: 'Dismiss',
+        title: 'Dismiss {name}',
+        lead: '{name} will leave the team. Their memory is archived, not deleted.',
+        handover:
+          'Their {n} unfinished tasks will have no owner until the producer reassigns them.',
+        facts: '{done} tasks handed back, {stopped} stopped before finishing',
+        reasonLabel: 'Reason',
+        reasonPlaceholder:
+          'Say what fell short. The reason goes on record and the producer sees it next turn',
+        busyHint: '{name} is working on a task. You can dismiss them once it is handed back',
+        busy: '{name} is working on a task. Dismiss them after it is handed back or this turn ends',
+        failed: "Couldn't dismiss this teammate. Try again later",
+        records: '{n} dismissed',
+        byUser: 'Dismissed by you',
+        byProducer: 'Dismissed by the producer',
+        grounds: {
+          quality: 'Work fell short',
+          unfinished: 'Tasks repeatedly unfinished',
+          redundant: 'Role no longer needed',
+          user_request: 'At your request',
+          user: 'Your decision'
+        },
+        evidence: 'Evidence',
+        handedTo: 'Unfinished tasks passed to {name}: {tasks}',
+        unassigned: 'Unfinished tasks left without an owner: {tasks}',
+        memoryArchived: 'Memory archived'
+      },
       office: {
         aria: 'Team office: {summary}',
         noTasksFor: 'No tasks assigned to {name}',
@@ -2832,6 +2860,7 @@ First work out why the install failed from the output above. If you can run comm
         team_message: 'Send message',
         team_deliver: 'Submit delivery',
         team_hire: 'Add teammate',
+        team_dismiss: 'Dismiss teammate',
         team_snapshot: 'Save project snapshot',
         generate_image: 'Generate Image',
         search_assets: 'Search Assets',

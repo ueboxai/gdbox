@@ -107,6 +107,12 @@
         @reopen-job="emit('reopen-job', $event)"
         @open-models="emit('open-models')"
         @set-model="(name: string, m: TeamModel) => emit('set-model', name, m)"
+        @dismiss="(name: string, reason: string) => emit('dismiss', name, reason)"
+      />
+      <TeamDismissalList
+        class="team-board-dismissals"
+        :dismissals="team.dismissals"
+        :pixel="style === 'v2'"
       />
     </div>
   </section>
@@ -130,6 +136,7 @@ import {
   type TeamUsage,
   type TeamVerdict
 } from '@core/shared/agentTeam'
+import TeamDismissalList from './TeamDismissalList.vue'
 import TeamLaneBoard from './teamLanes/TeamLaneBoard.vue'
 import TeamOffice from './teamOffice/TeamOffice.vue'
 import { officeStyle } from './teamOffice/officeStyle'
@@ -168,6 +175,8 @@ const emit = defineEmits<{
   'open-models': []
   /** 用户给队员换了模型 */
   'set-model': [name: string, model: TeamModel]
+  /** 用户辞退了一个队员（理由必填） */
+  dismiss: [name: string, reason: string]
 }>()
 const { t } = useI18n()
 const { ago, now } = useTeamLabels()
@@ -381,6 +390,10 @@ watch(
   &.is-v2 {
     background: var(--q-bg);
   }
+}
+
+.team-board-dismissals {
+  padding: var(--space-3) var(--space-4) var(--space-4);
 }
 
 .office-wrap {
