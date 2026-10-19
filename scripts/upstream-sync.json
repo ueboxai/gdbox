@@ -365,6 +365,48 @@
       "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
       "note": "团队工程整组需独立适配 Godot 工程、插件登录/凭据与协议，不能仅迁入界面；本批未迁入，关联后续修复一起评估。",
       "verification": "仅审查依赖与提交范围，尚未实施或验证。"
+    },
+    "752db15e7b140b5747522c7059b61a6ff94bcf6a": {
+      "status": "ported",
+      "local": "cf1eb9bacba508380c74221ca448288a868bf11e",
+      "snapshot": "6a7e174126eb0334f10cb2659f85bd6fa8eb6b05",
+      "note": "迁入 Jev 1.14/preview 目录及显式图片、Box、长上下文请求；保留旧文本回落、套餐协议限制和调用方授权图片约束，不自动采集或上传截图。",
+      "verification": "pnpm verify --with-build 13/13 全部通过；851 个测试文件、9629 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包和离线启动通过（服务端请求 0）。verify:changed 首跑缺 SQLite Node 缓存，补齐后以上完整门禁通过。未实调 DeepSeek/TypeSafe 或做应用内交互走查。详见 docs/upstream-port-2026-10-19.md。"
+    },
+    "bad4143d761d813a4ca385a0a14082336a9b03ac": {
+      "status": "ported",
+      "local": "cf1eb9bacba508380c74221ca448288a868bf11e",
+      "snapshot": "6a7e174126eb0334f10cb2659f85bd6fa8eb6b05",
+      "note": "迁入外部 MCP 工具与提示词适配及目标复核未给结论的收尾；保留 GDBox 的 Godot 文件、节点和工程示例，补充外部可提问但无界面工具的测试。",
+      "verification": "pnpm verify --with-build 13/13 全部通过；851 个测试文件、9629 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包和离线启动通过（服务端请求 0）。verify:changed 首跑缺 SQLite Node 缓存，补齐后以上完整门禁通过。未实调 DeepSeek/TypeSafe 或做应用内交互走查。详见 docs/upstream-port-2026-10-19.md。"
+    },
+    "b9660e7e5392732e9f678ec437175d52cd0e3f2a": {
+      "status": "ported",
+      "local": "cf1eb9bacba508380c74221ca448288a868bf11e",
+      "snapshot": "6a7e174126eb0334f10cb2659f85bd6fa8eb6b05",
+      "note": "迁入未完成任务清单的逐步推进提醒；只追加到助手消息最后一个工具结果，已更新清单或全部完成则不提醒，不自动标记完成。",
+      "verification": "pnpm verify --with-build 13/13 全部通过；851 个测试文件、9629 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包和离线启动通过（服务端请求 0）。verify:changed 首跑缺 SQLite Node 缓存，补齐后以上完整门禁通过。未实调 DeepSeek/TypeSafe 或做应用内交互走查。详见 docs/upstream-port-2026-10-19.md。"
+    },
+    "f495da60950d1af111ac46799df21a79664594f8": {
+      "status": "ported",
+      "local": "cf1eb9bacba508380c74221ca448288a868bf11e",
+      "snapshot": "6a7e174126eb0334f10cb2659f85bd6fa8eb6b05",
+      "note": "迁入可配置 DeepSeek 网页检索及目录、密钥复用、鉴权/余额/限流错误反馈；补充超时清理和非 JSON 错误响应测试，保留未配置时内置浏览器回退。",
+      "verification": "pnpm verify --with-build 13/13 全部通过；851 个测试文件、9629 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包和离线启动通过（服务端请求 0）。verify:changed 首跑缺 SQLite Node 缓存，补齐后以上完整门禁通过。未实调 DeepSeek/TypeSafe 或做应用内交互走查。详见 docs/upstream-port-2026-10-19.md。"
+    },
+    "6a7e174126eb0334f10cb2659f85bd6fa8eb6b05": {
+      "status": "ported",
+      "local": "cf1eb9bacba508380c74221ca448288a868bf11e",
+      "snapshot": "6a7e174126eb0334f10cb2659f85bd6fa8eb6b05",
+      "note": "迁入团队最新要求的持久化、续跑、独立验收与两种任务板显示；补充恢复与界面测试，新增样式采用 GDBox 主题变量，保留 Godot 绑定和快照。",
+      "verification": "pnpm verify --with-build 13/13 全部通过；851 个测试文件、9629 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包和离线启动通过（服务端请求 0）。verify:changed 首跑缺 SQLite Node 缓存，补齐后以上完整门禁通过。未实调 DeepSeek/TypeSafe 或做应用内交互走查。详见 docs/upstream-port-2026-10-19.md。"
+    },
+    "6cf9e07490395b84ba19b9cc36fe3518901fba75": {
+      "status": "ported",
+      "local": "afa0ea30df9baf01020d51d0ce5d1aaccada1cf2",
+      "snapshot": "6a7e174126eb0334f10cb2659f85bd6fa8eb6b05",
+      "note": "实际补丁与本仓 afa0ea30 已迁入的来源用途保护一致；当前仍保留目录用途锁定、旧配置归一化和绑定校验。仅补记来源，不重复改代码；保留后续 Codex OAuth 登录复用。",
+      "verification": "pnpm verify --with-build 13/13 全部通过；851 个测试文件、9629 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包和离线启动通过（服务端请求 0）。verify:changed 首跑缺 SQLite Node 缓存，补齐后以上完整门禁通过。未实调 DeepSeek/TypeSafe 或做应用内交互走查。详见 docs/upstream-port-2026-10-19.md。"
     }
   }
 }
