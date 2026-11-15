@@ -416,7 +416,8 @@ describe('大请求：上传时间算进首包', () => {
   const small = { pad: 'x'.repeat(1_000) }
 
   /** 发出 payload 后过 delays[第几次] 毫秒回话；'hang' 表示一直不回 */
-  const sending = (payload: unknown, delays: Array<number | 'hang'>, calls: { n: number }): StreamFn =>
+  const sending =
+    (payload: unknown, delays: Array<number | 'hang'>, calls: { n: number }): StreamFn =>
     async (m, _context, options) => {
       const delay = delays[Math.min(calls.n++, delays.length - 1)]
       await options?.onPayload?.(payload, m)
