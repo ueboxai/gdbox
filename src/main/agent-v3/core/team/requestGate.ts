@@ -27,6 +27,10 @@
  * 到点就当过载处理 —— 放弃这一次、退避后重发。只在**还没往下游推过任何内容**时重发，
  * 推过半截再重来会让调用方看到重复的开头。
  *
+ * 首包的表从发请求前就开始走，整段上传都算在里面，所以大请求按大小多等（每 MB 30 秒，
+ * 最多 5 分钟），没等到也只重发一次：真机一个 2 MB 的请求经代理传了 65 秒，60 秒到点被掐、
+ * 原样重发，中转站那边每发一次都要预扣、结算一次。
+ *
  * 工作室模式（`SessionContext.pacedRequests`）用整套：名额 + 卡死检测 + 重发。
  * 普通会话只用卡死检测和重发（`stallGuardStreamFn`），不排队 —— 见那里的注释。
  */
@@ -57,6 +61,15 @@ export interface GateConfig {
   firstEventTimeoutCeilMs: number
   /** 开始推内容之后，两个事件之间最多隔多久 */
   idleTimeoutMs: number
+  /** 请求体到这么大（字节）才给首包加上传时间；小请求照旧按基线掐 */
+  uploadAllowanceFromBytes: number
+  /** 每 MB 请求体给首包多等多久 */
+  uploadAllowancePerMbMs: number
+  /** 加上上传时间之后，等首包最多多久 */
+  largeRequestTimeoutCeilMs: number
+  /** 请求体到这么大（字节）时，没有首包最多重发几次（`largeRequestMaxRetries`） */
+  largeRequestBytes: number
+  largeRequestMaxRetries: number
   /** 过载时最多重发几次 */
   maxRetries: number
   /** 退避：第 n 次连续过载冷却 min(cap, base × 2^n)，再乘一个 [0.5, 1) 的抖动 */
@@ -72,6 +85,11 @@ export const DEFAULT_GATE_CONFIG: GateConfig = {
   firstEventTimeoutFloorMs: 60_000,
   firstEventTimeoutCeilMs: 180_000,
   idleTimeoutMs: 180_000,
+  uploadAllowanceFromBytes: 100_000,
+  uploadAllowancePerMbMs: 30_000,
+  largeRequestTimeoutCeilMs: 300_000,
+  largeRequestBytes: 1_000_000,
+  largeRequestMaxRetries: 1,
   maxRetries: 4,
   backoffBaseMs: 2_000,
   backoffCapMs: 30_000
@@ -154,6 +172,18 @@ export class AdaptiveLimiter {
     const c = this.config
     if (base === null) return c.firstEventTimeoutMs
     return Math.min(c.firstEventTimeoutCeilMs, Math.max(c.firstEventTimeoutFloorMs, base * 6))
+  }
+
+  /**
+   * 知道请求体多大之后该等首包多久。首包的表从发请求前就开始走，整段上传都算在里面：
+   * 真机一个 2 MB 的请求经代理传了 65 秒，60 秒一到就被掐、原样重发，网关那边每次都要扣费。
+   */
+  firstEventTimeoutFor(payloadBytes: number | undefined): number {
+    const base = this.firstEventTimeout()
+    const c = this.config
+    if (payloadBytes === undefined || payloadBytes < c.uploadAllowanceFromBytes) return base
+    const allowance = (payloadBytes / 1_048_576) * c.uploadAllowancePerMbMs
+    return Math.max(base, Math.min(c.largeRequestTimeoutCeilMs, base + allowance))
   }
 
   /** 拿一个名额。排队中被停下就退出队列，不占名额 */
@@ -309,10 +339,25 @@ export function failedAssistantMessage(model: Model<Api>, errorMessage: string):
 
 type Next = IteratorResult<AssistantMessageEvent> | 'timeout'
 
-function nextWithin(iterator: AsyncIterator<AssistantMessageEvent>, ms: number): Promise<Next> {
+/** 真正发出去的请求体有多大（字节）；量不出来当作不知道 */
+function byteLength(payload: unknown): number | undefined {
+  try {
+    return Buffer.byteLength(JSON.stringify(payload) ?? '', 'utf8')
+  } catch {
+    return undefined
+  }
+}
+
+const formatMb = (bytes: number): string => (bytes / 1_048_576).toFixed(1)
+
+/** 等 `pending` 最多 ms；超时后 `pending` 还挂着，可以接着再等 */
+function nextWithin(
+  pending: Promise<IteratorResult<AssistantMessageEvent>>,
+  ms: number
+): Promise<Next> {
   let timer: ReturnType<typeof setTimeout> | undefined
   return Promise.race([
-    iterator.next().finally(() => clearTimeout(timer)),
+    pending.finally(() => clearTimeout(timer)),
     new Promise<'timeout'>((resolve) => {
       timer = setTimeout(() => resolve('timeout'), ms)
     })
@@ -372,6 +417,10 @@ export function pacedStreamFn(inner: StreamFn, deps: PacedStreamDeps = {}): Stre
     void (async () => {
       let lastReason = ''
       let lastTransient = false
+      /** 上一次失败是大请求没等到首包：只重发 `largeRequestMaxRetries` 次，每次都要重传一遍、网关也要再扣一次 */
+      let lastLargeStall = false
+      let lastPayloadBytes = 0
+      let attempts = 0
       for (let attempt = 0; attempt <= limiter.config.maxRetries; attempt++) {
         if (outer?.aborted) break
         let release: (outcome: Outcome) => void
@@ -388,17 +437,39 @@ export function pacedStreamFn(inner: StreamFn, deps: PacedStreamDeps = {}): Stre
         const started = Date.now()
         let forwarded = 0
         let firstEventMs: number | undefined
+        let payloadBytes: number | undefined
+        attempts++
+        lastLargeStall = false
 
         try {
-          const stream = await inner(model, context, { ...options, signal: controller.signal })
+          const previousOnPayload = options?.onPayload
+          const stream = await inner(model, context, {
+            ...options,
+            signal: controller.signal,
+            onPayload: async (payload, payloadModel) => {
+              const upstream = await previousOnPayload?.(payload, payloadModel)
+              payloadBytes = byteLength(upstream === undefined ? payload : upstream)
+              return upstream
+            }
+          })
           const iterator = stream[Symbol.asyncIterator]()
           for (;;) {
-            const next = await nextWithin(
-              iterator,
+            const pending = iterator.next()
+            let next = await nextWithin(
+              pending,
               forwarded === 0 ? limiter.firstEventTimeout() : limiter.config.idleTimeoutMs
             )
+            // 请求体量出来之前表就开始走了：到点时先看它多大，大的按上传时间再多等一会儿
+            while (next === 'timeout' && forwarded === 0) {
+              const remaining = started + limiter.firstEventTimeoutFor(payloadBytes) - Date.now()
+              if (remaining <= 0) break
+              next = await nextWithin(pending, remaining)
+            }
             if (next === 'timeout') {
               controller.abort(new Error('stalled'))
+              lastPayloadBytes = payloadBytes ?? 0
+              lastLargeStall =
+                forwarded === 0 && lastPayloadBytes >= limiter.config.largeRequestBytes
               lastReason =
                 forwarded === 0
                   ? `等了 ${Math.round((Date.now() - started) / 1000)} 秒没有首包`
@@ -479,6 +550,7 @@ export function pacedStreamFn(inner: StreamFn, deps: PacedStreamDeps = {}): Stre
           out.end()
           return
         }
+        if (lastLargeStall && attempt >= limiter.config.largeRequestMaxRetries) break
         if (attempt < limiter.config.maxRetries) {
           deps.onRetry?.({ attempt: attempt + 1, reason: lastReason, model })
         }
@@ -489,6 +561,17 @@ export function pacedStreamFn(inner: StreamFn, deps: PacedStreamDeps = {}): Stre
           type: 'error',
           reason: 'aborted',
           error: failedAssistantMessage(model, 'Operation aborted')
+        })
+      } else if (lastLargeStall) {
+        // 不说「扛不住」：那句会被持续续跑当成中转不稳，每分钟再传一遍这么大的请求
+        out.push({
+          type: 'error',
+          reason: 'error',
+          error: failedAssistantMessage(
+            model,
+            `请求有 ${formatMb(lastPayloadBytes)} MB，发了 ${attempts} 次都没等到模型回应（最后一次：${lastReason}）。` +
+              '多半是网络上传太慢，检查代理或网络后点继续。'
+          )
         })
       } else if (lastTransient) {
         out.push({

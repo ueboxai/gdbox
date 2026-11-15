@@ -11,6 +11,8 @@ import {
 import type { StreamFn } from '@earendil-works/pi-agent-core'
 import { describe, expect, it } from 'vitest'
 
+import { isRecoverableDisconnect, isRetryableUnstable } from '../autoResume'
+
 import {
   AdaptiveLimiter,
   DEFAULT_GATE_CONFIG,
@@ -395,5 +397,76 @@ describe('普通会话的卡死防护', () => {
     )
     expect(STALL_GUARD_CONFIG.idleTimeoutMs).toBeGreaterThan(DEFAULT_GATE_CONFIG.idleTimeoutMs)
     expect(STALL_GUARD_CONFIG.maxRetries).toBeLessThan(DEFAULT_GATE_CONFIG.maxRetries)
+  })
+})
+
+/**
+ * 首包的表从发请求前就开始走，上传也算在里面。真机：2 MB 的请求经代理传了 65 秒，
+ * 60 秒到点被掐、原样重发，中转站每次都扣一次费。
+ */
+describe('大请求：上传时间算进首包', () => {
+  const upload: GateConfig = {
+    ...fast,
+    uploadAllowanceFromBytes: 100_000,
+    uploadAllowancePerMbMs: 100,
+    largeRequestTimeoutCeilMs: 1_000,
+    largeRequestBytes: 1_000_000
+  }
+  const big = { pad: 'x'.repeat(2_000_000) } // 约 1.9 MB：首包等 40 + 190 ms
+  const small = { pad: 'x'.repeat(1_000) }
+
+  /** 发出 payload 后过 delays[第几次] 毫秒回话；'hang' 表示一直不回 */
+  const sending = (payload: unknown, delays: Array<number | 'hang'>, calls: { n: number }): StreamFn =>
+    async (m, _context, options) => {
+      const delay = delays[Math.min(calls.n++, delays.length - 1)]
+      await options?.onPayload?.(payload, m)
+      const stream = createAssistantMessageEventStream()
+      if (delay !== 'hang') {
+        setTimeout(() => {
+          for (const event of ok) stream.push(event)
+          stream.end()
+        }, delay)
+      }
+      return stream
+    }
+
+  const run = async (inner: StreamFn, config: GateConfig = upload): Promise<string[]> => {
+    const limiter = new AdaptiveLimiter(config)
+    const paced = pacedStreamFn(inner, { limiterFor: () => limiter })
+    return collect(await paced(model, normalizeContext({ messages: [] })))
+  }
+
+  it('大请求上传慢：按大小多等，不掐不重发', async () => {
+    const calls = { n: 0 }
+    expect(await run(sending(big, [120], calls))).toEqual(['start', 'done'])
+    expect(calls.n).toBe(1)
+  })
+
+  it('小请求照旧按基线掐：同样慢就重发', async () => {
+    const calls = { n: 0 }
+    expect(await run(sending(small, [120, 0], calls))).toEqual(['start', 'done'])
+    expect(calls.n).toBe(2)
+  })
+
+  it('大请求一直没首包：只重发一次，报一句说清楚的失败，持续续跑不接', async () => {
+    const calls = { n: 0 }
+    const types = await run(sending(big, ['hang'], calls), { ...upload, largeRequestMaxRetries: 1 })
+    expect(calls.n).toBe(2)
+    expect(types).toHaveLength(1)
+    expect(types[0]).toMatch(/^error:请求有 1\.9 MB，发了 2 次都没等到模型回应/)
+    const text = types[0]!.slice('error:'.length)
+    expect(isRetryableUnstable(text)).toBe(false)
+    expect(isRecoverableDisconnect(text)).toBe(false)
+  })
+})
+
+describe('按请求体大小放宽首包（默认值）', () => {
+  it('小请求不变；2 MB 多等约一分钟；再大也不超过 5 分钟', () => {
+    const limiter = new AdaptiveLimiter(STALL_GUARD_CONFIG)
+    const base = limiter.firstEventTimeout()
+    expect(limiter.firstEventTimeoutFor(undefined)).toBe(base)
+    expect(limiter.firstEventTimeoutFor(50_000)).toBe(base)
+    expect(limiter.firstEventTimeoutFor(2 * 1_048_576)).toBe(base + 60_000)
+    expect(limiter.firstEventTimeoutFor(50 * 1_048_576)).toBe(300_000)
   })
 })
