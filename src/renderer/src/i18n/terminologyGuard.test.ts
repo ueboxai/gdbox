@@ -28,10 +28,7 @@ import {
  * 共用词表之外，界面上和 Godot 官方中文（项目管理器、项目设置）一致，统一写「项目」。
  * 只管界面文案：工具说明和提示词是写给模型的，「Godot 工程」照旧
  */
-const BANNED_TERMS: BannedTerm[] = [
-  ...SHARED_BANNED_TERMS,
-  { word: '工程', suggestion: '项目' }
-]
+const BANNED_TERMS: BannedTerm[] = [...SHARED_BANNED_TERMS, { word: '工程', suggestion: '项目' }]
 
 /**
  * 白名单：完整 key → 放行的禁用词条目。按 key 精确匹配，只放行该 key 下列出的条目；
