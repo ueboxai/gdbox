@@ -68,6 +68,7 @@ describe('upstream path policy', () => {
   })
 })
 
+// 每条用例起几十个 git 子进程，CI 的 Windows 机器上 30 秒不够
 describe('one-way porting against real independent Git repositories', () => {
   it('pins committed source, excludes dirty source files, and works offline after fetching', () => {
     const f = fixture()
@@ -96,7 +97,7 @@ describe('one-way porting against real independent Git repositories', () => {
     expect(git(f.root, ['log', '-1', '--format=%B'])).toContain(
       `cherry picked from commit ${selected}`
     )
-  }, 30000)
+  }, 60_000)
 
   it('keeps an explicit old snapshot and applies selected dependencies in upstream order', () => {
     const f = fixture()
@@ -115,7 +116,7 @@ describe('one-way porting against real independent Git repositories', () => {
       second
     ])
     expect(readFileSync(join(f.root, file), 'utf8')).toBe('second\n')
-  }, 30000)
+  }, 60_000)
 
   it('rejects dirty, staged and untracked target state without losing any work', () => {
     const f = fixture()
@@ -130,7 +131,7 @@ describe('one-way porting against real independent Git repositories', () => {
     expect(() => f.sync.pick([sha])).toThrow('工作区不干净')
     expect(readFileSync(join(f.root, 'untracked.txt'), 'utf8')).toBe('keep me')
     expect(f.sync.status({ refresh: false }).dirty).toBe(true)
-  }, 30000)
+  }, 60_000)
 
   it('validates the whole selection before applying and rejects local or protected commits', () => {
     const f = fixture()
@@ -143,7 +144,7 @@ describe('one-way porting against real independent Git repositories', () => {
     expect(() => f.sync.pick([])).toThrow('用法')
     expect(git(f.root, ['rev-parse', 'HEAD'])).toBe(before)
     expect(f.ledger().entries).toEqual({})
-  }, 30000)
+  }, 60_000)
 
   it('does not mark a patch already-present when a new file from the patch is missing', () => {
     const f = fixture()
@@ -156,7 +157,7 @@ describe('one-way porting against real independent Git repositories', () => {
     expect(row.paths).toContainEqual({ path: other, status: 'A', kind: 'shared' })
     f.sync.pick([sha])
     expect(readFileSync(join(f.root, other), 'utf8')).toBe('new file\n')
-  }, 30000)
+  }, 60_000)
 
   it('records a truly already-present patch without creating an empty commit', () => {
     const f = fixture()
@@ -167,7 +168,7 @@ describe('one-way porting against real independent Git repositories', () => {
     f.sync.pick([sha])
     expect(git(f.root, ['rev-parse', 'HEAD'])).toBe(before)
     expect(f.ledger().entries[sha].mode).toBe('already-present')
-  }, 30000)
+  }, 60_000)
 
   it('inspects both sides of renames and engine deletions', () => {
     const f = fixture()
@@ -183,7 +184,7 @@ describe('one-way porting against real independent Git repositories', () => {
         { path: other, status: 'A', kind: 'shared' }
       ])
     )
-  }, 30000)
+  }, 60_000)
 
   it('includes merge-only changes and refuses to pick merge commits automatically', () => {
     const f = fixture()
@@ -198,7 +199,7 @@ describe('one-way porting against real independent Git repositories', () => {
     expect(row.trial).toBeNull()
     expect(row.paths.some((item) => item.path === 'new/resolution.txt')).toBe(true)
     expect(() => f.sync.pick([sha])).toThrow('需要手工适配')
-  }, 30000)
+  }, 60_000)
 
   it('preserves successful predecessors and the conflict, then refuses another operation', () => {
     const f = fixture()
@@ -217,7 +218,7 @@ describe('one-way porting against real independent Git repositories', () => {
     expect(() => f.sync.mark(conflict, 'ported', 'not done', { local: 'HEAD' })).toThrow(
       '未结束的 Git 操作'
     )
-  }, 30000)
+  }, 60_000)
 
   it('retains partial work as pending and validates the local evidence before recording completion', () => {
     const f = fixture()
@@ -236,7 +237,7 @@ describe('one-way porting against real independent Git repositories', () => {
     expect(f.sync.status({ refresh: false, all: true }).rows[0].entry.verification).toBe(
       'focused tests passed'
     )
-  }, 30000)
+  }, 60_000)
 
   it('reads legacy ledger keys and prevents duplicate picks, while retaining unrecorded provenance', () => {
     const f = fixture()
@@ -256,7 +257,7 @@ describe('one-way porting against real independent Git repositories', () => {
     expect(f.sync.status({ refresh: false }).rows).toHaveLength(0)
     commit(f.root, 'ledger')
     expect(() => f.sync.pick([sha])).toThrow('已处理')
-  }, 30000)
+  }, 60_000)
 
   it('refuses a second writer without removing its lock', () => {
     const f = fixture()
@@ -266,5 +267,5 @@ describe('one-way porting against real independent Git repositories', () => {
     expect(() => f.sync.pick([sha])).toThrow('同步正在运行')
     expect(readFileSync(join(f.root, '.git/gdbox-upstream.lock'), 'utf8')).toBe('another writer')
     rmSync(join(f.root, '.git/gdbox-upstream.lock'))
-  }, 30000)
+  }, 60_000)
 })
