@@ -129,7 +129,18 @@ describe('team_status', () => {
   })
 
   it('最近改动只留最近的', async () => {
-    for (let i = 0; i < 205; i++) await store.recordActivity({ who: 'x', what: `${i}`, writes: '' })
+    // 先铺 200 条，再真记 5 条越过上限。一条一条记 205 次是 205 轮整文件读写，
+    // CI 的 Windows 机器上会超 10 秒
+    mkdirSync(join(dir, 'state'), { recursive: true })
+    const seeded = Array.from({ length: 200 }, (_, i) => ({
+      who: 'x',
+      what: `${i}`,
+      writes: '',
+      at: i
+    }))
+    writeFileSync(join(dir, 'state', 'activity.json'), JSON.stringify(seeded))
+    for (let i = 200; i < 205; i++)
+      await store.recordActivity({ who: 'x', what: `${i}`, writes: '' })
     const all = await store.activity(1000)
     expect(all).toHaveLength(200)
     expect(all.at(-1)?.what).toBe('204')
