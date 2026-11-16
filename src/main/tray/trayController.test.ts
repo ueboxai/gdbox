@@ -1,0 +1,1134 @@
+/** @vitest-environment node */
+import { EventEmitter } from 'node:events'
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
+
+const mocks = vi.hoisted(() => {
+  const state = {
+    ipcHandlers: new Map<string, (event: unknown, payload: unknown) => unknown>(),
+    languageListeners: [] as Array<() => void>,
+    libraryListeners: [] as Array<() => void>,
+    projectListeners: [] as Array<() => void>,
+    willQuitHandlers: [] as Array<() => void>,
+    beforeQuitHandlers: [] as Array<() => void>,
+    trayHandlers: new Map<string, () => void>(),
+    notifications: [] as Array<{
+      options: { title: string; body: string }
+      emit: (event: string, ...args: unknown[]) => void
+    }>,
+    notifSupported: true,
+    notifConstructorThrows: false,
+    notifShowThrows: false,
+    mainWindow: undefined as undefined | FakeWindow,
+    fileExists: true,
+    listRecent: async () =>
+      [] as Array<{
+        projectPath: string
+        projectName: string
+        lastOpenTime: string
+        isImported: boolean
+      }>,
+    findRecord: (() => undefined) as (
+      dir: string
+    ) => undefined | { projectKey: string; projectName?: string; originPath?: string },
+    interactiveProjects: [] as Array<{ projectPath: string }>,
+    /** 系统进程里正开着的 project.godot（没装插件、盒子认不出来的那种） */
+    runningProcessPaths: [] as string[],
+    /** 进程探测整个抛错（PowerShell/WMI 不可用之类） */
+    processQueryFails: false,
+    openFile: (async () => ({ success: true })) as (
+      path: string
+    ) => Promise<{ success: boolean; error?: string; pluginFailure?: string }>,
+    db: {}
+  }
+
+  class FakeNotification {
+    handlers = new Map<string, (...args: unknown[]) => void>()
+    options: { title: string; body: string }
+    static isSupported(): boolean {
+      return state.notifSupported
+    }
+    constructor(options: { title: string; body: string }) {
+      if (state.notifConstructorThrows) throw new Error('native ctor blew up')
+      this.options = options
+      state.notifications.push({
+        options,
+        emit: (event, ...args) => this.handlers.get(event)?.(...args)
+      })
+    }
+    on(event: string, cb: (...args: unknown[]) => void): this {
+      this.handlers.set(event, cb)
+      return this
+    }
+    show(): void {
+      if (state.notifShowThrows) throw new Error('native show blew up')
+    }
+  }
+
+  return {
+    state,
+    FakeNotification,
+    listRecentCalls: vi.fn(() => state.listRecent()),
+    showMainWindow: vi.fn(),
+    countActiveOperations: vi.fn(() => 0),
+    sendToWindow: vi.fn(),
+    appQuit: vi.fn(),
+    loggerWarn: vi.fn(),
+    dialogShow: vi.fn<(...args: unknown[]) => Promise<{ response: number }>>(async () => ({
+      response: 0
+    }))
+  }
+})
+
+vi.mock('electron', () => ({
+  app: {
+    once: (event: string, cb: () => void) =>
+      (event === 'before-quit'
+        ? mocks.state.beforeQuitHandlers
+        : mocks.state.willQuitHandlers
+      ).push(cb),
+    on: (event: string, cb: () => void) =>
+      (event === 'before-quit'
+        ? mocks.state.beforeQuitHandlers
+        : mocks.state.willQuitHandlers
+      ).push(cb),
+    quit: (...args: unknown[]) => mocks.appQuit(...args)
+  },
+  dialog: { showMessageBox: (...args: unknown[]) => mocks.dialogShow(...args) },
+  ipcMain: {
+    handle: (channel: string, cb: (event: unknown, payload: unknown) => unknown) => {
+      mocks.state.ipcHandlers.set(channel, cb)
+    }
+  },
+  Menu: { buildFromTemplate: (template: unknown) => template },
+  Notification: mocks.FakeNotification,
+  Tray: class {}
+}))
+
+vi.mock('fs', () => ({ existsSync: () => mocks.state.fileExists }))
+
+vi.mock('../appWindows', () => ({
+  findMainWindow: () => mocks.state.mainWindow,
+  sendToWindow: (...args: unknown[]) => mocks.sendToWindow(...args)
+}))
+
+vi.mock('../i18n', () => ({
+  mt: (key: string, params?: Record<string, unknown>) =>
+    params ? `${key}:${JSON.stringify(params)}` : key,
+  onLanguageChanged: (cb: () => void) => {
+    mocks.state.languageListeners.push(cb)
+  }
+}))
+
+vi.mock('../godot/recentProjects', () => ({
+  readGodotRecentProjects: () => mocks.listRecentCalls()
+}))
+
+vi.mock('../services/project/openProject', () => ({
+  openProject: (path: string) => mocks.state.openFile(path),
+  projectDirOf: (path: string) => path
+}))
+
+vi.mock('../services/project/projectLibraryEvents', () => ({
+  onProjectLibraryChanged: (cb: () => void) => {
+    mocks.state.libraryListeners.push(cb)
+    return () => {
+      mocks.state.libraryListeners = mocks.state.libraryListeners.filter((l) => l !== cb)
+    }
+  }
+}))
+
+vi.mock('../services/project/projectManager', () => ({
+  projectManager: {
+    onProjectsChanged: (cb: () => void) => {
+      mocks.state.projectListeners.push(cb)
+      return () => {
+        mocks.state.projectListeners = mocks.state.projectListeners.filter((l) => l !== cb)
+      }
+    },
+    getInteractiveProjects: () => mocks.state.interactiveProjects
+  }
+}))
+
+vi.mock('../services', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: (...args: unknown[]) => mocks.loggerWarn(...args),
+    error: vi.fn(),
+    debug: vi.fn()
+  }
+}))
+
+vi.mock('../godot/processes', () => ({
+  isGodotProjectRunning: async (path: string) => {
+    if (mocks.state.processQueryFails) throw new Error('cim query blew up')
+    return mocks.state.runningProcessPaths.includes(path)
+  }
+}))
+
+vi.mock('../sqliteDataBase', () => ({ getPublicDatabase: () => mocks.state.db }))
+vi.mock('../sqliteDataBase/models/project', () => ({
+  getProjectByPath: (_db: unknown, dir: string) => mocks.state.findRecord(dir)
+}))
+
+import {
+  TRAY_CONFIRM_QUIT_CHANNEL,
+  TRAY_SET_RECENT_SESSIONS_CHANNEL,
+  TRAY_TAKE_PENDING_CHANNEL
+} from '../../shared/trayActions'
+import { LAUNCH_TTL_MS } from './launchTracker'
+import { requestGuardedQuit } from './quitGuard'
+import { startTrayMenuController } from './trayController'
+
+const s = mocks.state
+
+class FakeWindow extends EventEmitter {
+  visible = true
+  minimized = false
+  destroyed = false
+  webContentsDestroyed = false
+  readonly webContents = { isDestroyed: () => this.webContentsDestroyed }
+
+  isDestroyed(): boolean {
+    return this.destroyed
+  }
+  isVisible(): boolean {
+    return this.visible
+  }
+  isMinimized(): boolean {
+    return this.minimized
+  }
+  restore = vi.fn(() => {
+    this.minimized = false
+  })
+  show = vi.fn(() => {
+    this.visible = true
+  })
+  focus = vi.fn()
+}
+
+interface MenuItem {
+  label?: string
+  enabled?: boolean
+  type?: string
+  click?: () => void
+}
+
+function projectEntry(
+  dir: string,
+  name: string,
+  lastOpenTime: string
+): { projectPath: string; projectName: string; lastOpenTime: string; isImported: boolean } {
+  return {
+    projectPath: `${dir}/project.godot`,
+    projectName: name,
+    lastOpenTime,
+    isImported: true
+  }
+}
+
+function projectRecord(dir: string): {
+  projectKey: string
+  projectName: string
+  originPath: string
+} {
+  const key = `k-${dir.replace(/[^a-z0-9]/gi, '')}`
+  const name = dir.split('/').pop() ?? dir
+  return { projectKey: key, projectName: name, originPath: `${dir}/project.godot` }
+}
+
+function seedProjects(dirs: string[], times: Record<string, string>): void {
+  const records = new Map(dirs.map((dir) => [dir, projectRecord(dir)]))
+  s.findRecord = (dir) => records.get(dir)
+  s.listRecent = async () =>
+    dirs.map((dir) => projectEntry(dir, dir.split('/').pop() ?? dir, times[dir]))
+}
+
+function labelsOf(template: MenuItem[]): string[] {
+  return template.map((item) => item.label ?? '---')
+}
+
+function projectItem(template: MenuItem[], name: string): MenuItem | undefined {
+  return template.find((item) => item.label?.includes(name))
+}
+
+function takePending(): unknown {
+  return s.ipcHandlers.get(TRAY_TAKE_PENDING_CHANNEL)!({}, undefined)
+}
+
+function newTray(): {
+  setToolTip: Mock
+  setContextMenu: Mock
+  popUpContextMenu: Mock
+  on: (event: string, cb: () => void) => void
+} {
+  return {
+    setToolTip: vi.fn(),
+    setContextMenu: vi.fn(),
+    popUpContextMenu: vi.fn(),
+    on: (event: string, cb: () => void) => {
+      s.trayHandlers.set(event, cb)
+    }
+  }
+}
+
+const realPlatform = process.platform
+const hostDeps = {
+  showMainWindow: mocks.showMainWindow,
+  countActiveOperations: mocks.countActiveOperations
+}
+
+function setPlatform(platform: string): void {
+  Object.defineProperty(process, 'platform', { value: platform, configurable: true })
+}
+
+async function flush(): Promise<void> {
+  await vi.advanceTimersByTimeAsync(0)
+  await vi.advanceTimersByTimeAsync(0)
+}
+
+describe('trayController', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    s.ipcHandlers.clear()
+    s.trayHandlers.clear()
+    s.languageListeners = []
+    s.libraryListeners = []
+    s.projectListeners = []
+    s.willQuitHandlers = []
+    s.beforeQuitHandlers = []
+    s.notifications = []
+    s.notifSupported = true
+    s.notifConstructorThrows = false
+    s.notifShowThrows = false
+    s.mainWindow = undefined
+    s.fileExists = true
+    s.interactiveProjects = []
+    s.runningProcessPaths = []
+    s.processQueryFails = false
+    s.openFile = async () => ({ success: true })
+    s.listRecent = async () => []
+    s.findRecord = () => undefined
+    vi.clearAllMocks()
+    mocks.countActiveOperations.mockReset().mockReturnValue(0)
+    mocks.showMainWindow.mockReset()
+    mocks.dialogShow.mockReset().mockResolvedValue({ response: 0 })
+  })
+
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: realPlatform, configurable: true })
+    vi.useRealTimers()
+  })
+
+  describe('非 win32 常驻菜单', () => {
+    it('连接变了就作废候选缓存：TTL 内的旧名单当场换', async () => {
+      setPlatform('darwin')
+      seedProjects(['D:/A', 'D:/B', 'D:/C', 'D:/D'], {
+        'D:/A': '2025-04-01T00:00:00',
+        'D:/B': '2025-03-01T00:00:00',
+        'D:/C': '2025-02-01T00:00:00',
+        'D:/D': '2025-01-01T00:00:00'
+      })
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      await flush()
+
+      expect(tray.setContextMenu).toHaveBeenCalledTimes(1)
+      expect(labelsOf(tray.setContextMenu.mock.calls[0][0] as MenuItem[])).toContain('A')
+      expect(labelsOf(tray.setContextMenu.mock.calls[0][0] as MenuItem[])).not.toContain('D')
+      expect(mocks.listRecentCalls).toHaveBeenCalledTimes(1)
+
+      seedProjects(['D:/D', 'D:/A', 'D:/B', 'D:/C'], {
+        'D:/D': '2025-06-01T00:00:00',
+        'D:/A': '2025-04-01T00:00:00',
+        'D:/B': '2025-03-01T00:00:00',
+        'D:/C': '2025-02-01T00:00:00'
+      })
+      s.interactiveProjects = [{ projectPath: 'D:/D' }]
+      s.projectListeners.forEach((cb) => cb())
+      await vi.advanceTimersByTimeAsync(250)
+
+      expect(mocks.listRecentCalls).toHaveBeenCalledTimes(2)
+      const template = tray.setContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      const d = projectItem(template, 'D')
+      expect(d?.enabled).toBe(false)
+      expect(d?.label).toContain('tray.running')
+      expect(template.indexOf(d!)).toBeLessThan(template.findIndex((i) => i.label === 'A'))
+    })
+
+    it('库变更信号同样作废候选缓存', async () => {
+      setPlatform('darwin')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      await flush()
+      expect(mocks.listRecentCalls).toHaveBeenCalledTimes(1)
+
+      seedProjects(['D:/B', 'D:/A'], {
+        'D:/B': '2025-05-01T00:00:00',
+        'D:/A': '2025-01-01T00:00:00'
+      })
+      s.libraryListeners.forEach((cb) => cb())
+      await vi.advanceTimersByTimeAsync(250)
+
+      expect(mocks.listRecentCalls).toHaveBeenCalledTimes(2)
+      const template = tray.setContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      expect(labelsOf(template)).toContain('B')
+    })
+
+    it('什么事件都不来：不轮询，名单不被定时重读', async () => {
+      setPlatform('darwin')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      await flush()
+      expect(mocks.listRecentCalls).toHaveBeenCalledTimes(1)
+      expect(tray.setContextMenu).toHaveBeenCalledTimes(1)
+
+      seedProjects(['D:/B', 'D:/A'], {
+        'D:/B': '2025-05-01T00:00:00',
+        'D:/A': '2025-01-01T00:00:00'
+      })
+      await vi.advanceTimersByTimeAsync(60_000)
+
+      expect(mocks.listRecentCalls).toHaveBeenCalledTimes(1)
+      expect(tray.setContextMenu).toHaveBeenCalledTimes(1)
+    })
+
+    it('等连接的标记到期自己退回可点：pending 的打开不排期', async () => {
+      setPlatform('darwin')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+      let resolveOpen!: (value: { success: boolean }) => void
+      s.openFile = () => new Promise((res) => (resolveOpen = res))
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      await flush()
+
+      const template0 = tray.setContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      projectItem(template0, 'A')!.click!()
+      await vi.advanceTimersByTimeAsync(250)
+      const launching = tray.setContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      const launchingItem = projectItem(launching, 'A')!
+      expect(launchingItem.enabled).toBe(false)
+      expect(launchingItem.label).toContain('tray.launching')
+
+      await vi.advanceTimersByTimeAsync(LAUNCH_TTL_MS + 60_000)
+      const pending = tray.setContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      const pendingItem = projectItem(pending, 'A')!
+      expect(pendingItem.enabled).toBe(false)
+      expect(pendingItem.label).toContain('tray.launching')
+
+      resolveOpen({ success: true })
+      await vi.advanceTimersByTimeAsync(250)
+      const waiting = tray.setContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      expect(projectItem(waiting, 'A')!.label).toContain('tray.launching')
+
+      await vi.advanceTimersByTimeAsync(LAUNCH_TTL_MS + 250)
+      const reverted = tray.setContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      expect(projectItem(reverted, 'A')!.enabled).not.toBe(false)
+      expect(projectItem(reverted, 'A')!.label).not.toContain('tray.launching')
+    })
+
+    it('will-quit：在途的 build 不发布', async () => {
+      setPlatform('darwin')
+      let resolveList!: (value: Awaited<ReturnType<typeof s.listRecent>>) => void
+      s.listRecent = () => new Promise((res) => (resolveList = res))
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+
+      s.willQuitHandlers.forEach((cb) => cb())
+      resolveList([])
+      await flush()
+      expect(tray.setContextMenu).not.toHaveBeenCalled()
+    })
+
+    it('will-quit：订阅摘掉、定时器停，落定路径全部不再到界面', async () => {
+      setPlatform('darwin')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+      s.openFile = async () => ({ success: true, pluginFailure: 'PLUGIN_FILES_MISSING' })
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      await flush()
+      expect(tray.setContextMenu).toHaveBeenCalledTimes(1)
+      expect(mocks.listRecentCalls).toHaveBeenCalledTimes(1)
+      const items = tray.setContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+
+      projectItem(items, 'A')!.click!()
+      await flush()
+      expect(s.notifications).toHaveLength(1)
+
+      s.willQuitHandlers.forEach((cb) => cb())
+      expect(s.projectListeners).toHaveLength(0)
+      expect(s.libraryListeners).toHaveLength(0)
+
+      s.languageListeners.forEach((cb) => cb())
+      expect(tray.setToolTip).toHaveBeenCalledTimes(1)
+
+      projectItem(items, 'A')!.click!()
+      await flush()
+      expect(s.notifications).toHaveLength(1)
+
+      s.notifications[0].emit('click')
+      s.notifications[0].emit('failed', {}, new Error('late'))
+      expect(mocks.showMainWindow).not.toHaveBeenCalled()
+      expect(takePending()).toBeNull()
+
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(tray.setContextMenu).toHaveBeenCalledTimes(1)
+      expect(mocks.listRecentCalls).toHaveBeenCalledTimes(1)
+    })
+
+    it('语言变了：悬停提示当场重设，菜单防抖后重建', async () => {
+      setPlatform('darwin')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      await flush()
+      expect(tray.setContextMenu).toHaveBeenCalledTimes(1)
+      expect(tray.setToolTip).toHaveBeenCalledTimes(1)
+
+      s.languageListeners.forEach((cb) => cb())
+      expect(tray.setToolTip).toHaveBeenCalledTimes(2)
+      expect(tray.setContextMenu).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(250)
+      expect(tray.setContextMenu).toHaveBeenCalledTimes(2)
+    })
+
+    it('界面报上来最近对话：防抖后重建，菜单里有这几条', async () => {
+      setPlatform('darwin')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      await flush()
+      expect(tray.setContextMenu).toHaveBeenCalledTimes(1)
+
+      s.ipcHandlers.get(TRAY_SET_RECENT_SESSIONS_CHANNEL)!({}, [
+        { id: 's1', title: 'Chat one', updatedAt: '2025-05-01T00:00:00' }
+      ])
+      await vi.advanceTimersByTimeAsync(150)
+      expect(tray.setContextMenu).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(100)
+      expect(tray.setContextMenu).toHaveBeenCalledTimes(2)
+      const template = tray.setContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      expect(labelsOf(template)).toContain('Chat one')
+    })
+  })
+
+  describe('菜单项接线', () => {
+    async function darwinMenu(): Promise<{
+      tray: ReturnType<typeof newTray>
+      items: MenuItem[]
+    }> {
+      setPlatform('darwin')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      await flush()
+      return { tray, items: tray.setContextMenu.mock.calls.at(-1)![0] as MenuItem[] }
+    }
+
+    it('点「新对话」：窗口叫到前台，动作进待取槽，取走即清', async () => {
+      const { items } = await darwinMenu()
+
+      items.find((item) => item.label === 'tray.newChat')!.click!()
+
+      expect(mocks.showMainWindow).toHaveBeenCalledTimes(1)
+      expect(mocks.sendToWindow).toHaveBeenCalledTimes(1)
+      expect(takePending()).toEqual({ type: 'new-session' })
+      expect(takePending()).toBeNull()
+    })
+
+    it('点一条最近对话：待取槽里拿到 open-session', async () => {
+      const { tray } = await darwinMenu()
+
+      s.ipcHandlers.get(TRAY_SET_RECENT_SESSIONS_CHANNEL)!({}, [
+        { id: 's1', title: 'Chat one', updatedAt: '2025-05-01T00:00:00' }
+      ])
+      await vi.advanceTimersByTimeAsync(250)
+      const items = tray.setContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+
+      items.find((item) => item.label === 'Chat one')!.click!()
+
+      expect(takePending()).toEqual({ type: 'open-session', sessionId: 's1' })
+    })
+
+    it('点「打开 GDBox」：只把窗口叫到前台，不落动作', async () => {
+      const { items } = await darwinMenu()
+
+      items.find((item) => item.label === 'tray.open')!.click!()
+
+      expect(mocks.showMainWindow).toHaveBeenCalledTimes(1)
+      expect(mocks.sendToWindow).not.toHaveBeenCalled()
+      expect(takePending()).toBeNull()
+    })
+  })
+
+  describe('win32 右键现建', () => {
+    /** 右键弹菜单 → 点工程项 → 等打开链路落定（标记进入「等连接」段） */
+    async function launchFromMenu(tray: { popUpContextMenu: Mock }): Promise<void> {
+      s.trayHandlers.get('right-click')!()
+      await flush()
+      const menu = tray.popUpContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      projectItem(menu, 'A')!.click!()
+      await flush()
+    }
+
+    it('会话 / 语言 / 工程变化都不排定时器；右键时才现建，拿到的是新名单', async () => {
+      setPlatform('win32')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      expect(s.trayHandlers.has('right-click')).toBe(true)
+
+      s.projectListeners.forEach((cb) => cb())
+      s.libraryListeners.forEach((cb) => cb())
+      s.languageListeners.forEach((cb) => cb())
+      s.ipcHandlers.get(TRAY_SET_RECENT_SESSIONS_CHANNEL)!({}, [
+        { id: 's1', title: 'Chat one', updatedAt: '2025-05-01T00:00:00' }
+      ])
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(tray.setContextMenu).not.toHaveBeenCalled()
+      expect(tray.popUpContextMenu).not.toHaveBeenCalled()
+      expect(mocks.listRecentCalls).not.toHaveBeenCalled()
+      expect(tray.setToolTip).toHaveBeenCalledTimes(2)
+
+      seedProjects(['D:/B', 'D:/A'], {
+        'D:/B': '2025-05-01T00:00:00',
+        'D:/A': '2025-01-01T00:00:00'
+      })
+      s.trayHandlers.get('right-click')!()
+      await flush()
+
+      expect(tray.popUpContextMenu).toHaveBeenCalledTimes(1)
+      const template = tray.popUpContextMenu.mock.calls[0][0] as MenuItem[]
+      const labels = labelsOf(template)
+      expect(labels).toContain('Chat one')
+      expect(labels).toContain('B')
+      expect(mocks.listRecentCalls).toHaveBeenCalledTimes(1)
+    })
+
+    it('will-quit 之后右键不再弹菜单', async () => {
+      setPlatform('win32')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      s.willQuitHandlers.forEach((cb) => cb())
+
+      s.trayHandlers.get('right-click')!()
+      await flush()
+      expect(tray.popUpContextMenu).not.toHaveBeenCalled()
+      expect(mocks.listRecentCalls).not.toHaveBeenCalled()
+    })
+
+    it('TTL 内工程起停：不作废名单缓存，下一次右键现算「运行中」', async () => {
+      setPlatform('win32')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      s.trayHandlers.get('right-click')!()
+      await flush()
+
+      const idle = tray.popUpContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      expect(projectItem(idle, 'A')!.enabled).not.toBe(false)
+      expect(projectItem(idle, 'A')!.label).not.toContain('tray.running')
+
+      s.interactiveProjects = [{ projectPath: 'D:/A' }]
+      await vi.advanceTimersByTimeAsync(1_000)
+      s.trayHandlers.get('right-click')!()
+      await flush()
+
+      const running = tray.popUpContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      expect(projectItem(running, 'A')!.enabled).toBe(false)
+      expect(projectItem(running, 'A')!.label).toContain('tray.running')
+
+      s.interactiveProjects = []
+      s.trayHandlers.get('right-click')!()
+      await flush()
+
+      const reverted = tray.popUpContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      expect(projectItem(reverted, 'A')!.enabled).not.toBe(false)
+      expect(projectItem(reverted, 'A')!.label).not.toContain('tray.running')
+      expect(mocks.listRecentCalls).toHaveBeenCalledTimes(1)
+      expect(tray.popUpContextMenu).toHaveBeenCalledTimes(3)
+      expect(tray.setContextMenu).not.toHaveBeenCalled()
+    })
+
+    it('连上又关闭、中间没人右键：标记在连上那一刻就摘了，关闭后不再标「启动中」', async () => {
+      setPlatform('win32')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      await launchFromMenu(tray)
+
+      // 引擎连上 → 又断开（工程被关）。中间一次右键都没有 —— 点了启动就去
+      // 编辑器里干活的正常路径；标记只能在 onProjectsChanged 里摘掉
+      s.interactiveProjects = [{ projectPath: 'D:/A' }]
+      s.projectListeners.forEach((cb) => cb())
+      s.interactiveProjects = []
+      s.projectListeners.forEach((cb) => cb())
+      await flush()
+
+      s.trayHandlers.get('right-click')!()
+      await flush()
+      const closed = tray.popUpContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      const item = projectItem(closed, 'A')!
+      expect(item.label).toBe('A')
+      expect(item.enabled).not.toBe(false)
+    })
+
+    it('插件一直没连上就被关掉：过了宽限右键现查进程表，引擎不在就摘标记', async () => {
+      setPlatform('win32')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      await launchFromMenu(tray)
+
+      // 引擎没连上、进程也已经没了 —— 过了进程对账宽限再右键
+      await vi.advanceTimersByTimeAsync(40_000)
+
+      s.trayHandlers.get('right-click')!()
+      await flush()
+      const closed = tray.popUpContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      const item = projectItem(closed, 'A')!
+      expect(item.label).toBe('A')
+      expect(item.enabled).not.toBe(false)
+    })
+
+    it('宽限内右键不对进程表：刚点出去的启动照样灰着', async () => {
+      setPlatform('win32')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      await launchFromMenu(tray)
+
+      // 宽限内就算进程表暂时查不到（引擎刚拉起、WMI 还没收录），也得继续拦
+      await vi.advanceTimersByTimeAsync(5_000)
+      s.trayHandlers.get('right-click')!()
+      await flush()
+      const during = tray.popUpContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      const item = projectItem(during, 'A')!
+      expect(item.enabled).toBe(false)
+      expect(item.label).toContain('tray.launching')
+    })
+
+    it('进程还活着只是没连上：过了宽限照样标「启动中」', async () => {
+      setPlatform('win32')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      await launchFromMenu(tray)
+
+      // 引擎起来了（进程在）、插件慢还没握手 —— 这不是残留，不许摘
+      s.runningProcessPaths = ['D:/A/project.godot']
+      await vi.advanceTimersByTimeAsync(40_000)
+
+      s.trayHandlers.get('right-click')!()
+      await flush()
+      const alive = tray.popUpContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      const item = projectItem(alive, 'A')!
+      expect(item.enabled).toBe(false)
+      expect(item.label).toContain('tray.launching')
+    })
+
+    it('进程表整个查挂了：标记留着 —— 查不出来不等于不在跑', async () => {
+      setPlatform('win32')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      await launchFromMenu(tray)
+
+      // 过了宽限、探测整个抛错：查不出来不等于不在跑，标记留给 TTL
+      s.processQueryFails = true
+      await vi.advanceTimersByTimeAsync(40_000)
+
+      s.trayHandlers.get('right-click')!()
+      await flush()
+      const during = tray.popUpContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      const item = projectItem(during, 'A')!
+      expect(item.enabled).toBe(false)
+      expect(item.label).toContain('tray.launching')
+    })
+
+    it('连点两下右键：只弹后一次建好的菜单', async () => {
+      setPlatform('win32')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+      let resolveList!: (value: Awaited<ReturnType<typeof s.listRecent>>) => void
+      s.listRecent = () => new Promise((res) => (resolveList = res))
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+
+      s.ipcHandlers.get(TRAY_SET_RECENT_SESSIONS_CHANNEL)!({}, [])
+      s.trayHandlers.get('right-click')!()
+
+      s.ipcHandlers.get(TRAY_SET_RECENT_SESSIONS_CHANNEL)!({}, [
+        { id: 's2', title: 'Second', updatedAt: '2025-05-01T00:00:00' }
+      ])
+      s.trayHandlers.get('right-click')!()
+
+      resolveList([
+        {
+          projectPath: 'D:/A/project.godot',
+          projectName: 'A',
+          lastOpenTime: '2025-01-01T00:00:00',
+          isImported: true
+        }
+      ])
+      await flush()
+
+      expect(tray.popUpContextMenu).toHaveBeenCalledTimes(1)
+      const template = tray.popUpContextMenu.mock.calls[0][0] as MenuItem[]
+      expect(labelsOf(template)).toContain('Second')
+      expect(mocks.listRecentCalls).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('通知落定', () => {
+    async function openAndSettle(): Promise<void> {
+      setPlatform('win32')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      s.trayHandlers.get('right-click')!()
+      await flush()
+      const items = tray.popUpContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+      projectItem(items, 'A')!.click!()
+      await flush()
+    }
+
+    it('插件失败的系统通知弹不出来（failed）：动作照样送进待取槽', async () => {
+      s.openFile = async () => ({ success: true, pluginFailure: 'PLUGIN_FILES_MISSING' })
+      await openAndSettle()
+      expect(s.notifications).toHaveLength(1)
+
+      s.notifications[0].emit('failed', {}, new Error('native show failure'))
+      expect(mocks.showMainWindow).toHaveBeenCalledTimes(1)
+      expect(mocks.sendToWindow).toHaveBeenCalledTimes(1)
+      expect(takePending()).toEqual({
+        type: 'plugin-failure',
+        pluginFailure: 'PLUGIN_FILES_MISSING',
+        originPath: 'D:/A/project.godot',
+        projectName: 'A'
+      })
+      expect(takePending()).toBeNull()
+    })
+
+    it('failed 之后又补一个迟到的 click：动作只落定一回', async () => {
+      s.openFile = async () => ({ success: true, pluginFailure: 'PLUGIN_FILES_MISSING' })
+      await openAndSettle()
+
+      s.notifications[0].emit('failed', {}, new Error('native show failure'))
+      s.notifications[0].emit('click')
+      expect(mocks.showMainWindow).toHaveBeenCalledTimes(1)
+      expect(takePending()).toMatchObject({ type: 'plugin-failure' })
+      expect(takePending()).toBeNull()
+    })
+
+    it('系统不支持通知：动作立即送到', async () => {
+      s.notifSupported = false
+      s.openFile = async () => ({ success: true, pluginFailure: 'PLUGIN_FILES_MISSING' })
+      await openAndSettle()
+
+      expect(s.notifications).toHaveLength(0)
+      expect(mocks.showMainWindow).toHaveBeenCalledTimes(1)
+      expect(takePending()).toMatchObject({ type: 'plugin-failure' })
+    })
+
+    it('Notification 构造直接抛：动作照样送到', async () => {
+      s.notifConstructorThrows = true
+      s.openFile = async () => ({ success: true, pluginFailure: 'PLUGIN_FILES_MISSING' })
+      await openAndSettle()
+
+      expect(mocks.showMainWindow).toHaveBeenCalledTimes(1)
+      expect(takePending()).toMatchObject({ type: 'plugin-failure' })
+    })
+
+    it('show() 抛：照样落定，不重复', async () => {
+      s.notifShowThrows = true
+      s.openFile = async () => ({ success: true, pluginFailure: 'PLUGIN_FILES_MISSING' })
+      await openAndSettle()
+
+      expect(mocks.showMainWindow).toHaveBeenCalledTimes(1)
+      expect(takePending()).toMatchObject({ type: 'plugin-failure' })
+    })
+
+    it('普通打开失败：通知已经说完了，点通知只把窗口叫回来，不再补弹同一句话', async () => {
+      s.openFile = async () => ({ success: false, error: 'NO_FILE_ASSOCIATION' })
+      await openAndSettle()
+
+      expect(s.notifications).toHaveLength(1)
+      expect(s.notifications[0].options.body).toContain('NO_FILE_ASSOCIATION')
+      s.notifications[0].emit('click')
+
+      expect(mocks.showMainWindow).toHaveBeenCalledTimes(1)
+      expect(mocks.dialogShow).not.toHaveBeenCalled()
+      expect(takePending()).toBeNull()
+    })
+
+    it('普通打开失败但通知弹不出来：原因交给界面用应用内的框弹', async () => {
+      s.notifSupported = false
+      s.openFile = async () => ({ success: false, error: 'NO_FILE_ASSOCIATION' })
+      await openAndSettle()
+
+      expect(mocks.showMainWindow).toHaveBeenCalledTimes(1)
+      expect(mocks.dialogShow).not.toHaveBeenCalled()
+      const action = takePending() as { type: string; title: string; body: string }
+      expect(action.type).toBe('open-failed')
+      expect(action.title).toBe('tray.openFailedTitle')
+      expect(action.body).toContain('NO_FILE_ASSOCIATION')
+    })
+
+    it('编辑器已经开着这个工程（盒子没认出来）：不开第二个，通知一声，菜单项不灰', async () => {
+      setPlatform('win32')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+      s.runningProcessPaths = ['D:/A/project.godot']
+      const openFile = vi.fn(async () => ({ success: true }))
+      s.openFile = openFile
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      s.trayHandlers.get('right-click')!()
+      await flush()
+      projectItem(tray.popUpContextMenu.mock.calls.at(-1)![0] as MenuItem[], 'A')!.click!()
+      await flush()
+
+      expect(openFile).not.toHaveBeenCalled()
+      expect(s.notifications).toHaveLength(1)
+      expect(s.notifications[0].options.title).toBe('tray.alreadyRunningTitle')
+
+      s.trayHandlers.get('right-click')!()
+      await flush()
+      const item = projectItem(tray.popUpContextMenu.mock.calls.at(-1)![0] as MenuItem[], 'A')
+      expect(item?.label).toBe('A')
+      expect(item?.enabled).not.toBe(false)
+    })
+  })
+
+  describe('退出确认', () => {
+    function quitItem(items: MenuItem[]): MenuItem {
+      return items.find((item) => item.label === 'tray.quit')!
+    }
+
+    async function darwinMenu(): Promise<MenuItem[]> {
+      setPlatform('darwin')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      await flush()
+      return tray.setContextMenu.mock.calls.at(-1)![0] as MenuItem[]
+    }
+
+    function confirmFromUi(reason?: 'update'): unknown {
+      return s.ipcHandlers.get(TRAY_CONFIRM_QUIT_CHANNEL)!({}, reason)
+    }
+
+    it('没有会话操作：直接退，不拉窗口也不问', async () => {
+      const items = await darwinMenu()
+      quitItem(items).click!()
+      await flush()
+
+      expect(mocks.appQuit).toHaveBeenCalledTimes(1)
+      expect(mocks.dialogShow).not.toHaveBeenCalled()
+      expect(mocks.showMainWindow).not.toHaveBeenCalled()
+    })
+
+    it('有会话操作：窗口叫回来，确认交给界面的应用内确认框，不弹原生框', async () => {
+      mocks.countActiveOperations.mockReturnValue(2)
+      const items = await darwinMenu()
+      quitItem(items).click!()
+      await flush()
+
+      expect(mocks.showMainWindow).toHaveBeenCalledTimes(1)
+      expect(takePending()).toEqual({ type: 'confirm-quit', count: 2 })
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(mocks.dialogShow).not.toHaveBeenCalled()
+      expect(mocks.appQuit).not.toHaveBeenCalled()
+    })
+
+    it('界面里选了「仍然退出」：退', async () => {
+      mocks.countActiveOperations.mockReturnValue(1)
+      const items = await darwinMenu()
+      quitItem(items).click!()
+      takePending()
+
+      expect(confirmFromUi()).toEqual({ success: true })
+      expect(mocks.appQuit).toHaveBeenCalledTimes(1)
+    })
+
+    it('界面一直没来取：退回原生确认框，默认和取消都在「取消」上', async () => {
+      mocks.countActiveOperations.mockReturnValue(1)
+      mocks.dialogShow.mockResolvedValue({ response: 1 })
+      const items = await darwinMenu()
+      quitItem(items).click!()
+      await vi.advanceTimersByTimeAsync(8_000)
+
+      expect(mocks.dialogShow).toHaveBeenCalledTimes(1)
+      const [options] = mocks.dialogShow.mock.calls[0] as [
+        { buttons: string[]; defaultId: number; cancelId: number }
+      ]
+      expect(options.buttons).toEqual(['tray.quitConfirmOk', 'tray.quitConfirmCancel'])
+      expect(options.defaultId).toBe(1)
+      expect(options.cancelId).toBe(1)
+      expect(mocks.appQuit).not.toHaveBeenCalled()
+      // 没取走的那条清掉了，界面之后挂上来不会再弹一次
+      expect(takePending()).toBeNull()
+    })
+
+    it('原生框里按了「仍然退出」：退；框开着时再点退出不叠第二个', async () => {
+      mocks.countActiveOperations.mockReturnValue(1)
+      let answer: (value: { response: number }) => void = () => {}
+      mocks.dialogShow.mockImplementation(() => new Promise((resolve) => (answer = resolve)))
+      const items = await darwinMenu()
+      quitItem(items).click!()
+      await vi.advanceTimersByTimeAsync(8_000)
+      quitItem(items).click!()
+      await vi.advanceTimersByTimeAsync(8_000)
+      expect(mocks.dialogShow).toHaveBeenCalledTimes(1)
+
+      answer({ response: 0 })
+      await flush()
+      expect(mocks.appQuit).toHaveBeenCalledTimes(1)
+    })
+
+    it('原生框也弹不出来：记一笔，按用户意图直接退出', async () => {
+      mocks.countActiveOperations.mockReturnValue(1)
+      mocks.dialogShow.mockRejectedValue(new Error('no dialog'))
+      const items = await darwinMenu()
+      quitItem(items).click!()
+      await vi.advanceTimersByTimeAsync(8_000)
+      await flush()
+
+      expect(mocks.appQuit).toHaveBeenCalledTimes(1)
+      expect(mocks.loggerWarn).toHaveBeenCalled()
+    })
+
+    it('界面取走了就不退回原生框', async () => {
+      mocks.countActiveOperations.mockReturnValue(1)
+      const items = await darwinMenu()
+      quitItem(items).click!()
+      takePending()
+      await vi.advanceTimersByTimeAsync(8_000)
+
+      expect(mocks.dialogShow).not.toHaveBeenCalled()
+    })
+
+    it('will-quit 之后界面迟到的确认不再退第二次', async () => {
+      mocks.countActiveOperations.mockReturnValue(1)
+      const items = await darwinMenu()
+      quitItem(items).click!()
+      takePending()
+      s.willQuitHandlers.forEach((handler) => handler())
+
+      confirmFromUi()
+      expect(mocks.appQuit).not.toHaveBeenCalled()
+    })
+
+    describe('托盘以外的退出（requestGuardedQuit）', () => {
+      it('没有会话操作：当场走发起方给的路，不问', async () => {
+        await darwinMenu()
+        const proceed = vi.fn()
+        requestGuardedQuit(proceed, 'update')
+
+        expect(proceed).toHaveBeenCalledTimes(1)
+        expect(mocks.showMainWindow).not.toHaveBeenCalled()
+        expect(mocks.appQuit).not.toHaveBeenCalled()
+      })
+
+      it('安装更新撞上会话操作：同一条确认动作，带 update；确认后装包而不是 app.quit', async () => {
+        mocks.countActiveOperations.mockReturnValue(2)
+        await darwinMenu()
+        const proceed = vi.fn()
+        requestGuardedQuit(proceed, 'update')
+
+        expect(proceed).not.toHaveBeenCalled()
+        expect(takePending()).toEqual({ type: 'confirm-quit', count: 2, reason: 'update' })
+        confirmFromUi('update')
+        expect(proceed).toHaveBeenCalledTimes(1)
+        expect(mocks.appQuit).not.toHaveBeenCalled()
+      })
+
+      it('更新框开着时又点托盘退出：确认更新框照样装包，不被后来的退出换成 app.quit', async () => {
+        mocks.countActiveOperations.mockReturnValue(1)
+        await darwinMenu()
+        const install = vi.fn()
+        requestGuardedQuit(install, 'update')
+        const plainQuit = vi.fn()
+        requestGuardedQuit(plainQuit)
+
+        confirmFromUi('update')
+        expect(install).toHaveBeenCalledTimes(1)
+        expect(plainQuit).not.toHaveBeenCalled()
+      })
+
+      it('app-quit 撞上会话操作：动作和托盘一模一样', async () => {
+        mocks.countActiveOperations.mockReturnValue(1)
+        await darwinMenu()
+        const proceed = vi.fn()
+        requestGuardedQuit(proceed)
+
+        expect(takePending()).toEqual({ type: 'confirm-quit', count: 1 })
+        confirmFromUi()
+        expect(proceed).toHaveBeenCalledTimes(1)
+      })
+
+      it('界面接不住：原生框按钮换成重启安装，确认后走发起方的路', async () => {
+        mocks.countActiveOperations.mockReturnValue(1)
+        mocks.dialogShow.mockResolvedValue({ response: 0 })
+        await darwinMenu()
+        const proceed = vi.fn()
+        requestGuardedQuit(proceed, 'update')
+        await vi.advanceTimersByTimeAsync(8_000)
+        await flush()
+
+        const [options] = mocks.dialogShow.mock.calls[0] as [{ buttons: string[] }]
+        expect(options.buttons).toEqual(['tray.updateConfirmOk', 'tray.quitConfirmCancel'])
+        expect(proceed).toHaveBeenCalledTimes(1)
+        expect(mocks.appQuit).not.toHaveBeenCalled()
+      })
+
+      it('更新的确认被托盘「退出」顶掉：确认的是后来那条', async () => {
+        mocks.countActiveOperations.mockReturnValue(1)
+        const items = await darwinMenu()
+        const proceed = vi.fn()
+        requestGuardedQuit(proceed, 'update')
+        quitItem(items).click!()
+        confirmFromUi()
+
+        expect(mocks.appQuit).toHaveBeenCalledTimes(1)
+        expect(proceed).not.toHaveBeenCalled()
+      })
+    })
+
+    it('win32 右键现建的菜单里点退出：有会话操作同样交给界面问', async () => {
+      setPlatform('win32')
+      seedProjects(['D:/A'], { 'D:/A': '2025-01-01T00:00:00' })
+      mocks.countActiveOperations.mockReturnValue(1)
+
+      const tray = newTray()
+      startTrayMenuController(tray as never, hostDeps)
+      s.trayHandlers.get('right-click')!()
+      await flush()
+
+      quitItem(tray.popUpContextMenu.mock.calls.at(-1)![0] as MenuItem[]).click!()
+      expect(takePending()).toEqual({ type: 'confirm-quit', count: 1 })
+      expect(mocks.appQuit).not.toHaveBeenCalled()
+      expect(tray.setContextMenu).not.toHaveBeenCalled()
+    })
+  })
+})

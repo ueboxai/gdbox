@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
+  <!-- 同公司图标家族：浅底圆角方块 + 四个黑色角括号（盒子）；虚幻盒子中间是 >，GDBox 换成 2×2 像素瓦片，代表游戏资产 -->
+  <rect x="32" y="32" width="448" height="448" rx="112" fill="#f7f7f7" stroke="#d8dadd" stroke-width="8" />
+  <g transform="translate(16 16) scale(7.5)" fill="none" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M27 10H10v17M37 10h17v17M54 37v17H37M27 54H10V37" stroke="#17191b" stroke-width="7" />
+  </g>
+  <g transform="translate(16 16) scale(7.5)" fill="#7c8389">
+    <rect x="23" y="23" width="8.2" height="8.2" />
+    <rect x="32.8" y="23" width="8.2" height="8.2" />
+    <rect x="23" y="32.8" width="8.2" height="8.2" />
+    <rect x="32.8" y="32.8" width="8.2" height="8.2" fill="#17191b" />
+  </g>
+</svg>

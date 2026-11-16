@@ -1,0 +1,31 @@
+{
+  "name": "gdbox-cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GDBox CLI — 让外部 Agent、开发者和脚本通过终端调用 GDBox 的 Godot 能力",
+  "type": "module",
+  "bin": {
+    "gdbox": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "claude-plugin",
+    "claude-plugin-mcp",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
+    "prepack": "pnpm run build",
+    "verify:package": "node scripts/check-package.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

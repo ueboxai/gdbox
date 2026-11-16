@@ -1,0 +1,264 @@
+/**
+ * 一条经验在磁盘上的样子，以及读写它。
+ *
+ * ## 为什么是 markdown 而不是数据库
+ *
+ * 硬规则 10：用户的东西以磁盘文件为准。经验虽然是整理员写的，但它属于用户 ——
+ * 要能打开看、手改、删；本工程那一层还能随工程进版本库。统计数字（出场几次、采纳几次）
+ * 变得太勤，另放 `.ledger.json`，不去反复改用户看得见的文件（见 `ledger.ts`）。
+ *
+ * ## 为什么按工具分文件
+ *
+ * 召回的第一把钥匙就是工具名（见 `recall.ts`）：一次报错只需要读一个文件。
+ *
+ * ## 格式
+ *
+ * ```markdown
+ * ## Godot 4 里实例化场景用 instantiate()
+ * <!-- id: e-1a2b3c -->
+ * - key: godot_check · "nonexistent function 'instance' in base 'packedscene'"
+ * - advice: PackedScene 在 Godot 4 里用 instantiate()，不是 instance()
+ * - expect: tool=edit_local_file
+ * - source: 2026-09-28 · session a1b2 · failed twice, then succeeded
+ * - verified: 2026-09-28 · Godot 4.3
+ * - status: trial
+ * ```
+ *
+ * 通用层（`<userData>/experience/`）的经验多两个字段，工程层的没有：
+ *
+ * ```markdown
+ * - engines: 4.2, 4.3      在这些引擎版本上被照着做并且成功过
+ * - not-for: 4.4           在这些版本上照着做了还是同一个错
+ * ```
+ *
+ * 字段名用英文、固定小写：解析要稳，而界面上显示的是翻译过的标签，不是这几个词。
+ * 解析宽进：认不出的行原样跳过，一条经验缺了必填字段就整条不认 —— 用户手改坏了
+ * 一条，不能拖垮整个文件。
+ */
+
+export type ExperienceStatus = 'trial' | 'proven' | 'retired'
+
+/**
+ * 为什么退休。界面要说得出「是被挤掉的，还是证据说它不对」—— 两者对用户的意思完全不同。
+ *
+ * - capacity：这一层满了，它是最该走的那条
+ * - replaced：同一个 API 来了一条新的
+ * - failed：照着做了还是同一个错
+ * - ignored：一直摆在眼前没人照做
+ * - no-lift：样本够了，出场不比不出场好
+ * - refuted：引擎里一查，它说不存在的东西其实存在
+ * - script-bug：后来认定这类报错是脚本自己的 bug，不是引擎的规矩
+ */
+export type RetireReason =
+  | 'capacity'
+  | 'replaced'
+  | 'failed'
+  | 'ignored'
+  | 'no-lift'
+  | 'refuted'
+  | 'script-bug'
+
+const RETIRE_REASONS: ReadonlySet<string> = new Set<RetireReason>([
+  'capacity',
+  'replaced',
+  'failed',
+  'ignored',
+  'no-lift',
+  'refuted',
+  'script-bug'
+])
+
+/**
+ * 「采纳」的判据：经验出场后，下一步做了它说的事。
+ *
+ * 必须是结构化的 —— 「模型有没有照着做」让模型自己判断，又回到了靠猜。
+ * 两种都没写的经验判不了采纳，也就永远转不了正（见 `lifecycle.ts`）。
+ */
+export interface ExpectedAction {
+  /** 下一步调用了这个工具 */
+  tool?: string
+  /** 同一个工具重试时，这个参数的值变了 */
+  param?: string
+}
+
+export interface ExperienceEntry {
+  id: string
+  title: string
+  tool: string
+  /** 归一化后的报错里必须含有的一段（见 `errorSignature.ts`） */
+  errorPattern: string
+  advice: string
+  expect: ExpectedAction
+  source: string
+  /** 验真的日期与引擎版本 */
+  verified?: { date: string; engine?: string }
+  status: ExperienceStatus
+  /** 退休的才有。这个字段出现之前退休的旧经验没有 */
+  retiredBecause?: RetireReason
+  /** 用户钉住的不会被淘汰 */
+  pinned?: boolean
+  /** 通用层：在哪些引擎版本（major.minor）上被照着做并且成功过 */
+  engines?: string[]
+  /** 通用层：在哪些引擎版本上照着做了还是同一个错 —— 这些版本上不再出场 */
+  notFor?: string[]
+  /**
+   * 验证工具才有：报错在说的那个 API（`packedscene.instance`）。召回时新报错得说的是同一个 API。
+   * 见 `specificity.ts` 的 `symbolOf`
+   */
+  symbol?: string
+  /**
+   * 脚本里的错误写法（`.instance`、`kinematicbody2d`），从「改文件时删掉、改完没有」的行里确定性抽出来。
+   * 已验证的经验据此在执行前提醒（见 `precheck.ts`）
+   */
+  avoid?: string
+}
+
+/** `4.3.stable` / `Godot 4.3` → `4.3`。拿不出 major.minor 的回 undefined */
+export function engineMinor(version: string | undefined): string | undefined {
+  const match = version?.match(/(\d+)\.(\d+)/)
+  return match ? `${match[1]}.${match[2]}` : undefined
+}
+
+function parseList(value: string | undefined): string[] | undefined {
+  const list = (value ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  return list.length ? list : undefined
+}
+
+const ID_LINE = /^<!--\s*id:\s*([\w-]+)\s*-->$/
+const FIELD_LINE = /^-\s*([a-z-]+):\s*(.*)$/
+
+function parseKey(value: string): { tool: string; errorPattern: string } | undefined {
+  const match = value.match(/^([\w.-]+)\s*·\s*"(.*)"$/)
+  if (!match) return undefined
+  return { tool: match[1], errorPattern: match[2] }
+}
+
+function parseExpect(value: string): ExpectedAction {
+  const expect: ExpectedAction = {}
+  for (const part of value.split(/\s*,\s*/)) {
+    const [k, v] = part.split('=').map((s) => s.trim())
+    if (!v) continue
+    if (k === 'tool') expect.tool = v
+    if (k === 'param') expect.param = v
+  }
+  return expect
+}
+
+function parseVerified(value: string): ExperienceEntry['verified'] {
+  const [date, engine] = value.split('·').map((s) => s.trim())
+  if (!date) return undefined
+  const version = engine?.replace(/^(UE|Godot)\s*/i, '')
+  return version ? { date, engine: version } : { date }
+}
+
+function parseStatus(value: string): ExperienceStatus | undefined {
+  return value === 'trial' || value === 'proven' || value === 'retired' ? value : undefined
+}
+
+export function parseExperienceFile(text: string): ExperienceEntry[] {
+  const entries: ExperienceEntry[] = []
+  const blocks = text.split(/^## /m).slice(1)
+
+  for (const block of blocks) {
+    const [titleLine, ...lines] = block.split(/\r?\n/)
+    const fields: Record<string, string> = {}
+    let id: string | undefined
+    for (const raw of lines) {
+      const line = raw.trim()
+      const idMatch = line.match(ID_LINE)
+      if (idMatch) {
+        id = idMatch[1]
+        continue
+      }
+      const field = line.match(FIELD_LINE)
+      if (field) fields[field[1]] = field[2].trim()
+    }
+
+    const key = fields.key ? parseKey(fields.key) : undefined
+    const status = parseStatus(fields.status ?? '')
+    const title = titleLine.trim()
+    if (!id || !title || !key || !fields.advice || !status) continue
+
+    const verified = fields.verified ? parseVerified(fields.verified) : undefined
+    const engines = parseList(fields.engines)
+    const notFor = parseList(fields['not-for'])
+    const symbol = fields.symbol?.trim()
+    const avoid = fields.avoid?.trim()
+    const because = fields['retired-because']?.trim()
+    const retiredBecause =
+      status === 'retired' && because && RETIRE_REASONS.has(because)
+        ? (because as RetireReason)
+        : undefined
+    entries.push({
+      id,
+      title,
+      tool: key.tool,
+      errorPattern: key.errorPattern,
+      advice: fields.advice,
+      expect: parseExpect(fields.expect ?? ''),
+      source: fields.source ?? '',
+      ...(verified ? { verified } : {}),
+      status,
+      ...(retiredBecause ? { retiredBecause } : {}),
+      ...(fields.pinned === 'yes' ? { pinned: true } : {}),
+      ...(engines ? { engines } : {}),
+      ...(notFor ? { notFor } : {}),
+      ...(symbol ? { symbol } : {}),
+      ...(avoid ? { avoid } : {})
+    })
+  }
+  return entries
+}
+
+/** 单行字段不能带换行，否则下一次解析会把它劈成两条 */
+function oneLine(value: string): string {
+  return value.replace(/\s*\r?\n\s*/g, ' ').trim()
+}
+
+function formatExpect(expect: ExpectedAction): string {
+  return [
+    ...(expect.tool ? [`tool=${expect.tool}`] : []),
+    ...(expect.param ? [`param=${expect.param}`] : [])
+  ].join(', ')
+}
+
+export function serializeExperienceFile(tool: string, entries: ExperienceEntry[]): string {
+  const header =
+    `# ${tool}\n\n` +
+    '<!-- Written by GDBox from real engine results. Edit or delete freely; ' +
+    'statistics live in .ledger.json. -->\n'
+  const body = entries.map((entry) => {
+    const lines = [
+      `## ${oneLine(entry.title)}`,
+      `<!-- id: ${entry.id} -->`,
+      `- key: ${entry.tool} · "${oneLine(entry.errorPattern)}"`,
+      `- advice: ${oneLine(entry.advice)}`,
+      ...(formatExpect(entry.expect) ? [`- expect: ${formatExpect(entry.expect)}`] : []),
+      `- source: ${oneLine(entry.source)}`,
+      ...(entry.verified
+        ? [
+            `- verified: ${entry.verified.date}${entry.verified.engine ? ` · Godot ${entry.verified.engine}` : ''}`
+          ]
+        : []),
+      `- status: ${entry.status}`,
+      ...(entry.status === 'retired' && entry.retiredBecause
+        ? [`- retired-because: ${entry.retiredBecause}`]
+        : []),
+      ...(entry.pinned ? ['- pinned: yes'] : []),
+      ...(entry.engines?.length ? [`- engines: ${entry.engines.join(', ')}`] : []),
+      ...(entry.notFor?.length ? [`- not-for: ${entry.notFor.join(', ')}`] : []),
+      ...(entry.symbol ? [`- symbol: ${oneLine(entry.symbol)}`] : []),
+      ...(entry.avoid ? [`- avoid: ${oneLine(entry.avoid)}`] : [])
+    ]
+    return lines.join('\n')
+  })
+  return `${header}\n${body.join('\n\n')}\n`
+}
+
+/** 工具名 → 文件名。工具名本身就是安全字符，这里只防万一 */
+export function fileNameForTool(tool: string): string {
+  return `${tool.replace(/[^\w.-]/g, '_')}.md`
+}

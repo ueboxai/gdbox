@@ -1,0 +1,518 @@
+import type { ChatSession } from '@renderer/store/modules/chatSessions'
+
+/** 侧边栏组织方式：按 UE 工程分组，或平铺成一个列表 */
+export type ChatGroupMode = 'project' | 'flat'
+
+/** 组内排序方式 */
+export type ChatSortMode = 'recent' | 'created' | 'name'
+
+export const PINNED_GROUP_KEY = 'pinned'
+export const FLAT_GROUP_KEY = 'all'
+export const UNASSIGNED_GROUP_KEY = 'unassigned'
+
+/** 当前已连接的 UE 工程（只取分组需要的字段） */
+export interface ConnectedProjectRef {
+  projectName: string
+  projectPath?: string
+  engineVersion?: string
+}
+
+export type ChatSessionGroupKind = 'pinned' | 'project' | 'unassigned' | 'all'
+
+export interface ChatSessionGroup {
+  key: string
+  kind: ChatSessionGroupKind
+  /** 工程分组的工程名；其余分组为空串，标题由界面按 kind 取 i18n 文案 */
+  projectName: string
+  projectPath: string
+  engineVersion: string
+  /** 该工程当前是否正连着编辑器 */
+  connected: boolean
+  /**
+   * 同名工程不止一个路径，这一组只装其中一个路径（`projectPath` 就是它；
+   * 为空则是这个名字下没记路径的老对话）。按名字批量操作时要用
+   * `sessionInProjectGroup` 筛，否则会连同名的另一组一起动。
+   */
+  split: boolean
+  /** 用户把这个工程置顶了：排在「项目」区最前 */
+  pinned: boolean
+  sessions: ChatSession[]
+}
+
+export interface GroupChatSessionsOptions {
+  mode: ChatGroupMode
+  sortMode: ChatSortMode
+  connectedProjects?: ConnectedProjectRef[]
+  /** 用户手动加进来的工程，没有对话也要占一行 */
+  manualProjects?: ConnectedProjectRef[]
+  /** 被置顶的工程名 */
+  pinnedProjects?: string[]
+  /** 用户主动从侧边栏移走的工程；连接状态不能把它重新带回来 */
+  hiddenProjects?: string[]
+  keyword?: string
+  /**
+   * 是否把「已连接但还没有任何对话」的工程也列出来。
+   * 搜索时应传 false —— 搜索结果里出现一个空分组只会碍事。
+   */
+  includeEmptyConnected?: boolean
+}
+
+/**
+ * 工程分组 key。
+ *
+ * 按**工程名**（忽略大小写）归组，而不是按路径：同一个工程可能一次带着路径、
+ * 一次只有名字（不同来源盖的戳），按路径分会把一个工程劈成两组，
+ * 而用户眼里它就是一个工程。同一个名字真有两个路径时才拆，见 `projectGroupKeyResolver`。
+ */
+export function projectGroupKey(projectName: string): string {
+  return `project:${projectName.trim().toLowerCase()}`
+}
+
+function sessionProjectName(session: ChatSession): string {
+  return session.project?.projectName?.trim() || ''
+}
+
+/** 某个对话当前落在哪个分组里（用于打开对话时把它所在的分组展开） */
+export function sessionGroupKey(session: ChatSession, mode: ChatGroupMode): string {
+  if (session.pinned) return PINNED_GROUP_KEY
+  if (mode === 'flat') return FLAT_GROUP_KEY
+
+  const projectName = sessionProjectName(session)
+  return projectName ? projectGroupKey(projectName) : UNASSIGNED_GROUP_KEY
+}
+
+/**
+ * 侧边栏的三个顶层区：置顶 / 项目 / 对话。
+ *
+ * 「项目」下面才是一个个 UE 工程，「对话」放没归工程的对话——两者同级。
+ */
+export const SECTION_PINNED_KEY = 'section:pinned'
+export const SECTION_PROJECTS_KEY = 'section:projects'
+export const SECTION_PLAIN_KEY = 'section:plain'
+
+/** 某个对话属于哪个顶层区 */
+export function sessionSectionKey(session: ChatSession, mode: ChatGroupMode): string {
+  if (session.pinned) return SECTION_PINNED_KEY
+  if (mode === 'flat') return SECTION_PLAIN_KEY
+  return sessionProjectName(session) ? SECTION_PROJECTS_KEY : SECTION_PLAIN_KEY
+}
+
+/** 对话是否命中搜索词（标题 / 最后一条消息 / 所属工程） */
+export function matchChatSession(session: ChatSession, keyword: string): boolean {
+  const needle = keyword.trim().toLowerCase()
+  if (!needle) return true
+
+  const haystack = [session.title, session.lastMessagePreview || '', sessionProjectName(session)]
+    .join('\n')
+    .toLowerCase()
+
+  return haystack.includes(needle)
+}
+
+export function filterChatSessions(sessions: ChatSession[], keyword: string): ChatSession[] {
+  const needle = keyword.trim()
+  if (!needle) return [...sessions]
+  return sessions.filter((session) => matchChatSession(session, needle))
+}
+
+function compareByMode(left: ChatSession, right: ChatSession, mode: ChatSortMode): number {
+  if (mode === 'name') {
+    const byName = left.title.localeCompare(right.title, 'zh-Hans-CN')
+    if (byName !== 0) return byName
+  } else if (mode === 'created') {
+    const byCreated = right.createdAt - left.createdAt
+    if (byCreated !== 0) return byCreated
+  } else {
+    const byUpdated = right.updatedAt - left.updatedAt
+    if (byUpdated !== 0) return byUpdated
+  }
+
+  // 同权重时先看谁刚被置顶，再按更新时间，最后拿 id 兜底保证排序稳定
+  const byPinnedAt = (right.pinnedAt || 0) - (left.pinnedAt || 0)
+  if (byPinnedAt !== 0) return byPinnedAt
+
+  const byUpdated = right.updatedAt - left.updatedAt
+  if (byUpdated !== 0) return byUpdated
+
+  return left.id.localeCompare(right.id)
+}
+
+export function sortChatSessions(sessions: ChatSession[], mode: ChatSortMode): ChatSession[] {
+  return [...sessions].sort((left, right) => compareByMode(left, right, mode))
+}
+
+function groupSortValue(group: ChatSessionGroup, mode: ChatSortMode): number {
+  return group.sessions.reduce((latest, session) => {
+    const value = mode === 'created' ? session.createdAt : session.updatedAt
+    return Math.max(latest, value)
+  }, 0)
+}
+
+function compareProjectGroups(
+  left: ChatSessionGroup,
+  right: ChatSessionGroup,
+  mode: ChatSortMode
+): number {
+  // 用户手动置顶的工程压过一切
+  if (left.pinned !== right.pinned) {
+    return left.pinned ? -1 : 1
+  }
+
+  // 其次是正连着编辑器的工程：那是用户此刻真正在做的事
+  if (left.connected !== right.connected) {
+    return left.connected ? -1 : 1
+  }
+
+  if (mode === 'name') {
+    return left.projectName.localeCompare(right.projectName, 'zh-Hans-CN')
+  }
+
+  const byActivity = groupSortValue(right, mode) - groupSortValue(left, mode)
+  if (byActivity !== 0) return byActivity
+
+  return left.projectName.localeCompare(right.projectName, 'zh-Hans-CN')
+}
+
+function createGroup(
+  key: string,
+  kind: ChatSessionGroupKind,
+  overrides: Partial<ChatSessionGroup> = {}
+): ChatSessionGroup {
+  return {
+    key,
+    kind,
+    projectName: '',
+    projectPath: '',
+    engineVersion: '',
+    connected: false,
+    split: false,
+    pinned: false,
+    sessions: [],
+    ...overrides
+  }
+}
+
+interface ProjectGroupKeyResolver {
+  (projectName: string, projectPath: string | undefined): string
+  isSplit: (projectName: string) => boolean
+}
+
+/**
+ * 工程分组 key 的算法：默认按名字，**同一个名字出现了两个以上路径**才按路径拆。
+ *
+ * 只按名字分的话，同一台机器上开两个同名工程（复制一份改改）会被并成一组，
+ * 而主进程认归属是先比路径的 —— 两组对话其实各发往各的编辑器。
+ * 但也不能一律按路径：老对话的戳常常只有名字，一律按路径会把一个工程劈成两组。
+ * 拆开时，没记路径的老对话单独落在名字组里，不去猜它属于哪一个。
+ */
+function projectGroupKeyResolver(
+  sessions: ChatSession[],
+  projects: ConnectedProjectRef[]
+): ProjectGroupKeyResolver {
+  const pathsByName = new Map<string, Set<string>>()
+  const note = (name: string | undefined, path: string | undefined): void => {
+    const nameKey = name?.trim().toLowerCase()
+    const pathKey = projectPathKey(path)
+    if (!nameKey || !pathKey) return
+    const paths = pathsByName.get(nameKey) ?? new Set<string>()
+    paths.add(pathKey)
+    pathsByName.set(nameKey, paths)
+  }
+  for (const session of sessions) note(session.project?.projectName, session.project?.projectPath)
+  for (const project of projects) note(project.projectName, project.projectPath)
+
+  const isSplit = (projectName: string): boolean =>
+    (pathsByName.get(projectName.trim().toLowerCase())?.size ?? 0) > 1
+
+  const resolve = ((projectName: string, projectPath: string | undefined): string => {
+    const base = projectGroupKey(projectName)
+    if (!isSplit(projectName)) return base
+    const pathKey = projectPathKey(projectPath)
+    return pathKey ? `${base}@${pathKey}` : base
+  }) as ProjectGroupKeyResolver
+  resolve.isSplit = isSplit
+  return resolve
+}
+
+/**
+ * 这条对话是不是这个工程分组的。
+ *
+ * 对按名字操作的地方（归档整组、移出整组）用：拆开的分组只认自己的路径。
+ */
+export function sessionInProjectGroup(session: ChatSession, group: ChatSessionGroup): boolean {
+  const name = sessionProjectName(session)
+  if (!name || name.toLowerCase() !== group.projectName.trim().toLowerCase()) return false
+  if (!group.split) return true
+  return projectPathKey(session.project?.projectPath) === projectPathKey(group.projectPath)
+}
+
+/**
+ * 把对话切成侧边栏要渲染的分组。
+ *
+ * 顺序固定为：置顶 → 已连接工程 → 其余工程 → 纯对话。
+ * 置顶的对话**只**出现在置顶区，不在原工程里重复一份。
+ */
+export function groupChatSessions(
+  sessions: ChatSession[],
+  options: GroupChatSessionsOptions
+): ChatSessionGroup[] {
+  const {
+    mode,
+    sortMode,
+    connectedProjects = [],
+    manualProjects = [],
+    pinnedProjects = [],
+    hiddenProjects = [],
+    keyword = ''
+  } = options
+  const pinnedProjectKeys = new Set(pinnedProjects.map((name) => projectGroupKey(name)))
+  const hiddenProjectKeys = new Set(hiddenProjects.map((name) => projectGroupKey(name)))
+  const includeEmptyConnected = options.includeEmptyConnected ?? !keyword.trim()
+
+  const visible = filterChatSessions(sessions, keyword)
+  const pinned = visible.filter((session) => session.pinned)
+  const rest = visible.filter((session) => !session.pinned)
+
+  const groups: ChatSessionGroup[] = []
+
+  if (pinned.length > 0) {
+    groups.push(
+      createGroup(PINNED_GROUP_KEY, 'pinned', { sessions: sortChatSessions(pinned, sortMode) })
+    )
+  }
+
+  if (mode === 'flat') {
+    groups.push(createGroup(FLAT_GROUP_KEY, 'all', { sessions: sortChatSessions(rest, sortMode) }))
+    return groups
+  }
+
+  const keyOf = projectGroupKeyResolver(sessions, [...connectedProjects, ...manualProjects])
+
+  const connectedByKey = new Map<string, ConnectedProjectRef>()
+  for (const project of connectedProjects) {
+    const name = project.projectName?.trim()
+    if (!name) continue
+    if (hiddenProjectKeys.has(projectGroupKey(name))) continue
+    connectedByKey.set(keyOf(name, project.projectPath), project)
+  }
+
+  const projectGroups = new Map<string, ChatSessionGroup>()
+  const unassigned: ChatSession[] = []
+
+  for (const session of rest) {
+    const projectName = sessionProjectName(session)
+    if (!projectName) {
+      unassigned.push(session)
+      continue
+    }
+
+    if (hiddenProjectKeys.has(projectGroupKey(projectName))) {
+      unassigned.push(session)
+      continue
+    }
+    const key = keyOf(projectName, session.project?.projectPath)
+
+    const existing = projectGroups.get(key)
+    if (existing) {
+      existing.sessions.push(session)
+      existing.projectPath = existing.projectPath || session.project?.projectPath || ''
+      existing.engineVersion = existing.engineVersion || session.project?.engineVersion || ''
+      continue
+    }
+
+    const connected = connectedByKey.get(key)
+    projectGroups.set(
+      key,
+      createGroup(key, 'project', {
+        projectName,
+        projectPath: connected?.projectPath || session.project?.projectPath || '',
+        engineVersion: connected?.engineVersion || session.project?.engineVersion || '',
+        connected: Boolean(connected),
+        split: keyOf.isSplit(projectName),
+        pinned: pinnedProjectKeys.has(projectGroupKey(projectName)),
+        sessions: [session]
+      })
+    )
+  }
+
+  if (includeEmptyConnected) {
+    for (const [key, project] of connectedByKey) {
+      if (projectGroups.has(key)) continue
+      projectGroups.set(
+        key,
+        createGroup(key, 'project', {
+          projectName: project.projectName.trim(),
+          projectPath: project.projectPath || '',
+          engineVersion: project.engineVersion || '',
+          connected: true,
+          split: keyOf.isSplit(project.projectName),
+          pinned: pinnedProjectKeys.has(projectGroupKey(project.projectName))
+        })
+      )
+    }
+  }
+
+  // 手动添加的工程始终占一行——用户点「+」加进来的，空着也得看得见
+  for (const project of manualProjects) {
+    const projectName = project.projectName?.trim()
+    if (!projectName) continue
+
+    if (hiddenProjectKeys.has(projectGroupKey(projectName))) continue
+    const key = keyOf(projectName, project.projectPath)
+    if (projectGroups.has(key)) continue
+
+    const connected = connectedByKey.get(key)
+    projectGroups.set(
+      key,
+      createGroup(key, 'project', {
+        projectName,
+        projectPath: connected?.projectPath || project.projectPath || '',
+        engineVersion: connected?.engineVersion || project.engineVersion || '',
+        connected: Boolean(connected),
+        split: keyOf.isSplit(projectName),
+        pinned: pinnedProjectKeys.has(projectGroupKey(projectName))
+      })
+    )
+  }
+
+  const sortedProjectGroups = [...projectGroups.values()]
+    .map((group) => ({ ...group, sessions: sortChatSessions(group.sessions, sortMode) }))
+    .sort((left, right) => compareProjectGroups(left, right, sortMode))
+
+  groups.push(...sortedProjectGroups)
+
+  if (unassigned.length > 0) {
+    groups.push(
+      createGroup(UNASSIGNED_GROUP_KEY, 'unassigned', {
+        sessions: sortChatSessions(unassigned, sortMode)
+      })
+    )
+  }
+
+  return groups
+}
+
+/** 收集所有对话上出现过的工程名（用于「归入工程」菜单） */
+export function collectKnownProjects(
+  sessions: ChatSession[],
+  connectedProjects: ConnectedProjectRef[] = []
+): ConnectedProjectRef[] {
+  const byKey = new Map<string, ConnectedProjectRef>()
+
+  for (const project of connectedProjects) {
+    const name = project.projectName?.trim()
+    if (!name) continue
+    // 先来的赢：调用方把连着的排在手动加的前面。后来的盖掉前面的话，菜单上标着
+    // 「已连接」的那一项其实指向另一份没连着的同名工程
+    if (byKey.has(projectGroupKey(name))) continue
+    byKey.set(projectGroupKey(name), {
+      projectName: name,
+      projectPath: project.projectPath,
+      engineVersion: project.engineVersion
+    })
+  }
+
+  for (const session of sessions) {
+    const name = sessionProjectName(session)
+    if (!name) continue
+    const key = projectGroupKey(name)
+    if (byKey.has(key)) continue
+    byKey.set(key, {
+      projectName: name,
+      projectPath: session.project?.projectPath,
+      engineVersion: session.project?.engineVersion
+    })
+  }
+
+  return [...byKey.values()].sort((left, right) =>
+    left.projectName.localeCompare(right.projectName, 'zh-Hans-CN')
+  )
+}
+
+/** 侧边栏对话行右上角的活动状态 */
+export type SessionActivity = 'waiting' | 'running' | 'done' | 'idle'
+
+/**
+ * 一条对话此刻该显示什么活动状态。
+ *
+ * 正在跑就转圈，跑完还没看就点蓝点 —— 两者互斥，正在跑的时候不该同时说「已完成」。
+ *
+ * **「等你回答」压过「正在跑」**，尽管此刻两者都成立（agent 阻塞在 `ask_user`
+ * 里，这条对话在跑）。转圈说的是「它在忙，你等着就行」，而这里的事实正相反：
+ * 它不会自己往下走了，`ask_user` 没有超时（见主进程 `host/questionChannel.ts`），
+ * 要它继续只能由人来答。这两句话不能同时显示一个，得让更要紧的那句赢。
+ */
+export function sessionActivityState(
+  isRunning: boolean,
+  taskDone: boolean,
+  awaitingAnswer = false
+): SessionActivity {
+  if (awaitingAnswer) return 'waiting'
+  if (isRunning) return 'running'
+  if (taskDone) return 'done'
+  return 'idle'
+}
+
+/** 「归入项目」下拉里的一行 */
+export interface ProjectChoice {
+  /** 菜单项的 key：有路径用路径，没有退到名字 */
+  key: string
+  project: ConnectedProjectRef
+  connected: boolean
+  /** 同名工程不止一个时，用路径把它们区分开；不重名时为空 */
+  detail?: string
+}
+
+/** 和主进程 `core/projectPathKey.ts` 同一把尺子：大小写、斜杠、结尾斜杠、削 `project.godot` */
+export function projectPathKey(value: string | null | undefined): string {
+  const raw = (value || '').trim().toLowerCase().replace(/\\/g, '/').replace(/\/+$/, '')
+  if (!raw.endsWith('/project.godot')) return raw
+  const cut = raw.lastIndexOf('/')
+  return cut > 0 ? raw.slice(0, cut) : raw
+}
+
+/**
+ * 「归入项目」下拉的选项。
+ *
+ * `collectKnownProjects` 按名字去重，那是给侧边栏分组用的；但同一台机器上开两个
+ * 同名工程（复制一份改改）很常见，按名字去重就只剩一个，另一个根本选不到。
+ * 主进程认归属先比路径，所以这里连着的工程按路径各占一行，重名的带上路径区分。
+ * 没连着的已知工程仍按名字列，且和连着的重名时不再重复出现。
+ */
+export function listProjectChoices(
+  known: ConnectedProjectRef[],
+  connected: ConnectedProjectRef[]
+): ProjectChoice[] {
+  const choices: ProjectChoice[] = []
+  const seen = new Set<string>()
+  const connectedNames = new Set<string>()
+
+  for (const project of connected) {
+    const name = project.projectName?.trim()
+    if (!name) continue
+    const key = projectPathKey(project.projectPath) || projectGroupKey(name)
+    if (seen.has(key)) continue
+    seen.add(key)
+    connectedNames.add(name.toLowerCase())
+    choices.push({ key, project: { ...project, projectName: name }, connected: true })
+  }
+
+  for (const project of known) {
+    const name = project.projectName?.trim()
+    if (!name || connectedNames.has(name.toLowerCase())) continue
+    choices.push({ key: projectGroupKey(name), project, connected: false })
+  }
+
+  const nameCount = new Map<string, number>()
+  for (const choice of choices) {
+    const name = choice.project.projectName.toLowerCase()
+    nameCount.set(name, (nameCount.get(name) ?? 0) + 1)
+  }
+  for (const choice of choices) {
+    if ((nameCount.get(choice.project.projectName.toLowerCase()) ?? 0) > 1) {
+      choice.detail = choice.project.projectPath
+    }
+  }
+
+  return choices
+}

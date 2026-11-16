@@ -1,0 +1,6 @@
+{
+  "name": "gdbox-hybrid",
+  "version": "0.1.0",
+  "description": "Produce a GDBox hybrid team from Claude Code: you plan and coordinate, teammates are models running inside GDBox, an acceptor subagent judges delivery.",
+  "author": { "name": "GDBox" }
+}

@@ -1,0 +1,87 @@
+version: 2
+
+# 两件事要自动跟：workflow 里钉死的 action SHA，和生产依赖的安全更新。
+# 都开了分组，否则一个 npm ecosystem 每周能糊上来几十个 PR，
+# 噪音大到没人看 —— 那等于没开。
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # quality.yml 里的 action 全部钉在 commit SHA（防 tag 被重新指向）。
+    # 钉死之后就必须有人来推，这个 job 就是那个人。
+    groups:
+      actions:
+        patterns:
+          - '*'
+    labels:
+      - dependencies
+      - ci
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # 刚发布的版本先晾 7 天再升：npm 上的投毒包基本都在发布后几小时内被摘掉，
+    # 冷却期比任何扫描都管用。
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    groups:
+      # pi-* 两个包总是一起发版，一起升。
+      # 别指望分组按顺序先到先得：实测 Dependabot 把它塞进了 prod-minor-patch，
+      # 所以下面两组都显式 exclude 掉 pi-*。
+      # 它还在 0.x，minor 就是破坏性变更（agent-v3 直接吃它的类型），所以单独一组、单独适配。
+      pi:
+        patterns:
+          - '@earendil-works/pi-*'
+      # 开发依赖挂了顶多本地跑不起来，合并成一个 PR 就够。
+      # 只收 minor/patch：vite/vitest/eslint 这类大版本混在一组里谁也合不动，
+      # major 单独出 PR，逐个升。
+      dev-dependencies:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+      # 生产依赖会进安装包，按 minor/patch 分组，major 单独出 PR 人工看。
+      prod-minor-patch:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+        exclude-patterns:
+          - '@earendil-works/pi-*'
+      # vitest 和 @vitest/* 必须同版本，大版本也得一起升。
+      # 其余 major 不分组，一个包一个 PR：#35 把 17 个大版本塞进一个 PR，
+      # 装依赖就挂（better-sqlite3 13），后面 16 个连 CI 都没跑到，根本没法合。
+      vitest:
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+        update-types:
+          - major
+    ignore:
+      # better-sqlite3 13 改了产物位置，scripts/better-sqlite3-abi.mjs 缓存不到，
+      # postinstall 直接退出。脚本适配之前先拦住大版本。
+      - dependency-name: better-sqlite3
+        update-types:
+          - version-update:semver-major
+      # 这几个是为安全修复/兼容性故意钉死的版本（见 package.json 的 overrides），
+      # 机器人只会改 devDependencies 那一行、不动 overrides，升了反而两套版本并存。
+      - dependency-name: minimatch
+      - dependency-name: brace-expansion
+      - dependency-name: webidl-conversions
+      # electron 跟着 electron-builder / better-sqlite3 的 ABI 走，
+      # 升版本要连带 pnpm rebuild:electron，不能让机器人自己决定。
+      # 小版本也拦：44.0 → 44.4 一样会牵出原生模块重编译，统一人工升。
+      - dependency-name: electron
+      # 类型要和运行时的 Node 对上：engines 和 CI 都是 Node 24，Electron 44 自带的也是 24。
+      # 换 Node 大版本时连这一条一起改。
+      - dependency-name: '@types/node'
+        versions:
+          - '>=25'
+      # 3.3.14 在模板属性里遇到 `//`（如 placeholder="https://..."）会误报
+      # 「Property 'value' does not exist」，见 vuejs/language-tools#6322。修好的版本出来就能删。
+      - dependency-name: vue-tsc
+        versions:
+          - '3.3.14'

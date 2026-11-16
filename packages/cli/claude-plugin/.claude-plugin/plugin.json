@@ -1,0 +1,6 @@
+{
+  "name": "gdbox-team",
+  "version": "0.1.0",
+  "description": "Run a GDBox game-studio team from Claude Code: Claude is the producer, teammates and acceptance tester; GDBox provides the board, mail, file locks, snapshots and the delivery gate.",
+  "author": { "name": "GDBox" }
+}

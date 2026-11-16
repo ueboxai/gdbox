@@ -1,0 +1,85 @@
+# Definition of Done
+
+中文版：[definition-of-done.zh-CN.md](definition-of-done.zh-CN.md)
+
+This list defines what "done" means. The PR template maps to it line by line. An AI agent walks
+this list before claiming completion.
+
+---
+
+## A. Gates
+
+This list matches the **publish** tier, not every task. Do not run gates while working; run
+`pnpm verify:changed` (about 30 s) on each commit; run the full `pnpm verify` (about 3.5 min) once
+before the batch goes out. See [AGENTS.md](../../AGENTS.md) §3.
+
+- [ ] Each commit in this batch passed `pnpm verify:changed` when it was made
+- [ ] `pnpm verify` is fully green; the last line reads `✅ 门禁全绿，可以提交了。`
+- [ ] Nothing passed by `.skip`, deleted tests, commented-out assertions, lowered coverage
+      thresholds, widened ESLint ignores, or `/* eslint-disable */` at the top of a new file
+- [ ] If the main process, build config, or dependencies changed: `pnpm verify --with-build` also ran
+
+## B. The feature itself
+
+- [ ] `pnpm dev` starts and the feature was **clicked through by a human**, not just green in tests
+- [ ] The happy path works
+- [ ] Edge cases are handled (empty, `null`, over-long input, duplicates, out of range)
+- [ ] Failures surface a message to the user — no blank screen, no silent failure
+- [ ] Nothing existing broke (spot-check the neighbouring features)
+
+## C. Code
+
+- [ ] Placed correctly on the seven-layer map in [vertical-slice.md](vertical-slice.md); no layer skipped
+- [ ] If `src/preload/index.ts` changed, `src/preload/index.d.ts` changed with it
+- [ ] The renderer does not call `ipcRenderer` directly — it goes through `window.api.*` →
+      `src/renderer/src/api/*` → `unwrapResult()`
+- [ ] No hard-coded HEX colors or magic pixel values; CSS variables from `theme.css` are used
+- [ ] Checked in both dark and light themes, legible in both
+- [ ] No new dependencies, network calls, or telemetry (if there are, justify them in the PR)
+- [ ] No unrelated files reformatted — every file in `git diff --stat` is one you meant to touch
+
+## D. Tests
+
+- [ ] New logic has tests
+- [ ] Happy path, edge cases, and error path are all covered
+- [ ] Tests live in `tests/` or beside the source as `*.test.ts`
+- [ ] Tests don't depend on real user data directories or real network access
+
+## E. Copy and i18n
+
+- [ ] New user-visible strings were added to **both** `zh-CN.ts` and `en-US.ts`
+- [ ] Wording follows [CONTEXT.md](../../CONTEXT.md) and `terminologyGuard.test.ts` passes
+- [ ] If the copy is on a login / subscription / payment / authorization path, the key was added to
+      `CRITICAL_KEYS` in `src/renderer/src/i18n/criticalPathCoverage.test.ts`
+- [ ] No hard-coded Chinese in new `.vue` templates
+
+## F. Database (only if you touched the schema)
+
+- [ ] The new column is in the `CREATE TABLE` statement
+- [ ] A separate idempotent migration exists (`PRAGMA table_info` check → `ALTER TABLE ADD COLUMN`)
+- [ ] The new column is nullable or has a default
+- [ ] The migration has a test, including "running it twice doesn't fail"
+- [ ] The PR describes **what happens to existing users after they upgrade**
+
+## G. Commit
+
+- [ ] Branch is named `feat/<slug>` or `fix/<slug>`
+- [ ] Commit message is Conventional Commits with a Chinese description, e.g. `feat: 支持自定义标签颜色`
+- [ ] Breaking changes use `!` (e.g. `feat!: 卸载工作流 Nexus`)
+- [ ] The PR template is filled in honestly, including whether AI assisted
+- [ ] **A human was asked before pushing or opening the PR**
+
+---
+
+## If you didn't finish
+
+Do not fake completion to satisfy this list.
+
+Add a `## Unfinished / need help` section to the PR description and state:
+
+- which item you couldn't meet;
+- what you tried;
+- where you got stuck (paste the exact error).
+
+Maintainers will help finish that PR. A green PR that routed around the hard part leaves the
+problem for the next person.

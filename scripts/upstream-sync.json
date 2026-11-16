@@ -1,0 +1,1503 @@
+{
+  "upstream": {
+    "path": "../uebox-pub",
+    "branch": "main"
+  },
+  "base": "b6b4aabe",
+  "entries": {
+    "018aa584": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入锁定官方 Blender MCP 源码随包和 Python/pip 镜像回退；安装脚本移到 resources/blender-mcp/scripts，保留 GDBox 安装目录，不恢复 blender-ue-pipeline。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "048ff2d1": {
+      "status": "skip",
+      "note": "只是 prettier 换行；跟着前置提交搬时本仓自己格式化"
+    },
+    "0ce932d4": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入大规模网络资产库分批对账、worker 查询/WAL 检查点、索引与统计维护、列表去抖；保留 Godot 资产处理和旧库先补列后建索引，不恢复已删除的 UE projectTool/contentHandler。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "1e3a11f8": {
+      "status": "ported",
+      "local": "231d48f5"
+    },
+    "21848bfa": {
+      "status": "skip",
+      "note": "措辞改动，GDBox 的文档另写"
+    },
+    "21b66268": {
+      "status": "skip",
+      "note": "UE Python API 执行前检查设计稿，GDBox 没有 Python 执行工具"
+    },
+    "23f1c9ea": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入取消单工具五条上限、未出场条目的淘汰保护、退休原因、旧退休记录修复及升为通用时保留 symbol/avoid；保留 Godot 识别/探针/对照逻辑，不迁入 UE Python 专属事实桶与复查机制。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "2aedf1ab": {
+      "status": "ported",
+      "note": "本仓已有同样的改动"
+    },
+    "2b7a4ece": {
+      "status": "ported",
+      "note": "本仓已有同样的改动"
+    },
+    "3327e56b": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "经核对 GDBox 已有报告首句作为快照标签的同等实现，保留现状；团队测试通过。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "361d2ebd": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入语音手册措辞更新。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "3de02a25": {
+      "status": "ported",
+      "local": "d55b7594",
+      "note": "P0 敏感操作确认卡去掉整块警示黄。样式，干净"
+    },
+    "4c57b4aa": {
+      "status": "ported",
+      "note": "本仓已有同样的改动"
+    },
+    "5c609e3f": {
+      "status": "ported",
+      "local": "bf8d7db8",
+      "note": "系统提示词保留 GDBox 的收尾示例，registry 只加 turnReport 的导入"
+    },
+    "63637ee2": {
+      "status": "ported",
+      "local": "dda74388",
+      "note": "P0 提示消息同屏上限修复（进度消息堆成三条卡住）。干净"
+    },
+    "6a0f49de": {
+      "status": "ported",
+      "note": "本仓已有同样的改动"
+    },
+    "767e14b8": {
+      "status": "ported",
+      "local": "eeeb83a3",
+      "note": "主进程分叉时已删，本次删 preload 和类型声明"
+    },
+    "7732f361": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入全部权限下 ask_user 推荐项倒计时、主模型角色合并与旧设置迁移；保留 Godot Agent 提示词和工具池。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "8b3052f9": {
+      "status": "ported",
+      "local": "73df89b7",
+      "note": "P0 套餐模型列表改由清单 models 决定、Box-Chat Beta 进模型菜单。冲突 2：createAgent.ts 系统提示词取上游不报套餐模型名、保留 GDBox 品牌；InputComposer.vue 保留 GDBox 缩进、补上标签和说明"
+    },
+    "91ed7990": {
+      "status": "ported",
+      "note": "GDBox 分叉时已在 registry.ts 按 Godot 文件锁自己实现了同样的逻辑"
+    },
+    "ad6ee127": {
+      "status": "ported",
+      "local": "8e3d8e4",
+      "note": "冲突 2 处手工合：GDBox 没有 project_manage，制作人只留绑工程，提示词改成工程也由队员建"
+    },
+    "bc25d769": {
+      "status": "ported",
+      "note": "本仓已有同样的改动"
+    },
+    "c3a20c69": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入 Blender 前置依赖安装、PATH 刷新与失败交给 Agent 处理；使用 GDBox 身份。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "ce7149d0": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入框外追问队列、展开、立即插话、撤回编辑与删除；保留 GDBox 输入框内容。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "e4b85d02": {
+      "status": "ported",
+      "local": "0403b795",
+      "note": "P0 对话页消息区铺满整页、滚动条贯通。干净"
+    },
+    "e55fea06": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入空 change_log 后续修复，避免重复触发全量对账。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "e728d43f": {
+      "status": "skip",
+      "note": "官网语音合成说明，GDBox 官网另写"
+    },
+    "e7c8b69a": {
+      "status": "ported",
+      "local": "2559548f",
+      "note": "P0 创作者套餐连接弹窗的地址能点开、能复制。干净"
+    },
+    "ec65d7d1": {
+      "status": "ported",
+      "local": "7946d305",
+      "note": "P0 小窗透明度不生效、插话被拒提示不准。干净"
+    },
+    "f0576152": {
+      "status": "ported",
+      "local": "cf7ef58",
+      "note": "off() 要传 on() 返回的包装"
+    },
+    "fa3b3ebd": {
+      "status": "skip",
+      "note": "上游自己的 lint 基线，两边基线各管各的"
+    },
+    "78576f2b22f6b96296884b1e55f38289c5343a58": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "补齐 Anthropic 自建渠道的模型目录回落与 adaptive thinking，保留 GDBox 依赖版本。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "161cd757b810b47a2a30fad7180c69b49ab7587a": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入 Codex 快速模式 UI、设置、IPC 和 priority 请求参数。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "4ac8a1ecc4c813fc93eba318f0b977ffeba4ec86": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入空白/截断子任务结论判失败及团队成果筛选，保留 Godot 锁、快照和工程绑定。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "f9841ed9249f0ebbe9241db34a10c3d743621e56": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入音效生成角色、素材库工具、PCM/WAV 与防重复扣费；适配 Godot 技能，gen_sfx 共用云端实现，兼容 ElevenLabs 音乐来源，保留离线 sfxr 和 res:// 工程落盘。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "183a2832f788ed8a22fe1af69a0a92afdd958e8e": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入带工具与思考档位的实际连接探测；与 87b8e842 后续修复一起交付。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "迁入失败后按实际请求测试协议/思考/工具兼容性，不按报错措辞猜测。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "917ae97ce45ded0b8408ebbbf9fcc66ac9bd25b5": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "87b8e8421b1ba65d8e73d15f078b3cc69ee23cb4",
+      "note": "格式整理随相关文件移植完成，不扩大到无关文件。",
+      "verification": "类型检查、改动行 lint、18 个技能校验、9 项 Python 测试通过；原 GDBox 工作区复验 106 个测试文件，1531 项通过，仅 2 项原有 macOS 路径断言失败。Windows 打包、依赖闭包和离线启动通过（服务端请求 0）。verify/verify:changed 被原有颜色问题阻断；全量 lint 有既有基线缺口。未实调付费模型或安装 Blender；详见 docs/upstream-port-2026-10-16.md。"
+    },
+    "5fc07da742b415baa02cc1d60fffca8ffe6cc6a0": {
+      "status": "ported",
+      "local": "d88945c2d4cd262aec2b1b2e8e392d0b4b07f88a",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "迁入视频分析失败后的 Chromium/FFmpeg 关键帧回退及 Windows 自动 shell 排除 WSL；补齐初始化失败、临时资源清理与零图片结果失败处理，保留 Godot 和原有对象存储路径。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "eb6d1a14c3a85fb8f8552ddcc6d8b7a11b38ab97": {
+      "status": "ported",
+      "local": "d88945c2d4cd262aec2b1b2e8e392d0b4b07f88a",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "基础逐轮记忆已在 875ecea 迁入；本批补齐实际保存成功才提示可续接，并保留团队用量、Godot 工程绑定、文件锁和快照规则。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "0b8b0814fddacda950aa7b093584373db711f16c": {
+      "status": "ported",
+      "local": "f3f7631e5b6572902f486ec3033efd81712b4dd4",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "核对已迁入的 goal/team 单运行循环与验收事件，补记来源，本批整体验证。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "14f4aff8518c8bae132082b9d429f5ec3ca344d4": {
+      "status": "ported",
+      "local": "0a5e6e937091d2a2bda872269226f836984468ed",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "核对已迁入的团队实际用量统计与双语任务板；本批修正格式并整体验证。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "c8d4672b002336e02963ad9d78c93ef2896b1165": {
+      "status": "ported",
+      "local": "d88945c2d4cd262aec2b1b2e8e392d0b4b07f88a",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "核对上游团队循环与用量合并的解决逻辑，现有 f3f7631/0a5e6e9 已覆盖，无重复迁入。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "183173867dca29a168a7cb0c9c542ba4e5951586": {
+      "status": "ported",
+      "local": "d88945c2d4cd262aec2b1b2e8e392d0b4b07f88a",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "核对团队用量与逐轮记忆合并的解决逻辑，GDBox 同时保留 keepUsage 与 keepMessages、结算逻辑及引擎差异。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "a025193802391cc4a90df26f51192ebfec9d1589": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "与已移植的 183a2832 稳定 patch-id 完全相同，补记重写后的上游 SHA，不重复迁入。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "4bafc802bba265bfe9bf0a18479f004f698289c5": {
+      "status": "ported",
+      "local": "0ea40b953c7bc9b79aed339d7b832c68a7d8a9c1",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "与已移植的 87b8e842 稳定 patch-id 完全相同，补记重写后的上游 SHA，不重复迁入。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "1900472adb6676929206a5a3f57d533ad842a5db": {
+      "status": "skip",
+      "snapshot": "183173867dca29a168a7cb0c9c542ba4e5951586",
+      "note": "UE 专属 ue_autoplay 视觉验收和关键帧回放，不覆盖 Godot 的试玩工具。",
+      "verification": "已审查提交范围，未迁入。"
+    },
+    "b8fe0a5924fae513a2f592c4a9181017ba22fd83": {
+      "status": "ported",
+      "local": "d88945c2d4cd262aec2b1b2e8e392d0b4b07f88a",
+      "snapshot": "d1c2fc5731cdea7bfd6b12294b87715a7a3fe7a3",
+      "note": "迁入所有 MCP 服务测试统一规避 fetch 禁用端口的准备逻辑；不改断言、超时和生产服务。",
+      "verification": "840 个测试文件、9458 项通过，原有 2 项跳过；三侧类型检查、lint、颜色、文档、技能和生产打包通过。verify --with-build 前 12 步通过，末步初跑连接中断；同一产物改用独立调试端口复验离线启动通过，服务端请求 0。真实 Chromium MP4 抽帧冒烟通过。未实调付费模型。详见 docs/upstream-port-2026-10-17.md。"
+    },
+    "653f8284ea1b100bbc8045adefa722cb1e610f68": {
+      "status": "ported",
+      "local": "5413cba79a2b68048abf6d331f1fa244f3c9fd08",
+      "snapshot": "653f8284ea1b100bbc8045adefa722cb1e610f68",
+      "note": "整体迁入 Codex 生图来源：codex-images 适配器（Responses image_generation 工具、事件流取图、比例写进提示词、一次一张并发）、目录 chatgpt-image 沿用 ChatGPT 登录、令牌续期按 id 去重；无 UE 专属部分，originator 与本仓 oauth.ts 一致仍为 unreal-box。",
+      "verification": "verify:changed 10/10 通过（相关单测 311 文件 4170 项）；src/main/ai 与模型设置页 72 文件 1331 项通过。真实出图只在 UEBox 侧用同一份适配器代码实调过（2 张并发 + 参考图改图 16:9），GDBox 应用内未手动走设置页添加来源。"
+    },
+    "14cc053dec9513563a16509cd16548f85c9558d6": {
+      "status": "ported",
+      "local": "fd0dfff56f95c14e0c80ca620c8a091f7591333a",
+      "snapshot": "144d68440278033b63129973bf3451db5acca686",
+      "note": "手工适配迁入音色设计：百炼声音设计接口、合成按次传音色与演法、design_voice/adopt_voice/list_voices（归 godot.asset，带 project_path、校验 project.godot）、音色表放工程 .gdbox/voices.json（试听在 .gdbox/voices/，不进 res://）、音色 ID 前缀 gdbox；另给 gen_voice 每句台词加 role/style。generate_speech 同步。",
+      "verification": "GDBox verify:changed 10/10 通过（相关单测 119 文件 1765 项，含新增 voiceDesign 6 项）。百炼真实调用只在 UEBox dev 盒子真机走过（设计→试听→确认→配音、拒绝不入表），GDBox 应用内未真机走查。"
+    },
+    "98f2b0bec29d0638944c7796bcda183b13d4ce7f": {
+      "status": "ported",
+      "local": "fd0dfff56f95c14e0c80ca620c8a091f7591333a",
+      "snapshot": "144d68440278033b63129973bf3451db5acca686",
+      "note": "试听挂播放器：design_voice 回执 path+title，agentGeneratedMedia 认 design_voice；与上一条合在同一个本地提交。",
+      "verification": "ChatAudioPlayer 单测通过；同上，未在 GDBox 应用内真机看播放器。"
+    },
+    "21eee3f52c0eb9dfd9896eff5a501734d456cdae": {
+      "status": "ported",
+      "local": "76b88a639d5eff0449105d61740fafc88fbdfd86",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "迁入套餐主模型绑定保护和旧绑定还原，不引入账号要求或新依赖。",
+      "verification": "H 盘独立工作区：verify:changed 10/10（339 文件、4440 项）；完整单测 849 文件、9589 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包、离线启动通过（服务端请求 0）。完整 verify --with-build 被既有 5413cba7 的 5 个未改文件共 7 条格式警告阻断，未改基线；之后单独完成测试、打包和启动检查。未实调付费模型、语音服务或真实远程资产库。详见 docs/upstream-port-2026-10-18.md。"
+    },
+    "eeb7aec64703a938d3c04c36caf53b6b51afd6b2": {
+      "status": "ported",
+      "local": "470ba924d893346214f9f9cfb2c4cbd68dbeccaa",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "迁入按音频话段识别插话、临时转写错误容错与连续失败反馈，保持已有服务配置入口。",
+      "verification": "H 盘独立工作区：verify:changed 10/10（339 文件、4440 项）；完整单测 849 文件、9589 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包、离线启动通过（服务端请求 0）。完整 verify --with-build 被既有 5413cba7 的 5 个未改文件共 7 条格式警告阻断，未改基线；之后单独完成测试、打包和启动检查。未实调付费模型、语音服务或真实远程资产库。详见 docs/upstream-port-2026-10-18.md。"
+    },
+    "075505003b4747a45a732ea2136ac61f101ea380": {
+      "status": "ported",
+      "local": "9fcde0fa6102b2604797078591aa9f8bad9166be",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "迁入扩展名归一化、存量分块迁移和批量变更完成后刷新；保留 GDBox 旧库先补列后建索引与 Godot 资源语义。",
+      "verification": "H 盘独立工作区：verify:changed 10/10（339 文件、4440 项）；完整单测 849 文件、9589 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包、离线启动通过（服务端请求 0）。完整 verify --with-build 被既有 5413cba7 的 5 个未改文件共 7 条格式警告阻断，未改基线；之后单独完成测试、打包和启动检查。未实调付费模型、语音服务或真实远程资产库。详见 docs/upstream-port-2026-10-18.md。"
+    },
+    "26f69d2db0c1f41f2ec6c02638d26a8d7c406af7": {
+      "status": "ported",
+      "local": "9fcde0fa6102b2604797078591aa9f8bad9166be",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "迁入语音状态条布局修复，不覆盖 GDBox 对话和工程行为。",
+      "verification": "H 盘独立工作区：verify:changed 10/10（339 文件、4440 项）；完整单测 849 文件、9589 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包、离线启动通过（服务端请求 0）。完整 verify --with-build 被既有 5413cba7 的 5 个未改文件共 7 条格式警告阻断，未改基线；之后单独完成测试、打包和启动检查。未实调付费模型、语音服务或真实远程资产库。详见 docs/upstream-port-2026-10-18.md。"
+    },
+    "144d68440278033b63129973bf3451db5acca686": {
+      "status": "ported",
+      "local": "9fcde0fa6102b2604797078591aa9f8bad9166be",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "迁入多来源目录回退及 reasoning effort 修复，保留 GDBox 工具集。",
+      "verification": "H 盘独立工作区：verify:changed 10/10（339 文件、4440 项）；完整单测 849 文件、9589 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包、离线启动通过（服务端请求 0）。完整 verify --with-build 被既有 5413cba7 的 5 个未改文件共 7 条格式警告阻断，未改基线；之后单独完成测试、打包和启动检查。未实调付费模型、语音服务或真实远程资产库。详见 docs/upstream-port-2026-10-18.md。"
+    },
+    "29518d64ff51672cee42d7f98164c68035589a1d": {
+      "status": "ported",
+      "local": "9fcde0fa6102b2604797078591aa9f8bad9166be",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "迁入已发消息编辑框随内容增高，上限 520px。",
+      "verification": "H 盘独立工作区：verify:changed 10/10（339 文件、4440 项）；完整单测 849 文件、9589 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包、离线启动通过（服务端请求 0）。完整 verify --with-build 被既有 5413cba7 的 5 个未改文件共 7 条格式警告阻断，未改基线；之后单独完成测试、打包和启动检查。未实调付费模型、语音服务或真实远程资产库。详见 docs/upstream-port-2026-10-18.md。"
+    },
+    "fd5acc176152840d3b24ae6692ac10cad99b9354": {
+      "status": "ported",
+      "local": "9fcde0fa6102b2604797078591aa9f8bad9166be",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "迁入加号命令技能菜单和添加文件入口；使用 GDBox 主题尺寸，补充正文保留、斜杠筛选词去重、键盘导航和加载中添加文件测试。",
+      "verification": "H 盘独立工作区：verify:changed 10/10（339 文件、4440 项）；完整单测 849 文件、9589 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包、离线启动通过（服务端请求 0）。完整 verify --with-build 被既有 5413cba7 的 5 个未改文件共 7 条格式警告阻断，未改基线；之后单独完成测试、打包和启动检查。未实调付费模型、语音服务或真实远程资产库。详见 docs/upstream-port-2026-10-18.md。"
+    },
+    "508b82a8a3c7291adb7653fcb999652f46313d46": {
+      "status": "todo",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "团队工程整组需独立适配 Godot 工程、插件登录/凭据与协议，不能仅迁入界面；本批未迁入，关联后续修复一起评估。",
+      "verification": "仅审查依赖与提交范围，尚未实施或验证。"
+    },
+    "d1edeb8cbe2d4333cbb4fa6e30cc076cc82a9487": {
+      "status": "todo",
+      "snapshot": "f172727ad33e0aa2be25b34d7ae6ea45c72eda32",
+      "note": "团队工程整组需独立适配 Godot 工程、插件登录/凭据与协议，不能仅迁入界面；本批未迁入，关联后续修复一起评估。",
+      "verification": "仅审查依赖与提交范围，尚未实施或验证。"
+    },
+    "752db15e7b140b5747522c7059b61a6ff94bcf6a": {
+      "status": "ported",
+      "local": "cf1eb9bacba508380c74221ca448288a868bf11e",
+      "snapshot": "6a7e174126eb0334f10cb2659f85bd6fa8eb6b05",
+      "note": "迁入 Jev 1.14/preview 目录及显式图片、Box、长上下文请求；保留旧文本回落、套餐协议限制和调用方授权图片约束，不自动采集或上传截图。",
+      "verification": "pnpm verify --with-build 13/13 全部通过；851 个测试文件、9629 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包和离线启动通过（服务端请求 0）。verify:changed 首跑缺 SQLite Node 缓存，补齐后以上完整门禁通过。未实调 DeepSeek/TypeSafe 或做应用内交互走查。详见 docs/upstream-port-2026-10-19.md。"
+    },
+    "bad4143d761d813a4ca385a0a14082336a9b03ac": {
+      "status": "ported",
+      "local": "cf1eb9bacba508380c74221ca448288a868bf11e",
+      "snapshot": "6a7e174126eb0334f10cb2659f85bd6fa8eb6b05",
+      "note": "迁入外部 MCP 工具与提示词适配及目标复核未给结论的收尾；保留 GDBox 的 Godot 文件、节点和工程示例，补充外部可提问但无界面工具的测试。",
+      "verification": "pnpm verify --with-build 13/13 全部通过；851 个测试文件、9629 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包和离线启动通过（服务端请求 0）。verify:changed 首跑缺 SQLite Node 缓存，补齐后以上完整门禁通过。未实调 DeepSeek/TypeSafe 或做应用内交互走查。详见 docs/upstream-port-2026-10-19.md。"
+    },
+    "b9660e7e5392732e9f678ec437175d52cd0e3f2a": {
+      "status": "ported",
+      "local": "cf1eb9bacba508380c74221ca448288a868bf11e",
+      "snapshot": "6a7e174126eb0334f10cb2659f85bd6fa8eb6b05",
+      "note": "迁入未完成任务清单的逐步推进提醒；只追加到助手消息最后一个工具结果，已更新清单或全部完成则不提醒，不自动标记完成。",
+      "verification": "pnpm verify --with-build 13/13 全部通过；851 个测试文件、9629 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包和离线启动通过（服务端请求 0）。verify:changed 首跑缺 SQLite Node 缓存，补齐后以上完整门禁通过。未实调 DeepSeek/TypeSafe 或做应用内交互走查。详见 docs/upstream-port-2026-10-19.md。"
+    },
+    "f495da60950d1af111ac46799df21a79664594f8": {
+      "status": "ported",
+      "local": "cf1eb9bacba508380c74221ca448288a868bf11e",
+      "snapshot": "6a7e174126eb0334f10cb2659f85bd6fa8eb6b05",
+      "note": "迁入可配置 DeepSeek 网页检索及目录、密钥复用、鉴权/余额/限流错误反馈；补充超时清理和非 JSON 错误响应测试，保留未配置时内置浏览器回退。",
+      "verification": "pnpm verify --with-build 13/13 全部通过；851 个测试文件、9629 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包和离线启动通过（服务端请求 0）。verify:changed 首跑缺 SQLite Node 缓存，补齐后以上完整门禁通过。未实调 DeepSeek/TypeSafe 或做应用内交互走查。详见 docs/upstream-port-2026-10-19.md。"
+    },
+    "6a7e174126eb0334f10cb2659f85bd6fa8eb6b05": {
+      "status": "ported",
+      "local": "cf1eb9bacba508380c74221ca448288a868bf11e",
+      "snapshot": "6a7e174126eb0334f10cb2659f85bd6fa8eb6b05",
+      "note": "迁入团队最新要求的持久化、续跑、独立验收与两种任务板显示；补充恢复与界面测试，新增样式采用 GDBox 主题变量，保留 Godot 绑定和快照。",
+      "verification": "pnpm verify --with-build 13/13 全部通过；851 个测试文件、9629 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包和离线启动通过（服务端请求 0）。verify:changed 首跑缺 SQLite Node 缓存，补齐后以上完整门禁通过。未实调 DeepSeek/TypeSafe 或做应用内交互走查。详见 docs/upstream-port-2026-10-19.md。"
+    },
+    "6cf9e07490395b84ba19b9cc36fe3518901fba75": {
+      "status": "ported",
+      "local": "afa0ea30df9baf01020d51d0ce5d1aaccada1cf2",
+      "snapshot": "6a7e174126eb0334f10cb2659f85bd6fa8eb6b05",
+      "note": "实际补丁与本仓 afa0ea30 已迁入的来源用途保护一致；当前仍保留目录用途锁定、旧配置归一化和绑定校验。仅补记来源，不重复改代码；保留后续 Codex OAuth 登录复用。",
+      "verification": "pnpm verify --with-build 13/13 全部通过；851 个测试文件、9629 项通过，2 项原有跳过；三侧类型检查、生产打包、依赖闭包和离线启动通过（服务端请求 0）。verify:changed 首跑缺 SQLite Node 缓存，补齐后以上完整门禁通过。未实调 DeepSeek/TypeSafe 或做应用内交互走查。详见 docs/upstream-port-2026-10-19.md。"
+    },
+    "e86b67cce6e9fb54c82013cc5ae6f2fcec45f6dc": {
+      "status": "ported",
+      "local": "f1a16bb2ffeac89ae7da424071b4aaf6160fead0",
+      "snapshot": "90899443edcdf3e072009de5730c4b8432b381d1",
+      "note": "已迁入资产格式化去掉同值的 realPath；ue_content_search、project_manage 在 GDBox 已删除，有意排除",
+      "verification": "未跑门禁和单测（用户要求本批不跑门禁）；主进程 tsc 通过，只剩仓库存量的 TS6307；未做真机验证"
+    },
+    "0bfd13ba60034e39e4c3b59ba806866b25f7712b": {
+      "status": "skip",
+      "snapshot": "90899443edcdf3e072009de5730c4b8432b381d1",
+      "note": "UEBox 大结果存档设计稿，内容和实测数据全是 UE 工具与 UEBox 会话，GDBox 不收",
+      "verification": "not-run"
+    },
+    "fb3b9738c48bd2392d55bbc1d27a5c9684bc4be7": {
+      "status": "ported",
+      "local": "5d3cc27fec1d7546499600b4e6a6e63b139acbba",
+      "snapshot": "90899443edcdf3e072009de5730c4b8432b381d1",
+      "note": "已迁入存档机制、result_query、自动加载、details 发往界面剔全文、摘要保留编号；search_assets 接入。project_list 与 UE 领域词在 GDBox 不存在，有意排除；摘要指示保留 Godot 版只加编号一行",
+      "verification": "未跑门禁和单测（用户要求本批不跑门禁）；主进程 tsc 通过，只剩仓库存量的 TS6307；未做真机验证"
+    },
+    "48c7df8831580bd3226708ffdef3bee64d0494ea": {
+      "status": "ported",
+      "local": "e7a5a1625a168648ab0f8fb7a0893c6b5fdcf47f",
+      "snapshot": "90899443edcdf3e072009de5730c4b8432b381d1",
+      "note": "已迁入多张表存档、details 来源、result_query 的 list 参数、defineTool 的 archive 声明；蓝图/材质图表与 defineUeTool 在 GDBox 已删除，有意排除",
+      "verification": "未跑门禁和单测（用户要求本批不跑门禁）；主进程 tsc 通过，只剩仓库存量的 TS6307；未做真机验证"
+    },
+    "5c6be6ebc5ace6cc642faac852f400bb14d55add": {
+      "status": "skip",
+      "snapshot": "90899443edcdf3e072009de5730c4b8432b381d1",
+      "note": "只改 material_get_graph 读图额度，GDBox 没有 UE 材质工具",
+      "verification": "not-run"
+    },
+    "fe62c2edc44463a7c396a92898311c441a20cf0f": {
+      "status": "ported",
+      "local": "06192966a0df620cd9e56e13033ded814f86eb65",
+      "snapshot": "90899443edcdf3e072009de5730c4b8432b381d1",
+      "note": "HTTP 调试服务绑定失败不再谎报成功、不再连带停掉 WebSocket，原样迁入",
+      "verification": "未跑门禁和单测（用户要求本批不跑门禁）；主进程 tsc 通过，只剩仓库存量的 TS6307；未做真机验证"
+    },
+    "c4a091ce3b6451d30b6dd50ab1e6954c59cb7e91": {
+      "status": "ported",
+      "local": "7de56f4b458759f06fd3120047463d48a3456a6a",
+      "snapshot": "90899443edcdf3e072009de5730c4b8432b381d1",
+      "note": "已迁入存档与 HTTP 调试服务的通用修复；UE 蓝图/材质测试与 ue-content-import-organize 技能在 GDBox 不存在，有意排除",
+      "verification": "未跑门禁和单测（用户要求本批不跑门禁）；主进程 tsc 通过，只剩仓库存量的 TS6307；未做真机验证"
+    },
+    "de99aa33bf03f24d1511937b7d8b3c74cca38ce1": {
+      "status": "ported",
+      "local": "b74a76b8a3eb13dd504c8d7971731c54e776f83b",
+      "snapshot": "90899443edcdf3e072009de5730c4b8432b381d1",
+      "note": "已迁入第二轮存档修复；材质存档测试在 GDBox 不存在，有意排除",
+      "verification": "未跑门禁和单测（用户要求本批不跑门禁）；主进程 tsc 通过，只剩仓库存量的 TS6307；未做真机验证"
+    },
+    "95ba243c28be5f94dd86f23f582a44b2d7102f6b": {
+      "status": "ported",
+      "local": "69701021b5291d99f358af6606baaab204953606",
+      "snapshot": "90899443edcdf3e072009de5730c4b8432b381d1",
+      "note": "已迁入过期用量防御（estimateOutgoingTokens，用于压缩判断和 measureCompaction）；GDBox 还没有 contextOverflow 的 compactLatest 那条路，那处不适用",
+      "verification": "未跑门禁和单测（用户要求本批不跑门禁）；主进程 tsc 通过，只剩仓库存量的 TS6307；未做真机验证"
+    },
+    "673d6af41ff021d3099681a254eab4f8b34da934": {
+      "status": "ported",
+      "local": "677613c15ff013fca5ae36180b655143a90a77b8",
+      "snapshot": "90899443edcdf3e072009de5730c4b8432b381d1",
+      "note": "已迁入队员检查点落盘（TeamStore.memberCheckpoint）与 parseCheckpoint；接到 GDBox 写在 transformContext 里的 createAutoCompact 上，没有引入 contextOverflow",
+      "verification": "未跑门禁和单测（用户要求本批不跑门禁）；主进程 tsc 通过，只剩仓库存量的 TS6307；未做真机验证"
+    },
+    "b3065aed06e47effba28da69fc67e844ef87a387": {
+      "status": "ported",
+      "local": "62e2d3d35d03b066e5571c9d4ec31eb3e5449a15",
+      "snapshot": "90899443edcdf3e072009de5730c4b8432b381d1",
+      "note": "team_board list 折叠完成项证据、ids 看全文、update 只回改动，原样迁入",
+      "verification": "未跑门禁和单测（用户要求本批不跑门禁）；主进程 tsc 通过，只剩仓库存量的 TS6307；未做真机验证"
+    },
+    "90899443edcdf3e072009de5730c4b8432b381d1": {
+      "status": "ported",
+      "local": "c0b8ce59f19c673bf8cee4fa1d8443e69d1704c5",
+      "snapshot": "90899443edcdf3e072009de5730c4b8432b381d1",
+      "note": "辞退队员时删掉它的压缩检查点，原样迁入",
+      "verification": "未跑门禁和单测（用户要求本批不跑门禁）；主进程 tsc 通过，只剩仓库存量的 TS6307；未做真机验证"
+    },
+    "f7d77abe54adba1727079d049287a13186499944": {
+      "status": "ported",
+      "local": "dcce1c714cc238dbe21aff9c0619927d5f763b6e",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "外部团队、CLI team 命令、上下文溢出恢复已在 8d87fdb2、159dba4a 迁入；剩下的任务板进度格折行在 dcce1c71 补齐（该提交说明里的 Upstream 行误写成 9e2eb578）",
+      "verification": "verify:changed 前 9 步通过；单测 10039 过，唯一失败 dismissal.test 为 I/O 超时，单独重跑通过；未做真机验证"
+    },
+    "9dfb5c3e8116b43ee37f0ee8c264bbf560bcc6d8": {
+      "status": "partial",
+      "local": "159dba4aa6e9136ef5dd97d07b250022902204cd",
+      "snapshot": "90899443edcdf3e072009de5730c4b8432b381d1",
+      "note": "已迁入 compaction 两个工厂的显式返回类型；其余为别的文件的 prettier 重排，未评估",
+      "verification": "未跑门禁和单测（用户要求不跑门禁）；主进程 tsc 通过，只剩存量 TS6307；与上游 contextOverflow 两个文件逐字节一致；未做真机验证"
+    },
+    "d23ac59c4e450d7f9892ae1fd66f2c6e02597fed": {
+      "status": "ported",
+      "local": "79d5a266cad8a69a9783203f04fe8f9cc59945c2",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "迁入生成中加号面板选技能、隐藏内置命令及按钮对齐；保留 GDBox 草稿和插话逻辑，尺寸改用主题变量，补充技能随插话发送测试。",
+      "verification": "本批 verify:changed 10 步通过，141 文件/1332 测试通过；三侧 typecheck、CLI 包检查（34 文件/1 运行时依赖）、Windows 打包与依赖闭包通过；打包产物离线启动及页面巡检通过，服务端请求 0。audit:prod 无 high/critical，仍有 5 low/11 moderate。最终 H 盘全量单测 867 文件通过、1 文件失败，9769 项通过、1 项失败、2 项既存跳过；唯一失败为此前 createAgent.test.ts 仍期待已删除的 UE material_describe 工具，本批未修改。全量 verify --with-build 在第 6 步被 userDataPath.ts、gdbox-css.test.ts 两处既存格式警告超基线阻断，未修改无关文件或基线。未实连 Claude Code；详见 docs/upstream-port-2026-10-22.md。ported 表示代码已落地，不代表全量门禁全绿。"
+    },
+    "63cd971ebdb178fd2bee00de528367913f471df4": {
+      "status": "ported",
+      "local": "79d5a266cad8a69a9783203f04fe8f9cc59945c2",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "迁入对话团队交付全文页签、多页签切换与关闭；保留 GDBox 冠军恢复。独立外部团队页没有对话侧栏，保留就地展开，补充全文、记录移除、对话隔离和外部团队回归测试。",
+      "verification": "本批 verify:changed 10 步通过，141 文件/1332 测试通过；三侧 typecheck、CLI 包检查（34 文件/1 运行时依赖）、Windows 打包与依赖闭包通过；打包产物离线启动及页面巡检通过，服务端请求 0。audit:prod 无 high/critical，仍有 5 low/11 moderate。最终 H 盘全量单测 867 文件通过、1 文件失败，9769 项通过、1 项失败、2 项既存跳过；唯一失败为此前 createAgent.test.ts 仍期待已删除的 UE material_describe 工具，本批未修改。全量 verify --with-build 在第 6 步被 userDataPath.ts、gdbox-css.test.ts 两处既存格式警告超基线阻断，未修改无关文件或基线。未实连 Claude Code；详见 docs/upstream-port-2026-10-22.md。ported 表示代码已落地，不代表全量门禁全绿。"
+    },
+    "5f502ae50740a73f170dbfe74918871f27892d7e": {
+      "status": "ported",
+      "local": "79d5a266cad8a69a9783203f04fe8f9cc59945c2",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "迁入独立 MCP 连接插件及包体检查；使用 GDBox 身份、GDBOX_URL/GDBOX_TOKEN 和本机默认端口 17871，保留现有 gdbox-team 插件。",
+      "verification": "本批 verify:changed 10 步通过，141 文件/1332 测试通过；三侧 typecheck、CLI 包检查（34 文件/1 运行时依赖）、Windows 打包与依赖闭包通过；打包产物离线启动及页面巡检通过，服务端请求 0。audit:prod 无 high/critical，仍有 5 low/11 moderate。最终 H 盘全量单测 867 文件通过、1 文件失败，9769 项通过、1 项失败、2 项既存跳过；唯一失败为此前 createAgent.test.ts 仍期待已删除的 UE material_describe 工具，本批未修改。全量 verify --with-build 在第 6 步被 userDataPath.ts、gdbox-css.test.ts 两处既存格式警告超基线阻断，未修改无关文件或基线。未实连 Claude Code；详见 docs/upstream-port-2026-10-22.md。ported 表示代码已落地，不代表全量门禁全绿。"
+    },
+    "b5dbb2503b4a34b1be4dfd423fdd13cd782ef515": {
+      "status": "ported",
+      "local": "79d5a266cad8a69a9783203f04fe8f9cc59945c2",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "迁入用量页工具失败数（失败率）的括号显示。",
+      "verification": "本批 verify:changed 10 步通过，141 文件/1332 测试通过；三侧 typecheck、CLI 包检查（34 文件/1 运行时依赖）、Windows 打包与依赖闭包通过；打包产物离线启动及页面巡检通过，服务端请求 0。audit:prod 无 high/critical，仍有 5 low/11 moderate。最终 H 盘全量单测 867 文件通过、1 文件失败，9769 项通过、1 项失败、2 项既存跳过；唯一失败为此前 createAgent.test.ts 仍期待已删除的 UE material_describe 工具，本批未修改。全量 verify --with-build 在第 6 步被 userDataPath.ts、gdbox-css.test.ts 两处既存格式警告超基线阻断，未修改无关文件或基线。未实连 Claude Code；详见 docs/upstream-port-2026-10-22.md。ported 表示代码已落地，不代表全量门禁全绿。"
+    },
+    "9e2eb578e9a4dc376d5acd296e9e6b660128964b": {
+      "status": "ported",
+      "local": "79d5a266cad8a69a9783203f04fe8f9cc59945c2",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "迁入 MCP SDK 1.32.1、markdown-it 15.0.3 和 follow-redirects 1.16.1；同步 CLI 版本并基于 GDBox 锁文件解析依赖，保留 pi 1.2.0 及现有流式解析补丁，没有覆盖为上游 pi 1.0.0。",
+      "verification": "本批 verify:changed 10 步通过，141 文件/1332 测试通过；三侧 typecheck、CLI 包检查（34 文件/1 运行时依赖）、Windows 打包与依赖闭包通过；打包产物离线启动及页面巡检通过，服务端请求 0。audit:prod 无 high/critical，仍有 5 low/11 moderate。最终 H 盘全量单测 867 文件通过、1 文件失败，9769 项通过、1 项失败、2 项既存跳过；唯一失败为此前 createAgent.test.ts 仍期待已删除的 UE material_describe 工具，本批未修改。全量 verify --with-build 在第 6 步被 userDataPath.ts、gdbox-css.test.ts 两处既存格式警告超基线阻断，未修改无关文件或基线。未实连 Claude Code；详见 docs/upstream-port-2026-10-22.md。ported 表示代码已落地，不代表全量门禁全绿。"
+    },
+    "c1098c2df7a8985d728ff309cf1a7c06ea7e104a": {
+      "status": "ported",
+      "local": "0a5e6e937091d2a2bda872269226f836984468ed",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "补记已有迁入：制作人、队员、验收员实际用量持久化及任务板明细。核对现有 addUsage/finishJob 与团队用量视图，不重复改代码。",
+      "verification": "本批 verify:changed 10 步通过，141 文件/1332 测试通过；三侧 typecheck、CLI 包检查（34 文件/1 运行时依赖）、Windows 打包与依赖闭包通过；打包产物离线启动及页面巡检通过，服务端请求 0。audit:prod 无 high/critical，仍有 5 low/11 moderate。最终 H 盘全量单测 867 文件通过、1 文件失败，9769 项通过、1 项失败、2 项既存跳过；唯一失败为此前 createAgent.test.ts 仍期待已删除的 UE material_describe 工具，本批未修改。全量 verify --with-build 在第 6 步被 userDataPath.ts、gdbox-css.test.ts 两处既存格式警告超基线阻断，未修改无关文件或基线。未实连 Claude Code；详见 docs/upstream-port-2026-10-22.md。ported 表示代码已落地，不代表全量门禁全绿。"
+    },
+    "5de6a3d3daea66966351fe74556516e37116eb7c": {
+      "status": "ported",
+      "local": "ab610c86215966f18edab015bed2ab154697ae58",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "补记已有迁入：875ecea7 与 ab610c86 已落地逐轮记忆串行保存和中断续作提示，d88945c2 后续完善验证；当前保留这些实现，不重复迁入。",
+      "verification": "本批 verify:changed 10 步通过，141 文件/1332 测试通过；三侧 typecheck、CLI 包检查（34 文件/1 运行时依赖）、Windows 打包与依赖闭包通过；打包产物离线启动及页面巡检通过，服务端请求 0。audit:prod 无 high/critical，仍有 5 low/11 moderate。最终 H 盘全量单测 867 文件通过、1 文件失败，9769 项通过、1 项失败、2 项既存跳过；唯一失败为此前 createAgent.test.ts 仍期待已删除的 UE material_describe 工具，本批未修改。全量 verify --with-build 在第 6 步被 userDataPath.ts、gdbox-css.test.ts 两处既存格式警告超基线阻断，未修改无关文件或基线。未实连 Claude Code；详见 docs/upstream-port-2026-10-22.md。ported 表示代码已落地，不代表全量门禁全绿。"
+    },
+    "426d70f763b7f3823a48f38e76093b9027380222": {
+      "status": "ported",
+      "local": "f3f7631e5b6572902f486ec3033efd81712b4dd4",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "补记已有迁入：goal/team 互斥与逐次验收事件已落地；核对 IPC、团队命令和任务板模型，不重复改代码。",
+      "verification": "本批 verify:changed 10 步通过，141 文件/1332 测试通过；三侧 typecheck、CLI 包检查（34 文件/1 运行时依赖）、Windows 打包与依赖闭包通过；打包产物离线启动及页面巡检通过，服务端请求 0。audit:prod 无 high/critical，仍有 5 low/11 moderate。最终 H 盘全量单测 867 文件通过、1 文件失败，9769 项通过、1 项失败、2 项既存跳过；唯一失败为此前 createAgent.test.ts 仍期待已删除的 UE material_describe 工具，本批未修改。全量 verify --with-build 在第 6 步被 userDataPath.ts、gdbox-css.test.ts 两处既存格式警告超基线阻断，未修改无关文件或基线。未实连 Claude Code；详见 docs/upstream-port-2026-10-22.md。ported 表示代码已落地，不代表全量门禁全绿。"
+    },
+    "53ecc253914d636faea2c31f6a2822447b6e619f": {
+      "status": "ported",
+      "local": "1033efcac772cd573d9c0b0975588f34624da8fc",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "补记已有迁入：后台摘要增量续写、撞线补压缩及失败回退已落地；保留后续 GDBox 上下文溢出恢复。",
+      "verification": "本批 verify:changed 10 步通过，141 文件/1332 测试通过；三侧 typecheck、CLI 包检查（34 文件/1 运行时依赖）、Windows 打包与依赖闭包通过；打包产物离线启动及页面巡检通过，服务端请求 0。audit:prod 无 high/critical，仍有 5 low/11 moderate。最终 H 盘全量单测 867 文件通过、1 文件失败，9769 项通过、1 项失败、2 项既存跳过；唯一失败为此前 createAgent.test.ts 仍期待已删除的 UE material_describe 工具，本批未修改。全量 verify --with-build 在第 6 步被 userDataPath.ts、gdbox-css.test.ts 两处既存格式警告超基线阻断，未修改无关文件或基线。未实连 Claude Code；详见 docs/upstream-port-2026-10-22.md。ported 表示代码已落地，不代表全量门禁全绿。"
+    },
+    "89ee24196eed1289ad2244ddee0ffbed57570958": {
+      "status": "ported",
+      "local": "cf1eb9bacba508380c74221ca448288a868bf11e",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "补记已有迁入：团队 latestRequest 持久化、验收与两种任务板展示已包含于 cf1eb9ba；保留 Godot 团队工具和项目绑定。",
+      "verification": "本批 verify:changed 10 步通过，141 文件/1332 测试通过；三侧 typecheck、CLI 包检查（34 文件/1 运行时依赖）、Windows 打包与依赖闭包通过；打包产物离线启动及页面巡检通过，服务端请求 0。audit:prod 无 high/critical，仍有 5 low/11 moderate。最终 H 盘全量单测 867 文件通过、1 文件失败，9769 项通过、1 项失败、2 项既存跳过；唯一失败为此前 createAgent.test.ts 仍期待已删除的 UE material_describe 工具，本批未修改。全量 verify --with-build 在第 6 步被 userDataPath.ts、gdbox-css.test.ts 两处既存格式警告超基线阻断，未修改无关文件或基线。未实连 Claude Code；详见 docs/upstream-port-2026-10-22.md。ported 表示代码已落地，不代表全量门禁全绿。"
+    },
+    "e146ce06f31c6c07f77fed63b0aee02e82a4d72d": {
+      "status": "ported",
+      "local": "53f3c35d37eae3dee430d25a6b14aa9d05297513",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "补记已有迁入：辞退队员的证据校验、档案、任务交接及界面已落地；保留 Godot 文件锁与后续辞退检查点清理。",
+      "verification": "本批 verify:changed 10 步通过，141 文件/1332 测试通过；三侧 typecheck、CLI 包检查（34 文件/1 运行时依赖）、Windows 打包与依赖闭包通过；打包产物离线启动及页面巡检通过，服务端请求 0。audit:prod 无 high/critical，仍有 5 low/11 moderate。最终 H 盘全量单测 867 文件通过、1 文件失败，9769 项通过、1 项失败、2 项既存跳过；唯一失败为此前 createAgent.test.ts 仍期待已删除的 UE material_describe 工具，本批未修改。全量 verify --with-build 在第 6 步被 userDataPath.ts、gdbox-css.test.ts 两处既存格式警告超基线阻断，未修改无关文件或基线。未实连 Claude Code；详见 docs/upstream-port-2026-10-22.md。ported 表示代码已落地，不代表全量门禁全绿。"
+    },
+    "8fd68532b33a9eaf97450a94ac46d1416cff0a18": {
+      "status": "ported",
+      "local": "dab979fa3a16cc04d1050489ad5ac7224df08a22",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "外部团队角色跟通行证走；保留制作人只读、验收事件记账",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "b0d1a88fc645ef1d5f3996b3ff6ade7445276da3": {
+      "status": "ported",
+      "local": "1d74764c2f21cb6d308f404459d3908f0317c1a2",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "GDBox 插件默认不自动装、首次导入时问一次；按 addons/gdbox_link 适配，排除 UE 的 .uproject/Plugins 与文档",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "b740ab1383af0ced80750ff3ded641c36e08f775": {
+      "status": "todo",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "共享技能依赖 UEBox 官网、协议和新网络接口；本批不接入，需先决定 GDBox 的共享服务边界。",
+      "verification": "只读核对提交差异与本仓实现；本条未实施，不代表运行验证通过。"
+    },
+    "3bd54f2b5a42bc4cd67bf0d6e869dba4680d204b": {
+      "status": "todo",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "共享技能格式整理，随 b740ab13/c85fca22 整组评估；本批未迁入共享技能。",
+      "verification": "只读核对提交差异与本仓实现；本条未实施，不代表运行验证通过。"
+    },
+    "c85fca22a0d29a8d5f7683fb9d37ead0101152b8": {
+      "status": "todo",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "技能分享绑定 UEBox 账户和设备授权；需要明确 GDBox 是否接入该服务，不随通用同步引入。",
+      "verification": "只读核对提交差异与本仓实现；本条未实施，不代表运行验证通过。"
+    },
+    "ab46ca7a4d5fb20e8dc2acf8a75fbef71163656a": {
+      "status": "todo",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "工具说明术语检查可单独适配 Godot 工具集；不是本次第一批范围。",
+      "verification": "只读核对提交差异与本仓实现；本条未实施，不代表运行验证通过。"
+    },
+    "82d5c7b8ad32a916319c9e4fe4503cd5b6afc319": {
+      "status": "ported",
+      "local": "18c456eb681048c37ea1c9b4c83bd6c77a4a9b81",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "资产卡片悬停显示引擎版本（设置里开）；不带团队工程角标、uplugin 标签、压缩包询问；补 assetFileList.engineVersion",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "37166bc73a990680e0a06651f303e998349566e2": {
+      "status": "ported",
+      "local": "b6e227eabb2385bb37f4a2f78b6c307031ff2ee0",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "本地库筛选栏引擎版本分面带数量",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "cbf1ad8ab0084b2859001019aaea85b5afcc7bb5": {
+      "status": "skip",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "仅四处格式整理；不单独搬运未选功能的格式变更，也不覆盖 GDBox 当前文件。",
+      "verification": "只读核对提交差异与本仓实现；本条未实施，不代表运行验证通过。"
+    },
+    "2470ba1be23cb3ab50bc2f991be1d62f94499285": {
+      "status": "skip",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "合并提交无独有冲突解决；对应 MCP 插件子提交 5f502ae5 已单独适配，避免重复迁入。",
+      "verification": "只读核对提交差异与本仓实现；本条未实施，不代表运行验证通过。"
+    },
+    "afeaaebc1741ae04a9423449c7ef665d94d956b5": {
+      "status": "skip",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "合并提交无独有冲突解决；安装策略跟随 b0d1a88f 待办，不重复记录整次合并为功能迁入。",
+      "verification": "只读核对提交差异与本仓实现；本条未实施，不代表运行验证通过。"
+    },
+    "c7bf247f61a93c06ac4fa72bd4857906c89bde8e": {
+      "status": "skip",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "合并提交无独有冲突解决；UE 控件功能不适用，共享技能另记待办，不重复搬合并提交。",
+      "verification": "只读核对提交差异与本仓实现；本条未实施，不代表运行验证通过。"
+    },
+    "1dce74246b6bc72825bdb85ee39b66a5fd77db4d": {
+      "status": "skip",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "UE UMG 控件替换/删除/属性及蓝图按钮事件绑定，不恢复 UE 工具、插件命令与技能。",
+      "verification": "只读核对提交差异与本仓实现；本条未实施，不代表运行验证通过。"
+    },
+    "7fa60b420b7c25a1cda685154ce8bae93a4387d5": {
+      "status": "skip",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "UE 蓝图函数图局部变量及相关插件/工具/技能；不适用于 Godot。",
+      "verification": "只读核对提交差异与本仓实现；本条未实施，不代表运行验证通过。"
+    },
+    "dbba1b9c93f277e6dbd9c6caac050d5e72d075b7": {
+      "status": "skip",
+      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
+      "note": "UEBox 1.0.10 发布版本，不覆盖 GDBox 独立版本与发布配置。",
+      "verification": "只读核对提交差异与本仓实现；本条未实施，不代表运行验证通过。"
+    },
+    "01e66bbdb0dac1c2624c06e19d83c538f19b8abf": {
+      "status": "ported",
+      "local": "f8f112e270a750be1e82ab3429d51fff1d84d596",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "NoteSourcePanel 卸载只移除自己的监听，原样挑取",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "108f7969a6ff1f7b6131509f81751f003bb399ec": {
+      "status": "ported",
+      "local": "26da6d0f9c99d83bd790f84635009dfcb94ea3fd",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "ChatGPT OAuth 回调 IPv6 回退与 EACCES 提示，原样挑取",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "cf9f7396654c09cd4e3765356e0b6e4a3362b78a": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "UE 插件：蓝图引用搜索、UE 5.3–5.7 控件改名、PBR 贴图命名，Godot 不适用",
+      "verification": "not-run"
+    },
+    "d3b27e7c727c88aac68a4ac05c4455113dd8055d": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "UE 体检 Nanite 筛选，Godot 无 Nanite",
+      "verification": "not-run"
+    },
+    "89beaa35c73cbcc02278a73f371bbc82a38e8701": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "UEBox 1.0.9 发布版本号，GDBox 独立发版",
+      "verification": "not-run"
+    },
+    "2d5a8dd96f53c05504e292b5642074ca7eed02eb": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "UEBox 1.0.11 发布版本号，GDBox 独立发版",
+      "verification": "not-run"
+    },
+    "bc2592db5d847e6da96844473289a9a99a04c674": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "UEBox 官方更新镜像域名，不进 GDBox；镜像机制已随 d1151b4b 迁入",
+      "verification": "not-run"
+    },
+    "9dc79a442668ab2ef3640e12b0c0e393004da0b4": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "UEBox 官方更新镜像地址，不进 GDBox；镜像机制已随 d1151b4b 迁入",
+      "verification": "not-run"
+    },
+    "069b74a703aced6dd1c7a05f556be55531f94119": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "蓝图片段 payload 重构，GDBox 无蓝图",
+      "verification": "not-run"
+    },
+    "f8ad34ea1712da8077f12b448c25ba0c14877c08": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "蓝图库/材质库视图记忆，GDBox 无这两个库",
+      "verification": "not-run"
+    },
+    "774217a3933c397098b42d80408d8a80b15d9be3": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "蓝图库/材质库 store 清理；对 GDBox 只剩 NotebookLayout 无用 CSS，未迁",
+      "verification": "not-run"
+    },
+    "ef15858c7088fc2988d34607e4bee36b6f4afd70": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "蓝图/材质编辑器后台改名；GDBox 笔记本无 tab 标题同步，唯一通用导出无调用方",
+      "verification": "not-run"
+    },
+    "303ad936a3109e6973c783fd48588b566429fa84": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "蓝图编辑器画布视角，GDBox 无蓝图",
+      "verification": "not-run"
+    },
+    "9a0b006768769ee93d110124e755108169bc61ef": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "蓝图库/材质库旧集合模型清理，GDBox 无这两个库",
+      "verification": "not-run"
+    },
+    "6973ec6081b735a0bf8e1c34ef6f8fe396087507": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "材质库删除文件夹，GDBox 无材质库",
+      "verification": "not-run"
+    },
+    "88284f172edaa452c942559a40f1cb21339fc2a0": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "UE 试玩工具与 UE 插件编辑器命令",
+      "verification": "not-run"
+    },
+    "f172727ad33e0aa2be25b34d7ae6ea45c72eda32": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "UE Python 脚本用途展示，GDBox 无 run_python 工具",
+      "verification": "not-run"
+    },
+    "faebf392527c170fd9784d1c6f2d01199b067c34": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "UE 编辑器加载中重复启动检测（UnrealProcessDetector），GDBox 工程打开逻辑独立",
+      "verification": "not-run"
+    },
+    "7026a639ce320f8cce5b92432eda6079cf44190b": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "外包参考导入 UE 工程时的软路径改写，UE 专属；外包区本身随团队工程待办",
+      "verification": "not-run"
+    },
+    "0bfd468bcc319a46f74062bc036de4e5cf4c60d1": {
+      "status": "ported",
+      "local": "9de6c2790853e381599249d53132ec620a9579d4",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "模型来源停用：整条配置挪到 models.disabled.json，启用时原样挪回并补绑空着的角色",
+      "verification": "verify:changed 前 9 步通过；单测 10039 过，唯一失败 dismissal.test 为 I/O 超时，单独重跑通过；未做真机验证"
+    },
+    "97f7ebcd0cdff41fee46e0de0522d95d79643da8": {
+      "status": "todo",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "资产库团队工程系列的后续修复，依赖 508b82a8（团队工程/团队服务器）先迁入",
+      "verification": "not-run"
+    },
+    "a0b68cb219d9bb0e3ce134206ba5225ba17030d5": {
+      "status": "todo",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "资产库团队工程系列的后续修复，依赖 508b82a8（团队工程/团队服务器）先迁入",
+      "verification": "not-run"
+    },
+    "dc51fc6bd360505e25f2b85200a734249c98b086": {
+      "status": "todo",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "资产库团队工程系列的后续修复，依赖 508b82a8（团队工程/团队服务器）先迁入",
+      "verification": "not-run"
+    },
+    "894d4435d76d6e5b81755236c0e6a3145959e161": {
+      "status": "todo",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "资产库团队工程系列的后续修复，依赖 508b82a8（团队工程/团队服务器）先迁入",
+      "verification": "not-run"
+    },
+    "6e837f0a6382f53ad70c68ca89557d2e8c39c72e": {
+      "status": "todo",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "资产库团队工程系列的后续修复，依赖 508b82a8（团队工程/团队服务器）先迁入",
+      "verification": "not-run"
+    },
+    "26f2e9a3efeca258c5e18c5ea27e1a87c073e053": {
+      "status": "todo",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "资产库团队工程系列的后续修复，依赖 508b82a8（团队工程/团队服务器）先迁入",
+      "verification": "not-run"
+    },
+    "b3ab5138109608466d0e341f8c55a421fcf5f71a": {
+      "status": "todo",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "资产库团队工程系列的后续修复，依赖 508b82a8（团队工程/团队服务器）先迁入",
+      "verification": "not-run"
+    },
+    "00605fb967b49309efd111d6f9e553af07ed1905": {
+      "status": "ported",
+      "local": "27db7ccee41867e6677c26d8244fadfdae399660",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "prettier 重排内容 GDBox 已有，挑取为空",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "21e1a0ff2e0a3929c5200ed72f68d03cd42e962c": {
+      "status": "ported",
+      "local": "27db7ccee41867e6677c26d8244fadfdae399660",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "CI setup-node 版本 GDBox 已一致，挑取为空",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "a136a7078df39d063f93ed0fa3929ae926e0cb9c": {
+      "status": "ported",
+      "local": "269373b3133371d1f4946d3699f6a7a4e32d6b71",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "偏好设置侧栏可滚动",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "04bfeb581f3bee21d020a706b0811ab101a0c3f4": {
+      "status": "ported",
+      "local": "c0d616c3d83243528692d854779f29aab56d81da",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "持久化改用 pick；AssetManagement 删掉死分支，不带入团队工程 TeamVersionPill",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "e5a11764ff6def88f4365d0a59c21c25d8d67daf": {
+      "status": "ported",
+      "local": "8c7d6a0f333cb24226b6839aaf90ab4c9a834fc2",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "侧边栏偏好持久化字段类型校验",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "a44ea77293e464b85e8cc6a703c55468c114c58c": {
+      "status": "ported",
+      "local": "f4907571f8360c8841cdef2d2cff9ea36dc77571",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "tabs 恢复逻辑按真实类型调用；GDBox 无 cleanupLibraryTabs",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "83093552fa0619fdc8f398b47feb55cf79a435cd": {
+      "status": "ported",
+      "local": "6e624300059fd218abd18f8d30c24a6771f41e65",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "离线启动与截图脚本先探测调试端口",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "5cb8b9555c1b5be336f11ffac7a4af39eadc4a8a": {
+      "status": "ported",
+      "local": "95d6fbdca7e04c8a581f0d87e35f1e6c10dfad6e",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "浏览器面板地址栏与页面菜单",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "c44a81a4509b5f9fd4f49262046aa66f2df3bc50": {
+      "status": "ported",
+      "local": "609c24561a92f68f11045f1d7e4bda7de790b8ae",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "Fish Audio 语音合成；文档按 GDBox 现有三家来源写",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "d778a804a5c79aa7f24206f40664bd9341f9f607": {
+      "status": "ported",
+      "local": "6db4638175a02f02054060576746712dedcaa4f1",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "来源目录预置 Fish Audio、Meta Muse",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "e795624384f7a004999dee4755e47e71b82729fa": {
+      "status": "ported",
+      "local": "1224d06578005af1830603ccbe08c56bddd7450a",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "MiniMax 生图",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "a193c84986081099b39e013495849547a38edb88": {
+      "status": "ported",
+      "local": "1f570a6badd129963b2858400b51e059a0e013c9",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "CLI ask --model；保留 GDBox 工程路径注入与编辑器未连重试，品牌与技能用 GDBox",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "89c74c95fb616ac67bafb1827bce8b0719ce8085": {
+      "status": "ported",
+      "local": "132aee7f319d1d517409f48ce3d937492ee40652",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "lint 基线收紧（删 usePersistOptions 后）",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "637d7b0757f7f522b466d3f02326ac94a411e1db": {
+      "status": "ported",
+      "local": "32d4c48c802a5fde4e4b1eac44a93e20ec6795ee",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "资产服务器/百度网盘/WebDAV 凭据主进程加密落盘；localStorage 基线按 GDBox 现有 key 收紧",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "d1151b4be0ede897319c32ec6582161f29ad1d41": {
+      "status": "ported",
+      "local": "4197cdc87857626b6659746783d6a4a0f03e7be5",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "更新源镜像机制；GDBox 未配 updateMirrors，行为不变；不带 UEBox 镜像域名",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "bbb08a5bdb991374cefa21430b6f8ad04f3c93eb": {
+      "status": "ported",
+      "local": "a90fc00012c6589f7ed5e2f8e78c88fee3c058c8",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "笔记本切 tab 保活：冻结路由、来源按笔记本存储与 retain/release；排除蓝图库、材质库",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "36056ede74576510e272d38042bf92b7361cdbb7": {
+      "status": "ported",
+      "local": "2c1edc0a79548927c5f2f7b7dec886fa92d381be",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "笔记本 store 去掉隐式当前 tab；排除蓝图库、材质库",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "bed20e84ec6c580b70c51de412c6f05a15a231c0": {
+      "status": "ported",
+      "local": "0af2de00dd013fdfae544a9f5dd64b8c422e02be",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "写库失败回滚按列表版本与 id 定位",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "3e572dde344a7c9fd945b5e6caeaa48e212a8518": {
+      "status": "ported",
+      "local": "bc4fd5d59d32c9f19325b2d566543130e1f5d32f",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "删除 store 中无人读取的分栏宽度与旧格式迁移",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "f9ab2a25da376f7720ed5df3321c5bbd73b1b3e8": {
+      "status": "skip",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "GDBox 没有 project_manage 与关卡锁，文件锁一次一把，不存在半途放锁",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "9f10a4b81fdb89ec216f3526da35f852458ab8fa": {
+      "status": "ported",
+      "local": "d45d5cc1c937cc3a59db41c4dd53703be45b129c",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "混合团队设计稿，开头注明与 GDBox 的出入",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "d2cf114bb85460622bb96942016a5414efb5b1bf": {
+      "status": "ported",
+      "local": "d45d5cc1c937cc3a59db41c4dd53703be45b129c",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "混合团队一、二阶段：HybridTeamHost、team_wait、交付闸、gdbox-hybrid 插件；制作人只读，X-GDBox-Profile；排除 UE 手测文档与 project_manage",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "c104f81b97d628b16d85db03c70daebab774d74d": {
+      "status": "ported",
+      "local": "d45d5cc1c937cc3a59db41c4dd53703be45b129c",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "混合团队一、二阶段：HybridTeamHost、team_wait、交付闸、gdbox-hybrid 插件；制作人只读，X-GDBox-Profile；排除 UE 手测文档与 project_manage",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "382e720416d785d056889eb6f8adde651e6a58ed": {
+      "status": "ported",
+      "local": "d45d5cc1c937cc3a59db41c4dd53703be45b129c",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "混合团队一、二阶段：HybridTeamHost、team_wait、交付闸、gdbox-hybrid 插件；制作人只读，X-GDBox-Profile；排除 UE 手测文档与 project_manage",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "9689731045caa48768477ef53407d1aa8c3d50d9": {
+      "status": "ported",
+      "local": "d45d5cc1c937cc3a59db41c4dd53703be45b129c",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "混合团队一、二阶段：HybridTeamHost、team_wait、交付闸、gdbox-hybrid 插件；制作人只读，X-GDBox-Profile；排除 UE 手测文档与 project_manage",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "4586a3de1e5672d3f90e88707ece5c29500662da": {
+      "status": "ported",
+      "local": "325b8a1f7f07d0ab783d4ba943ccfec12956bd63",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "混合团队审批托管给制作人；哪些步骤要问仍按 GDBox 风险规则",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "6d2e28fffdabc864c8f0cc06dca9debf03e9efcf": {
+      "status": "ported",
+      "local": "325b8a1f7f07d0ab783d4ba943ccfec12956bd63",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "混合团队审批托管给制作人；哪些步骤要问仍按 GDBox 风险规则",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "4897238bf2557ceabd91443f32d2553caeb9d553": {
+      "status": "ported",
+      "local": "325b8a1f7f07d0ab783d4ba943ccfec12956bd63",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "混合团队审批托管给制作人；哪些步骤要问仍按 GDBox 风险规则",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "a5dfd9ac142157e4f9893357d6bf03c4cd1ce7ac": {
+      "status": "ported",
+      "local": "661f17a2893d9320b6122e8684aeed2073c7c345",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "队员接活前压缩、本地搜索大结果存档、按需加载工具；排除 ue_content_search",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "e339073bfbd6cf1de6e7b9bbb68106b6b0801e65": {
+      "status": "ported",
+      "local": "8f1d6c38c3668cc09b0d8b3585a08167c4f50d72",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "留言不再逐条叫醒制作人；排除蓝图写图瘦身与 UE actor/资产详情存档",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "52aa4acf8a4bafbd8c75b0fda55cadb7aea72df8": {
+      "status": "ported",
+      "local": "e3d752e7b721bafb5e2c336814953e6a01876767",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "外部团队并入项目对话列表；工程名按 Godot 目录/project.godot 推导",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "5fa32f9a85925dbfef5f2ad36a5efbf1dd5c8c7c": {
+      "status": "ported",
+      "local": "76d8d075afc9a172b6f671207bf16daadcbbbba9",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "团队模式统一全放行（用户 2026-11-05 确认）；盒子 /team 按 yolo 跑，ask 模式除外；混合团队默认 yolo",
+      "verification": "verify:changed 前 9 步通过；全量单测 9965 过，1 个与本改动无关的语音播报用例在并发下超时，单独重跑 3 次均过；未在真实 Godot 编辑器验证"
+    },
+    "9354471e7955dbd42ba140c12aaf665571971758": {
+      "status": "ported",
+      "local": "76d8d075afc9a172b6f671207bf16daadcbbbba9",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "团队模式统一全放行（用户 2026-11-05 确认）；盒子 /team 按 yolo 跑，ask 模式除外；混合团队默认 yolo",
+      "verification": "verify:changed 前 9 步通过；全量单测 9965 过，1 个与本改动无关的语音播报用例在并发下超时，单独重跑 3 次均过；未在真实 Godot 编辑器验证"
+    },
+    "4061a4bc0940efdf8a8cdd19e173f87b251c216f": {
+      "status": "ported",
+      "local": "76d8d075afc9a172b6f671207bf16daadcbbbba9",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "团队模式统一全放行（用户 2026-11-05 确认）；盒子 /team 按 yolo 跑，ask 模式除外；混合团队默认 yolo",
+      "verification": "verify:changed 前 9 步通过；全量单测 9965 过，1 个与本改动无关的语音播报用例在并发下超时，单独重跑 3 次均过；未在真实 Godot 编辑器验证"
+    },
+    "d910b91747a78a331bf1899bb47673e9506f6ed7": {
+      "status": "ported",
+      "local": "76d8d075afc9a172b6f671207bf16daadcbbbba9",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "盒子里的制作人工具齐全、自己决定单干还是招人（用户 2026-11-05 确认）；外部团队制作人仍只读；写文件仍走文件锁",
+      "verification": "verify:changed 前 9 步通过；全量单测 9965 过，1 个与本改动无关的语音播报用例在并发下超时，单独重跑 3 次均过；未在真实 Godot 编辑器验证"
+    },
+    "f0594299187e5a1525c4fbbf64ffd3ba5f12a86d": {
+      "status": "ported",
+      "local": "e91d52477876a3a6f6abb097dd9fff69b7411414",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "依赖升级：pi 1.4.0（重新生成流式解析补丁）、Electron 44.9.3、electron-builder 26.18、happy-dom 21、diff 9 等；锁文件按 GDBox 重新解析",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "00b5c0f058287d95f864d3e73d9ef54a2b444b10": {
+      "status": "ported",
+      "local": "e91d52477876a3a6f6abb097dd9fff69b7411414",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "依赖升级：pi 1.4.0（重新生成流式解析补丁）、Electron 44.9.3、electron-builder 26.18、happy-dom 21、diff 9 等；锁文件按 GDBox 重新解析",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "d9186dd2049bd17ea8227b004c48caa9b65f998f": {
+      "status": "ported",
+      "local": "e91d52477876a3a6f6abb097dd9fff69b7411414",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "依赖升级：pi 1.4.0（重新生成流式解析补丁）、Electron 44.9.3、electron-builder 26.18、happy-dom 21、diff 9 等；锁文件按 GDBox 重新解析",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "940c261a0bdc24612d76c8bf3a1bd2dc6b14de38": {
+      "status": "ported",
+      "local": "e91d52477876a3a6f6abb097dd9fff69b7411414",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "依赖升级：pi 1.4.0（重新生成流式解析补丁）、Electron 44.9.3、electron-builder 26.18、happy-dom 21、diff 9 等；锁文件按 GDBox 重新解析",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "db210820d752c5c753edf1e32de46f1e2e77da1e": {
+      "status": "ported",
+      "local": "e91d52477876a3a6f6abb097dd9fff69b7411414",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "依赖升级：pi 1.4.0（重新生成流式解析补丁）、Electron 44.9.3、electron-builder 26.18、happy-dom 21、diff 9 等；锁文件按 GDBox 重新解析",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "e0d36d79bc3f5ee4bcd6630409217772fed7e59a": {
+      "status": "ported",
+      "local": "e91d52477876a3a6f6abb097dd9fff69b7411414",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "依赖升级：pi 1.4.0（重新生成流式解析补丁）、Electron 44.9.3、electron-builder 26.18、happy-dom 21、diff 9 等；锁文件按 GDBox 重新解析",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "ec35769a428b05103dac991148503445cef61144": {
+      "status": "ported",
+      "local": "e91d52477876a3a6f6abb097dd9fff69b7411414",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "依赖升级：pi 1.4.0（重新生成流式解析补丁）、Electron 44.9.3、electron-builder 26.18、happy-dom 21、diff 9 等；锁文件按 GDBox 重新解析",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "a060537bf6eb47248cbf21f9527b931e4fa293d8": {
+      "status": "ported",
+      "local": "e91d52477876a3a6f6abb097dd9fff69b7411414",
+      "snapshot": "e795624384f7a004999dee4755e47e71b82729fa",
+      "note": "依赖升级：pi 1.4.0（重新生成流式解析补丁）、Electron 44.9.3、electron-builder 26.18、happy-dom 21、diff 9 等；锁文件按 GDBox 重新解析",
+      "verification": "pnpm verify 11/11 全绿（882 文件 9966 项测试）；未在真实 Godot 编辑器与打包产物上验证"
+    },
+    "443d8aae42a6d66e9298beeb91c0f0515606e6a5": {
+      "status": "ported",
+      "local": "a2d824ac72b902c28449c293f0cd4b36589dbe7c",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "迁入 anthropic-messages 协议导入模型改拉 /v1/models",
+      "verification": "相关单测 65 个文件 1386 项通过；verify:changed 全绿（860 个测试文件）"
+    },
+    "2f0144ff3f100c1cc0d7e5ffe5fe5ef306c88bff": {
+      "status": "ported",
+      "local": "420b2e443401577c43f3863efdf85f048b9c3f77",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "迁入对话里本地文件 Markdown 链接可点开",
+      "verification": "相关单测 65 个文件 1386 项通过；verify:changed 全绿（860 个测试文件）"
+    },
+    "fbf8ad5b67d6f38644677a6ed8874420a9a1293c": {
+      "status": "ported",
+      "local": "b177acea6fa934908cc0fab86e1726b0b7047f57",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "迁入同一技能重复加载不重贴正文",
+      "verification": "相关单测 65 个文件 1386 项通过；verify:changed 全绿（860 个测试文件）"
+    },
+    "a4f1e48b13f1bef8d3439aa9d292af44bc109239": {
+      "status": "ported",
+      "local": "fb2a10dc9f3ef19c797458c832facfd60af03b56",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "迁入一键写入 Claude Code / Codex 配置；服务名改为 godot-box，网站文档同步",
+      "verification": "相关单测 65 个文件 1386 项通过；verify:changed 全绿（860 个测试文件）"
+    },
+    "244507d9cd0f26e75e782b7ac6829456cb925091": {
+      "status": "ported",
+      "local": "6e79e167edc83edfd312dcc2da628a26796e28bd",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "迁入导出 Markdown 带每轮工具和改动",
+      "verification": "相关单测 65 个文件 1386 项通过；verify:changed 全绿（860 个测试文件）"
+    },
+    "67f0a2f5189f0314575390dbb3df74d8280dc90a": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "保留 GDBox 的 Godot 常驻工具集（godot_check/run/screenshot、本机文件等），不改成全部按需加载（2026-11-13 用户决定）",
+      "verification": "not-run"
+    },
+    "ee9e8786e61378b701620deac1b2e03f0d2d7123": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "game-jam 技能面向 UE MegaJam 参赛流程",
+      "verification": "not-run"
+    },
+    "3e476bcb8e15dcc445dc138cf777841698f35dc7": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "game-jam 技能面向 UE MegaJam 参赛流程",
+      "verification": "not-run"
+    },
+    "376ee0435b29be8bcc2d8973e24b8b3a186c3146": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "game-jam 技能面向 UE MegaJam 参赛流程",
+      "verification": "not-run"
+    },
+    "4c3692ed96bee608b40c50991b33f8324ad6f391": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "game-jam 技能面向 UE MegaJam 参赛流程",
+      "verification": "not-run"
+    },
+    "fe11dc48ebbb2f0ed7bfeb986dc62e33d64e4e3b": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "game-jam 技能面向 UE MegaJam 参赛流程",
+      "verification": "not-run"
+    },
+    "faab7100b91c271ebb31bb0cb91a2bc42510b6db": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "UE 打包工具 projectPackage，GDBox 没有对应工具",
+      "verification": "not-run"
+    },
+    "fa1d4528ee27c0ce030297cfa874b89db8e65390": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "UE 打包工具 projectPackage，GDBox 没有对应工具",
+      "verification": "not-run"
+    },
+    "27299a5180e22770908d3ea53dce30dd70cf1b87": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "录 UE 打包版/PIE 窗口；GDBox 若要录 Godot 运行窗口需另做",
+      "verification": "not-run"
+    },
+    "cec16d57a526fcda4121458da54ad2cc937dc3e2": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "录 UE 打包版/PIE 窗口；GDBox 若要录 Godot 运行窗口需另做",
+      "verification": "not-run"
+    },
+    "a90076e57c25d1b4692188e37eb55b507a9e6568": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "录 UE 打包版/PIE 窗口；GDBox 若要录 Godot 运行窗口需另做",
+      "verification": "not-run"
+    },
+    "6d034589a44ec1ab89bd48e8f15e75375ba6ddb2": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "团队 2000 万 token 上限，已被上游 f48ebe46 撤回",
+      "verification": "not-run"
+    },
+    "f48ebe46e496f9175aa5a9c786c1c9a68bd9ddbe": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "撤回 6d034589，本仓未迁入原提交",
+      "verification": "not-run"
+    },
+    "0f4bbe18f07df4cafb2cbd1efe5ae059a0523030": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "MegaJam 欢迎页卡片，UE 比赛活动",
+      "verification": "not-run"
+    },
+    "ce773f45a3c0c3411cca458cb4742667dcebecc2": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "MegaJam 欢迎页卡片，UE 比赛活动",
+      "verification": "not-run"
+    },
+    "d9469cde244dad4acdad38fa98863c306e81b5d9": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "UEBox 发布版本与更新日志",
+      "verification": "not-run"
+    },
+    "c4825a98c2b0053d04927aa31670c1b2764d8f58": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "UEBox 发布版本与更新日志",
+      "verification": "not-run"
+    },
+    "f54105a4189efa8e101cb8dfcfc5d60a50698974": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "UE 5.9 插件支持",
+      "verification": "not-run"
+    },
+    "eee37adae1ab37a7308fcfb1e3ea53b6839bc795": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "UE 5.9 官方 MCP 自动接入",
+      "verification": "not-run"
+    },
+    "a22057bb856c63e7f84ee607be35b96a0901cd01": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "prettier 重排；涉及的 MarkdownRenderer 由本仓格式化处理",
+      "verification": "not-run"
+    },
+    "0e7451118c232cde0840256c3c82c95713260778": {
+      "status": "ported",
+      "local": "3dff8a0b5a8a7ff1492613485b84f20d0f4b94c6",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "迁入远程扫描 501、打包版 AI 命名、B 站来源 403、生图取消（补回 image:cancelTask，不含 PBR）、GIF 导出无效选项五处修复；排除本仓已删除的素材库迁移、命名规则、蓝图示例三处",
+      "verification": "相关单测 104 个文件 788 项通过；typecheck:node/web 通过"
+    },
+    "2f1de9b63a208f0f911e5d81da0abab678da3103": {
+      "status": "ported",
+      "local": "1e36650346d91a4bcf9cbfdf1ac7a0b851e1463c",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "Box Plan 生图参考图走 /images/edits；随 Box Plan 恢复（5800fb8d）一起迁入",
+      "verification": "Box Plan 恢复与迁入后 verify:changed 全绿（883 个测试文件，9957 项）；typecheck 通过；未在运行中的应用里实连 Box Plan 服务"
+    },
+    "deba88a455ebfd0fbeea3618df56fdb3c49193de": {
+      "status": "ported",
+      "local": "a844c7bfc2cd3e1b61612e09f55d3cb55ab6e185",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "清单标 anthropic-messages 的 Claude 走单独来源直连 /v1/messages",
+      "verification": "Box Plan 恢复与迁入后 verify:changed 全绿（883 个测试文件，9957 项）；typecheck 通过；未在运行中的应用里实连 Box Plan 服务"
+    },
+    "50faf668c59cbd3873f971795ef7186a549bb336": {
+      "status": "ported",
+      "local": "62a29c3c0347445938aa523374894d18a505f38c",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "只迁套餐地址改 token.uebox.ai；分享账户（plan.uebox.ai）GDBox 没有，排除",
+      "verification": "Box Plan 恢复与迁入后 verify:changed 全绿（883 个测试文件，9957 项）；typecheck 通过；未在运行中的应用里实连 Box Plan 服务"
+    },
+    "cd7fd9856799184618dbd4e9b55ffa0d50e05035": {
+      "status": "ported",
+      "local": "bbf76c2c8269fb57ea1b4cc0edc9ebd128956ffb",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "迁入 box_plan 工具与 creatorPlan/service.ts；排除 claim_megajam、campaign 接口与 game-jam 技能",
+      "verification": "Box Plan 恢复与迁入后 verify:changed 全绿（883 个测试文件，9957 项）；typecheck 通过；未在运行中的应用里实连 Box Plan 服务"
+    },
+    "576c22debb8a18c7127b3b5c26809ffafa8bfee4": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "MegaJam 活动套餐（UE 比赛），Box Plan 本身已迁入",
+      "verification": "not-run"
+    },
+    "f73e73632c733df497d2d56b53bfa99d73b0365e": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "MegaJam 活动套餐（UE 比赛），Box Plan 本身已迁入",
+      "verification": "not-run"
+    },
+    "53ea5f3c62bbb86b9dec71da352dccf9ec5e2370": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "MegaJam 活动套餐（UE 比赛），Box Plan 本身已迁入",
+      "verification": "not-run"
+    },
+    "791c47477c292e27dabf3e2f86d65694212f1bc8": {
+      "status": "skip",
+      "snapshot": "c4825a98c2b0053d04927aa31670c1b2764d8f58",
+      "note": "prettier 重排；GDBox 自己格式化",
+      "verification": "not-run"
+    },
+    "9f360543cc7e4065d3747af388d8d46e55377c59": {
+      "status": "ported",
+      "local": "a22d9c76f8a4e060ed9a2e778a90adfeb3571be5",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "直接挑取或按 GDBox 适配迁入",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "81c5390211435e4ccecb3a86f6b9eadc312396a7": {
+      "status": "ported",
+      "local": "ac2d45def0ec7b27fb8a05599f39642ef186a78d",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "直接挑取或按 GDBox 适配迁入",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "77a6c7b314a164f2cb74558bf12a4283f37a47fe": {
+      "status": "ported",
+      "local": "9ad4b22c02bbca0c658efc88a106ce728d2d335f",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "直接挑取或按 GDBox 适配迁入",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "70ac39caad72840e2aceec2d40aa879b6aed509a": {
+      "status": "ported",
+      "local": "52d084133e6cbe4da0bafd7543ca71d48a7ab2c0",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "直接挑取或按 GDBox 适配迁入",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "aedc7b691292adec33667804deec790edfb5926d": {
+      "status": "ported",
+      "local": "a146c4eddab5d8976d95b295aeaf088ae15caf0e",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "直接挑取或按 GDBox 适配迁入",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "cb829dc9653b52210eebb98ba11b9abe11d7cfee": {
+      "status": "ported",
+      "local": "0ed3bc8590111cf61de64eccdba754f1bc34ca46",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "直接挑取或按 GDBox 适配迁入",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "6ab85d325d48604e2703192d385cd86cf39a8cf3": {
+      "status": "ported",
+      "local": "b5f4cd812a79a4ef00fd6acbbe69380e7b779205",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "直接挑取或按 GDBox 适配迁入",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "ea39d5b1d37bf0cf52d1b47092a027e9c691b508": {
+      "status": "ported",
+      "local": "fd2e6a534557964f773ffc47cebcae9957cbe04d",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "直接挑取或按 GDBox 适配迁入",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "5ba641b01e87ad66524e4826e870dfdff8aec75c": {
+      "status": "ported",
+      "local": "b55f06a2a01b8851cac5c37a07aee18cead195b7",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "直接挑取或按 GDBox 适配迁入",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "c6ec9d9c5facd015787cef089a141a215144433f": {
+      "status": "ported",
+      "local": "0525de2382841903c2fcb17462af4b49b841dca7",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "直接挑取或按 GDBox 适配迁入",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "f19eae5585196645ea73db1b02f831be96b765b3": {
+      "status": "ported",
+      "local": "a383a089589880928a69a6c06a6e0053fcfbf73b",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "直接挑取或按 GDBox 适配迁入",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "8b9dfec03c829bc51550d67d9496827108aafe2d": {
+      "status": "ported",
+      "local": "8833a2319388b3a575c2df8fff7f6cfec68b96c9",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "直接挑取或按 GDBox 适配迁入",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "e301f27d93ca6ffd1865dbedf89517cdab0a1d30": {
+      "status": "ported",
+      "local": "2677e2f87351aad89acd254e54939743aa6beb7c",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "直接挑取或按 GDBox 适配迁入",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "fed4c33c0fe604515cc49942550127c914c4c09f": {
+      "status": "ported",
+      "local": "2bdad08e399acf909a855488344035fd6d89618a",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "直接挑取或按 GDBox 适配迁入",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "35b94b80514c8a2e5f2864e663bdad45cdfc1af3": {
+      "status": "ported",
+      "local": "6e355d95b57ce498130fdee01a4fa12f4a2f8cb6",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "依赖更新合并为一个提交，锁文件按 GDBox 重新解析；pi 补丁沿用",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "0dffb76de8a5b3b2d3d935f852d2544b4b5b1d85": {
+      "status": "ported",
+      "local": "6e355d95b57ce498130fdee01a4fa12f4a2f8cb6",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "依赖更新合并为一个提交，锁文件按 GDBox 重新解析；pi 补丁沿用",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "2b70ecce6a04d91aae5e797410f29d951344312c": {
+      "status": "ported",
+      "local": "6e355d95b57ce498130fdee01a4fa12f4a2f8cb6",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "依赖更新合并为一个提交，锁文件按 GDBox 重新解析；pi 补丁沿用",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "695e8277c9c3a814108e71ddc8318907c907d08f": {
+      "status": "ported",
+      "local": "6e355d95b57ce498130fdee01a4fa12f4a2f8cb6",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "依赖更新合并为一个提交，锁文件按 GDBox 重新解析；pi 补丁沿用",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "2ab68ccfc399bb4a17a834ce5e849eb8fac2b97c": {
+      "status": "ported",
+      "local": "6e355d95b57ce498130fdee01a4fa12f4a2f8cb6",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "依赖更新合并为一个提交，锁文件按 GDBox 重新解析；pi 补丁沿用",
+      "verification": "完整 pnpm verify 全绿（903 个测试文件，10124 项）；UI 四轮未在运行中的应用里逐项手点"
+    },
+    "3deafc8524511b79d685bfc8e2e1f785c12400af": {
+      "status": "skip",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "新建资产库改成加入团队入口；GDBox 没有团队工程/加入团队",
+      "verification": "not-run"
+    },
+    "200063abe1556d714a4591f592a2e2bd3216727d": {
+      "status": "skip",
+      "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
+      "note": "服务器资产库手册改按加入团队写；GDBox 没有该功能",
+      "verification": "not-run"
+    }
+  }
+}

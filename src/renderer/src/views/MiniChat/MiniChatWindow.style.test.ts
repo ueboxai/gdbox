@@ -1,0 +1,77 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { describe, expect, it } from 'vitest'
+
+const source = readFileSync(
+  resolve(process.cwd(), 'src/renderer/src/views/MiniChat/MiniChatWindow.vue'),
+  'utf8'
+)
+
+describe('MiniChatWindow theme styles', () => {
+  it('paints the window with the current theme page background', () => {
+    expect(source).toMatch(/\.mini-chat-window\s*{[^}]*background:\s*var\(--color-bg-surface\)/s)
+  })
+
+  /*
+   * 全局 border-box 下，带内边距的 svg 图标会把画图区挤没：18px 的回形针扣掉上下
+   * 8px 内边距只剩 2px 高，输入框左边就只剩一个点。
+   */
+  it('keeps the paperclip icon drawable under global border-box', () => {
+    expect(source).toMatch(/\.attach-btn\s*{[^}]*box-sizing:\s*content-box/s)
+  })
+})
+
+describe('MiniChatWindow read aloud', () => {
+  it('mounts the auto read-aloud watcher with the storage-synced switch', () => {
+    // 第二个参数（播报风格）让调用换了行，只认第一个参数是不是那个开关
+    expect(source).toMatch(/useAutoReadAloud\(\s*\(\) => voiceAutoPlayEnabled\.value/)
+  })
+
+  /*
+   * 重试、编辑会把旧答复删掉重来。那条要是正在念，气泡一删就没人能停它了
+   * （小窗没有常驻播放条），旧答复会盖着新答复一直念完 —— 删之前先停
+   */
+  it.each(['handleBubbleRetry', 'handleUserConfirmEdit'])('%s 删消息之前先停朗读', (name) => {
+    const body = source.slice(source.indexOf(`async function ${name}`))
+    const stopAt = body.indexOf('stopReadAloud()')
+    const deleteAt = body.indexOf('deleteMessagesFromIndex(')
+    expect(stopAt).toBeGreaterThan(-1)
+    expect(stopAt).toBeLessThan(deleteAt)
+  })
+})
+
+/*
+ * 侧边问一句问完就散：关窗（主进程发 reset-session）时不存进侧边栏，
+ * 复制出来的内核 transcript 也删掉。存成普通对话的话，用户在主窗口点开它
+ * 接着聊，就成了一条可写的主对话副本。
+ */
+describe('MiniChatWindow 侧边问一句关窗不留东西', () => {
+  const body = source.slice(
+    source.indexOf('function handleResetChat'),
+    source.indexOf('watch(', source.indexOf('function handleResetChat'))
+  )
+
+  it('借了上下文就跳过保存', () => {
+    expect(body).toContain('const borrowed = sideContext.value')
+    expect(body).toContain('if (!borrowed) {')
+  })
+
+  it('删掉复制出来的那份内核 transcript', () => {
+    expect(body).toContain('agentV3API.deleteSession(borrowed.agentSessionId)')
+  })
+})
+
+describe('MiniChatWindow 运行中的发送键', () => {
+  it('运行中换成带名称的停止键，发送键不再转圈', () => {
+    expect(source).toMatch(
+      /<AppTooltip v-if="isGenerating"[^>]*>\s*<AppButton[^>]*:aria-label="t\('miniChatWindow\.stopButton'\)"[^>]*@click="handleStopGenerating"/s
+    )
+    expect(source).not.toContain(':loading="isGenerating')
+  })
+
+  it('输入法选字时回车不发送', () => {
+    const body = source.slice(source.indexOf('function handleEnterKey'))
+    expect(body.slice(0, body.indexOf('\n}\n'))).toContain('e.isComposing || e.keyCode === 229')
+    expect(source).toContain('@keydown.enter.exact="handleEnterKey"')
+  })
+})

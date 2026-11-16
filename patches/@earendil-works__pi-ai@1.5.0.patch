@@ -1,0 +1,43 @@
+diff --git a/dist/utils/json-parse.js b/dist/utils/json-parse.js
+index c282e30..c7070d4 100644
+--- a/dist/utils/json-parse.js
++++ b/dist/utils/json-parse.js
+@@ -112,10 +112,38 @@ export function parseToolCallArguments(json) {
+  * @param partialJson The partial JSON string from streaming
+  * @returns Parsed object or empty object if parsing fails
+  */
++/*
++ * GDBox patch: every provider calls parseStreamingJson on the WHOLE accumulated arguments for
++ * every streamed delta, which is quadratic in the argument length. A runaway tool call with
++ * ~100k deltas blocked the Electron main process for 13 minutes. Large partial arguments are
++ * only re-parsed after they have grown by STREAMING_REPARSE_GROWTH since the last parse, so the
++ * total work is linear; in between the previous (slightly stale) partial result is returned.
++ * Partial arguments only feed streaming previews. Anything that ends with "}" may be the final,
++ * complete arguments and is always parsed in full, so final tool arguments are never stale.
++ */
++const STREAMING_REPARSE_MIN_LENGTH = 8 * 1024;
++const STREAMING_REPARSE_GROWTH = 1.25;
++const STREAMING_CACHE_HEAD = 128;
++let streamingCache;
+ export function parseStreamingJson(partialJson) {
+     if (!partialJson || partialJson.trim() === "") {
+         return {};
+     }
++    const large = partialJson.length > STREAMING_REPARSE_MIN_LENGTH;
++    const mayBeComplete = partialJson.trimEnd().endsWith("}");
++    if (large && !mayBeComplete && streamingCache &&
++        partialJson.length >= streamingCache.length &&
++        partialJson.length < streamingCache.length * STREAMING_REPARSE_GROWTH &&
++        partialJson.startsWith(streamingCache.head)) {
++        return streamingCache.result;
++    }
++    const result = parseStreamingJsonNow(partialJson);
++    streamingCache = large && !mayBeComplete
++        ? { length: partialJson.length, head: partialJson.slice(0, STREAMING_CACHE_HEAD), result }
++        : undefined;
++    return result;
++}
++function parseStreamingJsonNow(partialJson) {
+     try {
+         return parseJsonWithRepair(partialJson);
+     }

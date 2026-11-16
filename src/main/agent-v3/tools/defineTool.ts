@@ -1,0 +1,329 @@
+/**
+ * V3 工具定义。
+ *
+ * 存量 182 个 V2 工具是 AI SDK 的 `tool({ description, inputSchema, execute })`，
+ * pi 要的是 `AgentTool<TSchema>`。这一层负责抹平差异，让迁移一个工具只需要：
+ *
+ *   1. `tool(` → `defineTool(`
+ *   2. `inputSchema` → `input`
+ *   3. 补 `namespace` 和 `risk`
+ *
+ * **业务逻辑零改动**，Zod schema 原样保留。
+ *
+ * 相比 V2 多出来的三件事：
+ *   - `report()` 流式局部结果 —— 取代 V2 的 `reportProgress` 工具
+ *   - `images` 原生进上下文 —— 取代 V2 的 `AgentImageContext` 回灌
+ *   - `risk` 声明 —— 取代 V2 的 `SensitiveToolWrapper` 包装
+ */
+
+import type { AgentTool, AgentToolResult } from '@earendil-works/pi-agent-core'
+import type { TSchema } from 'typebox'
+import { z } from 'zod'
+
+import { runAbortable } from './abortable'
+import { admitImageForContext } from './contextImage'
+
+/** 工具的危险等级，审批门（core/approval.ts）据此决定是否拦截 */
+export type ToolRisk =
+  /** 只读。不需要审批 */
+  | 'safe'
+  /** 会改动用户数据，可撤销。默认需要审批，auto-edit 模式下放行 */
+  | 'mutating'
+  /** 不可逆（删除、覆盖、批量改写）。始终需要审批 */
+  | 'destructive'
+
+/** 工具产出。text / images 进模型上下文，details 只给宿主 UI */
+export interface ToolOutcome<TDetails = unknown> {
+  text?: string
+  /**
+   * 图片直接进上下文。
+   *
+   * UE 视口截图、材质预览、蓝图渲染图走这里 —— 模型下一轮就能"看到"，
+   * 不需要 V2 那套先存盘再回灌的绕路。
+   */
+  images?: { data: Buffer | string; mimeType: string }[]
+  /** 结构化数据。只发给渲染进程做 UI，**不进模型上下文**（省 token 的正确姿势） */
+  details?: TDetails
+  isError?: boolean
+  /** 提示 agent 本批工具跑完后停下 */
+  terminate?: boolean
+}
+
+/** execute 拿到的运行时上下文 */
+export interface ToolCallContext<TDetails = unknown> {
+  toolCallId: string
+  signal?: AbortSignal
+  /**
+   * 上报局部进度。
+   *
+   * 长任务（批量导入、蓝图编译）边跑边推给界面，用户不用盯着转圈。
+   * 只在本次 execute 期间有效，返回后调用无效。
+   */
+  report: (partial: ToolOutcome<TDetails>) => void
+  /**
+   * 登记「用户中途按停止时要补充的话」。中止那一刻调用一次，拼在
+   * 「不代表它没执行，先回读现场」后面。
+   *
+   * 给那些手上握着「已经做了什么」的工具用 —— `task` 用它交出子任务的写操作台账，
+   * 不然父 agent 只知道要回读、不知道回读什么。
+   */
+  setAbortNote?: (note: () => string | undefined) => void
+}
+
+export interface ToolSpec<TIn extends z.ZodTypeAny, TDetails = unknown> {
+  name: string
+  /**
+   * 命名空间，用于动态过滤、审批策略、MCP 暴露范围。
+   * 形如 `ue.material` / `asset` / `mcp.<serverId>`。
+   */
+  namespace: string
+  description: string
+  input: TIn
+  risk?: ToolRisk
+  /**
+   * 除完全访问权限外，每一次调用都必须由用户当场批准。
+   *
+   * 「本对话内都允许」对它无效；`yolo` 档直接放行 —— 见 `core/approval.ts`。
+   * 给的是那种**每次的参数都不一样、而参数本身就是风险**的工具：浏览器
+   * 打开哪个网址、往输入框里发什么内容，批准一次不能代表批准下一次。
+   */
+  requiresExplicitApproval?: boolean
+  /** 见 `ToolMeta.riskFor` */
+  riskFor?: (args: z.infer<TIn>) => ToolRisk
+  /** 能否与同批其他工具并发执行。改同一份资源的工具要声明 sequential */
+  concurrency?: 'sequential' | 'parallel'
+  /** 见 `ArchiveSpec` */
+  archive?: ArchiveSpec
+  execute: (args: z.infer<TIn>, ctx: ToolCallContext<TDetails>) => Promise<ToolOutcome<TDetails>>
+}
+
+/**
+ * Zod → TypeBox TSchema。
+ *
+ * 用 Zod 4 内建的 `z.toJSONSchema()`。**不要用 `zod-to-json-schema`** ——
+ * 那个包只支持 Zod 3，本仓库是 4.x，类型直接对不上。
+ * TSchema 本质就是 JSON Schema 对象，转换后结构兼容。
+ *
+ * `io: 'input'` 很关键：带 `.default()` 的字段在输出侧是必填、输入侧是可选，
+ * 取输出侧会让模型以为必须填。
+ */
+export function toToolSchema(schema: z.ZodTypeAny): TSchema {
+  return z.toJSONSchema(schema, {
+    target: 'draft-7',
+    io: 'input',
+    // 厂商对 JSON Schema 的支持参差不齐，遇到表达不了的结构降级成宽松对象，
+    // 而不是整个工具注册失败。
+    unrepresentable: 'any',
+    // `z.literal` 会出 `const`，Gemini 不认这个关键字、整个请求 400。
+    // 换成等价的单值 `enum`，各家都收
+    override: ({ jsonSchema }) => {
+      if (jsonSchema.const !== undefined) {
+        jsonSchema.enum = [jsonSchema.const]
+        delete jsonSchema.const
+      }
+    }
+  }) as unknown as TSchema
+}
+
+async function toContent(outcome: ToolOutcome): Promise<AgentToolResult<unknown>['content']> {
+  const content: AgentToolResult<unknown>['content'] = []
+  if (outcome.text) content.push({ type: 'text', text: outcome.text })
+  for (const image of outcome.images ?? []) {
+    // 每一张都过关口。工具自己压过的从这儿原样通过，没压的在这儿被压掉 ——
+    // 「记得压缩」从此是门禁，不再是纪律。见 contextImage.admitImageForContext
+    const admitted = await admitImageForContext(image)
+    content.push(...(Array.isArray(admitted) ? admitted : [admitted]))
+  }
+  // pi 要求 content 非空；工具只返了 details 时给个占位，
+  // 否则模型看到一个空 tool result 会以为调用失败。
+  if (content.length === 0) content.push({ type: 'text', text: '(无文本输出)' })
+  return content
+}
+
+async function toAgentResult<TDetails>(
+  outcome: ToolOutcome<TDetails>
+): Promise<AgentToolResult<TDetails>> {
+  return {
+    content: await toContent(outcome),
+    details: outcome.details as TDetails,
+    ...(outcome.terminate !== undefined ? { terminate: outcome.terminate } : {})
+  }
+}
+
+/**
+ * 工具失败要以**抛异常**的形式交给 pi。
+ *
+ * pi 判定失败的唯一依据是 `execute` 是否抛出 —— 成功路径里 `isError` 硬编码为
+ * false（见 agent-loop.js 的 executeToolCall）。`AgentToolResult` 上根本没有
+ * `isError` 字段，在返回值里设它会被静默忽略，结果就是**工具失败被当成功报给模型**。
+ *
+ * pi 捕获后会自己生成带错误信息的 tool result、标记 isError、喂回模型，
+ * 循环不会中断 —— 正是我们想要的行为，不需要自己 try/catch。
+ */
+class ToolFailure extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ToolFailure'
+  }
+}
+
+/** 附在 AgentTool 上的 V3 元数据，注册表和审批门读它 */
+export interface ToolMeta {
+  namespace: string
+  risk: ToolRisk
+  /** 见 `ToolSpec.requiresExplicitApproval` */
+  requiresExplicitApproval?: boolean
+  /**
+   * 按这次的参数算实际风险。`risk` 是最坏情况；带 dry_run 这类只读开关的工具
+   * 用它把预演降成 safe —— 审批门按实际风险问，「本对话内都允许」也按实际风险记，
+   * 在预演上点的允许放不过真正的那次。
+   */
+  riskFor?: (args: unknown) => ToolRisk
+  /** 见 `ArchiveSpec`。没声明的工具结果原样给模型 */
+  archive?: ArchiveSpec
+}
+
+/**
+ * 结果里哪个字段是「一张表」，以及目录页显示哪几列。
+ *
+ * 结果太大时只给模型目录页和一个编号，整份存在这条消息的 details 里，
+ * 模型用 `result_query` 按条件取（见 `core/resultArchive.ts`）。
+ * 键是表字段名，值是目录列；同一个工具不同动作回不同的表时写多项，取第一个出现的。
+ */
+export interface ArchiveSpec {
+  // 值允许 undefined：注册表是一张异构字面量数组，TS 会给别的工具的表名补上 `?: undefined`
+  lists: Readonly<Record<string, readonly string[] | undefined>>
+  /**
+   * 表在哪。默认 `text`：给模型的文本就是 JSON，目录页替换它。
+   * `details`：工具自己把结果排成了文字（并已自行封顶），表在 details 里 ——
+   * 文字原样给，后面补一句存档编号，被它自己的额度截掉的部分凭编号取
+   */
+  source?: 'text' | 'details'
+  /**
+   * 只给 `details` 来源用：存档时换用的那份小额度正文。工具自己的正文得照顾
+   * 不存档的调用方（外部 MCP、没有 result_query 的会话），额度只能放大；
+   * 存档时额度外凭编号取得到，正文就该收小
+   */
+  compact?: (details: unknown) => string
+}
+
+const RISK_RANK: Record<ToolRisk, number> = { safe: 0, mutating: 1, destructive: 2 }
+
+/**
+ * 这一次调用的实际风险：`riskFor` 只许往下降，不许往上抬。
+ *
+ * `risk` 是声明的最坏情况，「本对话内都允许」记在工具名上时覆盖的就是它；
+ * `riskFor` 要是能抬到比它还高，那条记录就会放过一次没人批准过的更危险的调用。
+ * 审批门、子任务写操作审计、目标复核都走这一个函数，免得各自对「这次算不算写」有不同答案。
+ */
+/**
+ * 把顶层的 `"true"` / `"false"` 字符串当成布尔。
+ *
+ * 审批门拿到的是内核按 schema 转过的参数（`"false"` 已经是 false），而目标台账、
+ * 子任务写操作计数读的是开始事件里的**原样**参数。模型把 `dry_run` 写成字符串时，
+ * 两边就算出两个风险：审批按真删问了、也真删了，台账却记成「只读预演」。
+ * `riskFor` 只看这类开关位，在这里抹平一下两边就一致了。
+ */
+function coerceFlagStrings(args: unknown): unknown {
+  if (!args || typeof args !== 'object' || Array.isArray(args)) return args
+  let out: Record<string, unknown> | null = null
+  for (const [key, value] of Object.entries(args as Record<string, unknown>)) {
+    if (value !== 'true' && value !== 'false') continue
+    out ??= { ...(args as Record<string, unknown>) }
+    out[key] = value === 'true'
+  }
+  return out ?? args
+}
+
+export function effectiveRisk(meta: ToolMeta | undefined, args: unknown): ToolRisk {
+  const declared = meta?.risk ?? 'destructive'
+  let wanted: ToolRisk | undefined
+  try {
+    wanted = meta?.riskFor?.(coerceFlagStrings(args))
+  } catch {
+    // 参数形状不对（结束事件没配上开始事件时是 undefined）就按声明的最坏情况算
+    wanted = undefined
+  }
+  return wanted !== undefined && RISK_RANK[wanted] <= RISK_RANK[declared] ? wanted : declared
+}
+
+export type UnrealAgentTool<TDetails = unknown> = AgentTool<TSchema, TDetails> & {
+  unrealBox: ToolMeta
+}
+
+export function defineTool<TIn extends z.ZodTypeAny, TDetails = unknown>(
+  spec: ToolSpec<TIn, TDetails>
+): UnrealAgentTool<TDetails> {
+  const risk: ToolRisk = spec.risk ?? 'mutating'
+
+  const tool = {
+    name: spec.name,
+    description: spec.description,
+    parameters: toToolSchema(spec.input),
+    executionMode: spec.concurrency ?? 'parallel',
+    execute: async (
+      toolCallId: string,
+      params: unknown,
+      signal?: AbortSignal,
+      onUpdate?: (partial: AgentToolResult<TDetails>) => void
+    ): Promise<AgentToolResult<TDetails>> => {
+      // pi 已按 JSON Schema 校验过一遍，这里再过 Zod 是为了拿到
+      // `.default()` / `.transform()` 的结果和精确的 TS 类型。
+      const parsed = spec.input.parse(params) as z.infer<TIn>
+
+      /** 进度回调的串行链。见下面 report 里的说明 */
+      let reportChain: Promise<void> = Promise.resolve()
+      let abortNote: (() => string | undefined) | undefined
+
+      // 不 try/catch：异常直接交给 pi，由它标记 isError 并喂回模型。
+      // 自己吞掉再返回一个"看起来成功"的结果，会让循环以为工具跑通了。
+      //
+      // 外面套一层 `runAbortable`：`signal` 一直都传进 `ctx` 了，但工具体里
+      // 真去读它的只有个位数，其余都是「等引擎回话为止」—— 于是用户按下停止
+      // 之后要一直等到这次调用自己结束。赛跑放在这里，所有工具一次覆盖，
+      // 工具体照旧可以自己读 `ctx.signal` 提前收尾（那样更干净）。
+      const outcome = await runAbortable(
+        spec.name,
+        signal,
+        () =>
+          spec.execute(parsed, {
+            toolCallId,
+            signal,
+            setAbortNote: (note) => {
+              abortNote = note
+            },
+            // 进度回调只喂界面，不进模型上下文（进上下文的是最终那份），
+            // 所以不必让工具体等压缩跑完。但**必须串成一条链**：两次 report
+            // 各自异步解析的话，后发的可能先回，界面上就是进度倒退。
+            // 末尾的 catch 也不能省 —— 压缩抛异常时这条链是没人接的 Promise，
+            // 在主进程里就是一次 unhandledRejection，而丢一条进度不该有这种代价。
+            report: (partial) => {
+              reportChain = reportChain
+                .then(() => toAgentResult(partial))
+                .then((result) => onUpdate?.(result))
+                .catch((error: unknown) => {
+                  console.warn(`[${spec.name}] 进度回调失败（不影响工具本身）:`, error)
+                })
+            }
+          }),
+        () => abortNote?.()
+      )
+
+      // 工具用 isError 表达失败时（不想自己 throw），转成异常给 pi。
+      if (outcome.isError) {
+        throw new ToolFailure(outcome.text || `${spec.name} 执行失败`)
+      }
+
+      return await toAgentResult(outcome)
+    },
+    unrealBox: {
+      namespace: spec.namespace,
+      risk,
+      ...(spec.requiresExplicitApproval ? { requiresExplicitApproval: true } : {}),
+      ...(spec.riskFor ? { riskFor: spec.riskFor as (args: unknown) => ToolRisk } : {}),
+      ...(spec.archive ? { archive: spec.archive } : {})
+    }
+  }
+
+  return tool as unknown as UnrealAgentTool<TDetails>
+}

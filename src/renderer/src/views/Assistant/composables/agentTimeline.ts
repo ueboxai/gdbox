@@ -1,0 +1,396 @@
+/**
+ * 把 Agent 的过程时间线切成「一段过程 → 一段正文 → 一段过程 → …」。
+ *
+ * 界面原来的排法是：所有工具调用和思考塞进顶部一个折叠框，模型说的所有话
+ * 拼成一坨挂在下面。那一坨里的句子其实分属不同步骤（「我先摸清工程情况」
+ * 「我再多探几下」「现在我把资产建出来」），挤在一起之后读的人对不上
+ * 哪句话在说哪一步 —— 而这恰恰是过程日志唯一有价值的信息。
+ *
+ * 这里按发生顺序切开，让每段解说紧跟着它解释的那几步。
+ */
+import type { AgentProcessItem } from '../components/AgentProcessLog.types'
+import type { AgentQuestionItem } from '@core/shared/agentQuestion'
+import type { ExcelFileInfo } from '../../../store/modules/chatMessages'
+
+export interface AgentTimelineProcessBlock {
+  kind: 'process'
+  key: string
+  items: AgentProcessItem[]
+}
+
+export interface AgentTimelineTextBlock {
+  kind: 'text'
+  key: string
+  text: string
+}
+
+/**
+ * 模型的一段推理。一轮一个框，显示在它发生的那一步。
+ */
+export interface AgentTimelineThinkingBlock {
+  kind: 'thinking'
+  key: string
+  text: string
+  /** 这一轮推理开始的时刻。步骤组拿它算整段用了多久 */
+  at?: number
+}
+
+/**
+ * 用户在运行途中插的那句话。
+ *
+ * 单独成块，不并进相邻的过程框 —— 它是**用户说的**，混在工具调用列表里
+ * 会被读成 agent 自己的一步。
+ */
+export interface AgentTimelineSteerBlock {
+  kind: 'steer'
+  key: string
+  text: string
+  /** 内核已经把这句话读进上下文（收到它的 message_end 才置位） */
+  applied: boolean
+  /**
+   * 撤回这条要用的号和内核 session。缺任何一个就不给撤回按钮 ——
+   * 画一个点了必然失败的按钮，比没有按钮更糟。
+   */
+  steerId?: string
+  sessionId?: string
+  /** 随这句话一起插进去的图。发完输入框就清空了，这里是它唯一的去处 */
+  images?: string[]
+  /** 随这句话带的文档、音视频。同上，只画卡片，内容已经交给内核了 */
+  files?: ExcelFileInfo[]
+  /** 用户没打字，`text` 是替内核补的说明 —— 只用来对回执，不画成气泡（图/卡片自己就说明了） */
+  textSynthetic?: boolean
+}
+
+/**
+ * agent 反问用户的那张选项卡片。
+ *
+ * 和 `steer` 一样单独成块，理由也一样 —— 它不是 agent 的一步，是一次
+ * **人机之间的往返**，混进工具调用列表里读不出来。而且它必须留在原地：
+ * 答完之后用户回头看，「当时问了什么、我选了什么」是他确认
+ * 「为什么做成这样」时唯一的凭据。
+ */
+export interface AgentTimelineQuestionBlock {
+  kind: 'question'
+  key: string
+  question: AgentQuestionItem
+}
+
+export type AgentTimelineBlock =
+  | AgentTimelineProcessBlock
+  | AgentTimelineTextBlock
+  | AgentTimelineThinkingBlock
+  | AgentTimelineSteerBlock
+  | AgentTimelineQuestionBlock
+
+function readTimelineText(item: AgentProcessItem): string {
+  const text = (item.data as { text?: unknown } | undefined)?.text
+  return typeof text === 'string' ? text : ''
+}
+
+/** `thinking` 条目只记位置，正文要到消息的 `thinking` 全文里去取 */
+function readTimelineThinking(item: AgentProcessItem, thinking: string): string {
+  const data = item.data as { start?: unknown; end?: unknown } | undefined
+  if (typeof data?.start !== 'number' || typeof data?.end !== 'number') return ''
+  return thinking.slice(data.start, data.end)
+}
+
+/** 时间线上有没有记推理的位置。没有的老消息仍然把推理整段放在顶部 */
+export function hasTimelineThinking(items: AgentProcessItem[] | undefined): boolean {
+  return !!items?.some((item) => item.type === 'thinking')
+}
+
+/**
+ * 工具跑着时用户插了一句：插话落在调用和结果之间，切块会把两头分进两组 ——
+ * 前一组那一行一直「进行中」，后一组多出一行没头没尾的结果。
+ * 把这样的结果挪回插话前面，和它的调用待在一组。只认带调用 id 的。
+ */
+function reattachResultsAcrossSteers(items: AgentProcessItem[]): AgentProcessItem[] {
+  if (!items.some((item) => item.type === 'user-steer')) return items
+  const callId = (item: AgentProcessItem): string | undefined => {
+    const data = (item.data ?? {}) as { id?: unknown; toolCallId?: unknown }
+    const raw = item.type === 'tool-call' ? (data.id ?? data.toolCallId) : data.toolCallId
+    return typeof raw === 'string' && raw ? raw : undefined
+  }
+  const out = [...items]
+  for (let index = 0; index < out.length; index++) {
+    const item = out[index]
+    if (item.type !== 'tool-result') continue
+    const id = callId(item)
+    if (!id) continue
+    const callAt = out.findIndex(
+      (other, at) => at < index && other.type === 'tool-call' && callId(other) === id
+    )
+    if (callAt === -1) continue
+    const steerAt = out.findIndex(
+      (other, at) => at > callAt && at < index && other.type === 'user-steer'
+    )
+    if (steerAt === -1) continue
+    out.splice(index, 1)
+    out.splice(steerAt, 0, item)
+  }
+  return out
+}
+
+/**
+ * 切块。
+ *
+ * key 里带块序号而不是随机数：流式过程中块只会**往后追加**，前面的 key 不变，
+ * Vue 才不会每来一个增量就把已经画好的块整个重建（重建会丢掉折叠状态和滚动位置）。
+ */
+export function splitAgentTimeline(items: AgentProcessItem[], thinking = ''): AgentTimelineBlock[] {
+  items = reattachResultsAcrossSteers(items)
+  const blocks: AgentTimelineBlock[] = []
+  let pendingText = ''
+  let pendingTextAt = 0
+
+  const flushText = (): void => {
+    const text = pendingText
+    const at = pendingTextAt
+    pendingText = ''
+    pendingTextAt = 0
+
+    // 只有空白的正文段不占一个块：模型在两次工具调用之间常常只吐一个换行，
+    // 给它一个块就是在界面上凭空多开一道空隙
+    if (!text.trim()) return
+
+    blocks.push({ kind: 'text', key: `text:${at}:${blocks.length}`, text })
+  }
+
+  for (const item of items) {
+    if (item.type === 'text') {
+      const text = readTimelineText(item)
+      if (!text) continue
+      if (!pendingText) pendingTextAt = item.timestamp
+      pendingText += text
+      continue
+    }
+
+    flushText()
+
+    if (item.type === 'thinking') {
+      const text = readTimelineThinking(item, thinking)
+      if (!/\S/.test(text)) continue
+      blocks.push({
+        kind: 'thinking',
+        key: `thinking:${item.timestamp}:${blocks.length}`,
+        text,
+        at: item.timestamp
+      })
+      continue
+    }
+
+    if (item.type === 'user-steer') {
+      const text = readTimelineText(item)
+      if (!text.trim()) continue
+      // 早先的版本撤回后留着一条标「已撤回」的；现在撤回的话回输入框了，记录里不再画它
+      if ((item.data as { cancelled?: unknown } | undefined)?.cancelled === true) continue
+      const data = item.data as
+        | {
+            applied?: unknown
+            steerId?: unknown
+            sessionId?: unknown
+            images?: unknown
+            files?: unknown
+            textSynthetic?: unknown
+          }
+        | undefined
+      const images = Array.isArray(data?.images)
+        ? data.images.filter((url): url is string => typeof url === 'string' && url.length > 0)
+        : []
+      const files = Array.isArray(data?.files)
+        ? data.files.filter(
+            (file): file is ExcelFileInfo =>
+              typeof (file as ExcelFileInfo | undefined)?.fileName === 'string'
+          )
+        : []
+      blocks.push({
+        kind: 'steer',
+        key: `steer:${item.timestamp}:${blocks.length}`,
+        text,
+        applied: data?.applied === true,
+        ...(typeof data?.steerId === 'string' ? { steerId: data.steerId } : {}),
+        ...(typeof data?.sessionId === 'string' ? { sessionId: data.sessionId } : {}),
+        ...(images.length > 0 ? { images } : {}),
+        ...(files.length > 0 ? { files } : {}),
+        ...(data?.textSynthetic === true && (images.length > 0 || files.length > 0)
+          ? { textSynthetic: true }
+          : {})
+      })
+      continue
+    }
+
+    if (item.type === 'question') {
+      const question = item.data as AgentQuestionItem | undefined
+      // 没有 toolCallId 就没法把答案送回去，画一张点了没反应的卡片更糟
+      if (!question?.toolCallId) continue
+      blocks.push({
+        // key 里带 toolCallId 而不是块序号：用户答完之后这一条会**就地改**
+        // （从待答变成只读），key 跟着变的话 Vue 会把整张卡片重建一遍，
+        // 展开状态和滚动位置一起丢。
+        kind: 'question',
+        key: `question:${question.toolCallId}`,
+        question
+      })
+      continue
+    }
+
+    const last = blocks[blocks.length - 1]
+    if (last && last.kind === 'process') {
+      last.items.push(item)
+      continue
+    }
+
+    blocks.push({
+      kind: 'process',
+      key: `process:${item.timestamp}:${blocks.length}`,
+      items: [item]
+    })
+  }
+
+  flushText()
+  return blocks
+}
+
+/**
+ * 流式刷新会带来一个新的数组壳，但完成的时间线区块没有变化。
+ *
+ * 保住那些区块及其 `items` 数组的引用，Vue 就不会把所有历史的
+ * `AgentProcessLog` 都重新计算一遍；只有正在增长的最后一段会更新。
+ */
+export function reconcileAgentTimeline(
+  previous: AgentTimelineBlock[],
+  items: AgentProcessItem[],
+  thinking = ''
+): AgentTimelineBlock[] {
+  const previousByKey = new Map(previous.map((block) => [block.key, block]))
+
+  return splitAgentTimeline(items, thinking).map((next) => {
+    const prior = previousByKey.get(next.key)
+    return prior && isSameTimelineBlock(prior, next) ? prior : next
+  })
+}
+
+function isSameTimelineBlock(previous: AgentTimelineBlock, next: AgentTimelineBlock): boolean {
+  if (previous.kind !== next.kind) return false
+
+  if (
+    (previous.kind === 'text' && next.kind === 'text') ||
+    (previous.kind === 'thinking' && next.kind === 'thinking')
+  ) {
+    return previous.text === next.text
+  }
+
+  if (previous.kind === 'process' && next.kind === 'process') {
+    return (
+      previous.items.length === next.items.length &&
+      previous.items.every((item, index) => item === next.items[index])
+    )
+  }
+
+  if (previous.kind === 'steer' && next.kind === 'steer') {
+    return previous.text === next.text && previous.applied === next.applied
+  }
+
+  return (
+    previous.kind === 'question' && next.kind === 'question' && previous.question === next.question
+  )
+}
+
+/** 时间线里所有正文段拼起来的全文 */
+export function joinTimelineText(items: AgentProcessItem[]): string {
+  let text = ''
+  for (const item of items) {
+    if (item.type !== 'text') continue
+    text += readTimelineText(item)
+  }
+  return text
+}
+
+/**
+ * 消息 `content` 里**超出时间线**的那部分。
+ *
+ * 正常情况下 content 就是时间线正文的拼接，这时返回空串 —— 再整段渲染一遍
+ * 就成了重影。但 content 会被别处覆盖（报错信息、「用户已停止」的追加、
+ * 老消息压根没有时间线），那些内容一个字都不能吞掉。
+ *
+ * 流式过程中 content 比时间线慢半拍（写回有节流），此时 content 是时间线的
+ * 前缀，同样返回空串 —— 否则会闪出一段重复的文字。
+ *
+ * 多出来的那部分也可能长在**前面**：曾经有一次刷新重连把「正在思考…」占位符
+ * 当成模型说过的话留在了 content 开头，于是两边谁也不是谁的前缀 ——
+ * 兜底分支把整条 content 又画了一遍，屏幕上一模一样的回复出现两次。
+ * 那个 bug 已经修在源头（`utils/typingPlaceholder.ts`），这里留一道：
+ * 认得出「多余的在前面」就只补那一截，而不是整段重影。
+ *
+ * 比对前两边都去掉首尾空白：收尾写进 content 的是 trim 过的全文，时间线里存的是
+ * 原始增量 —— 模型在工具调用之后开口常带着一个换行。不去的话两边谁也不是
+ * 谁的前缀，整条 content 被当成「多出来的」退回去，气泡里重影一段，自动朗读把
+ * 最终答复念两遍。
+ */
+export function resolveTrailingContent(content: string, timelineText: string): string {
+  const timeline = timelineText.trim()
+  if (!timeline) return content
+  const body = content.trim()
+  if (!body) return ''
+  if (timeline.startsWith(body)) return ''
+  if (body.startsWith(timeline)) return body.slice(timeline.length)
+  if (body.endsWith(timeline)) return body.slice(0, -timeline.length)
+  return content
+}
+
+/**
+ * 主对话页上的一段「步骤」：相邻的几轮推理和工具调用并成一组。
+ *
+ * 推理原来一轮一个框、工具调用一段一个框，两种框在时间线上交替出现 ——
+ * 一屏十来个带底色的条，正文被夹在中间透不过气。并成一组之后，
+ * 两段正文之间只剩一行摘要，推理成了组里的一行「思考过程」。
+ */
+export interface AgentTimelineStepsBlock {
+  kind: 'steps'
+  key: string
+  parts: Array<AgentTimelineProcessBlock | AgentTimelineThinkingBlock>
+}
+
+export type AgentDisplayBlock =
+  | AgentTimelineStepsBlock
+  | AgentTimelineTextBlock
+  | AgentTimelineSteerBlock
+  | AgentTimelineQuestionBlock
+
+/**
+ * 把相邻的推理块和过程块并成步骤组。
+ *
+ * 传入上一次的结果是为了保住引用：组里每一段都还是上次那几个对象时，
+ * 原样返回上次那个组 —— 流式期间只有最后一组在变，前面的组件不用重算。
+ */
+export function groupTimelineSteps(
+  blocks: readonly AgentTimelineBlock[],
+  previous: readonly AgentDisplayBlock[] = []
+): AgentDisplayBlock[] {
+  const previousByKey = new Map(previous.map((block) => [block.key, block]))
+  const grouped: AgentDisplayBlock[] = []
+  let parts: AgentTimelineStepsBlock['parts'] = []
+
+  const flush = (): void => {
+    if (parts.length === 0) return
+    const key = `steps:${parts[0].key}`
+    const prior = previousByKey.get(key)
+    const same =
+      prior?.kind === 'steps' &&
+      prior.parts.length === parts.length &&
+      prior.parts.every((part, index) => part === parts[index])
+    grouped.push(same ? prior : { kind: 'steps', key, parts })
+    parts = []
+  }
+
+  for (const block of blocks) {
+    if (block.kind === 'process' || block.kind === 'thinking') {
+      parts.push(block)
+      continue
+    }
+    flush()
+    grouped.push(block)
+  }
+  flush()
+  return grouped
+}

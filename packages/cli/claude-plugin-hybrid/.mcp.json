@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "gdbox-producer": {
+      "type": "http",
+      "url": "${GDBOX_URL:-http://127.0.0.1:17871/}",
+      "headers": {
+        "Authorization": "Bearer ${GDBOX_TOKEN}",
+        "X-GDBox-Profile": "producer"
+      },
+      "timeout": 660000
+    }
+  }
+}
