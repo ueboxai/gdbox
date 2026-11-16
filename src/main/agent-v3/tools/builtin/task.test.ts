@@ -137,9 +137,9 @@ describe('task 子 agent 工具', () => {
   it('透传命名空间白名单', async () => {
     const { runSubAgent, tool } = makeTool()
 
-    await tool.execute('c1', { prompt: '审查', namespaces: ['ue.material'] })
+    await tool.execute('c1', { prompt: '审查', namespaces: ['godot.asset'] })
 
-    expect(runSubAgent.mock.calls[0][0].namespaces).toEqual(['ue.material'])
+    expect(runSubAgent.mock.calls[0][0].namespaces).toEqual(['godot.asset'])
   })
 
   it('省略 namespaces 时继承全部工具', async () => {

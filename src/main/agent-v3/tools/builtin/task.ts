@@ -187,7 +187,7 @@ const taskInput = z.object({
     .array(z.string())
     .optional()
     .describe(
-      '限定子 agent 可用的工具命名空间，如 ["ue.material"]。省略则继承全部工具。' +
+      '限定子 agent 可用的工具命名空间，如 ["godot.asset"]。省略则继承全部工具。' +
         '缩小范围能让子 agent 更专注，但范围给窄了它会因为缺工具而卡住。'
     ),
   read_only: z
@@ -230,13 +230,13 @@ export function createTaskTool(deps: TaskToolDeps): UnrealAgentTool<SubAgentResu
     namespace: 'core',
     // 子 agent 自己会受审批门约束，起一个子 agent 本身不改任何东西
     risk: 'safe',
-    // 多个 task 可并发 —— 天然支持「三个子 agent 分别审查同一份蓝图」这类多视角用法
+    // 多个 task 可并发 —— 天然支持「三个子 agent 分别审查同一个场景」这类多视角用法
     concurrency: 'parallel',
     description: `把一个界定清晰的子任务交给独立的子 agent 执行。
 
 【什么时候用】
 - 子任务会产生大量中间探索（如遍历几百个资产找符合条件的），你不想让这些噪音污染当前对话
-- 子任务需要长时间反复迭代（如把蓝图连线改到编译通过）
+- 子任务需要长时间反复迭代（如把脚本改到 godot_check 不再报错）
 - 需要多个独立视角（并发起多个 task，让它们分别审查同一份资产）
 
 【什么时候不用】
