@@ -147,7 +147,8 @@ function explicitlyListedTools(): UnrealAgentTool<never>[] {
       // 给了冠军才会造 regression_retire
       champion: {
         gate: async () => null,
-        settle: async () => ({ text: '' })
+        settle: async () => ({ text: '' }),
+        retire: async () => ''
       }
     }),
     // 队员侧的三个工具：与制作人那份同名、调用参数不同（队员名、不带 live）。
