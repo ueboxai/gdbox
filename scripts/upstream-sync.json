@@ -614,10 +614,11 @@
       "verification": "只读核对提交差异与本仓实现；本条未实施，不代表运行验证通过。"
     },
     "ab46ca7a4d5fb20e8dc2acf8a75fbef71163656a": {
-      "status": "todo",
-      "snapshot": "9e2eb578e9a4dc376d5acd296e9e6b660128964b",
-      "note": "工具说明术语检查可单独适配 Godot 工具集；不是本次第一批范围。",
-      "verification": "只读核对提交差异与本仓实现；本条未实施，不代表运行验证通过。"
+      "status": "ported",
+      "local": "70604118da166e8fbfbe9f51860f1b5e8817184f",
+      "snapshot": "5b13d071f245c1765bf9c9e45ad2a7e74a84ede7",
+      "note": "工具说明术语守卫：共用词表移到 shared，GDBox 另拦 UE 说法；排除 UE 专属工具的五处改写",
+      "verification": "两个守卫测试与 builtin 工具单测通过；完整门禁通过"
     },
     "82d5c7b8ad32a916319c9e4fe4503cd5b6afc319": {
       "status": "ported",
@@ -1497,6 +1498,73 @@
       "status": "skip",
       "snapshot": "fed4c33c0fe604515cc49942550127c914c4c09f",
       "note": "服务器资产库手册改按加入团队写；GDBox 没有该功能",
+      "verification": "not-run"
+    },
+    "a4f5aadf499a00a62a5d278b263d3d42c64a2b69": {
+      "status": "ported",
+      "local": "49ac44a5fbf98368f25a6626260ffd966c2def76",
+      "snapshot": "5b13d071f245c1765bf9c9e45ad2a7e74a84ede7",
+      "note": "大请求按体积放宽首包超时，原样 cherry-pick",
+      "verification": "requestGate 相关单测通过；完整门禁通过"
+    },
+    "e80849c0e79264c75164f92aba038a9b884378f4": {
+      "status": "ported",
+      "local": "8d717a3fb1ff3bc230649d851c284fd2b4b4c23e",
+      "snapshot": "5b13d071f245c1765bf9c9e45ad2a7e74a84ede7",
+      "note": "requestGate 测试 prettier 换行，原样 cherry-pick",
+      "verification": "完整门禁通过"
+    },
+    "8df56d9e93cd9e80c126c39c9db2b2de4dc2e945": {
+      "status": "ported",
+      "local": "d52505e27205266e8c00ffdfeccba29a546fc180",
+      "snapshot": "5b13d071f245c1765bf9c9e45ad2a7e74a84ede7",
+      "note": "GDBox 已按 gdbox:// 协议自行实现，含在初始提交里",
+      "verification": "已在 0.1.0 完整门禁中覆盖"
+    },
+    "83faaf1593bba3e2f6d11012e4f54a8339247a5f": {
+      "status": "ported",
+      "local": "d52505e27205266e8c00ffdfeccba29a546fc180",
+      "snapshot": "5b13d071f245c1765bf9c9e45ad2a7e74a84ede7",
+      "note": "GDBox 已按 gdbox:// 协议自行实现，含在初始提交里",
+      "verification": "已在 0.1.0 完整门禁中覆盖"
+    },
+    "209529574e317e7b0f1a97d21221d8e1aeabc42d": {
+      "status": "ported",
+      "local": "d52505e27205266e8c00ffdfeccba29a546fc180",
+      "snapshot": "5b13d071f245c1765bf9c9e45ad2a7e74a84ede7",
+      "note": "GDBox 已按 gdbox:// 协议自行实现，含在初始提交里",
+      "verification": "已在 0.1.0 完整门禁中覆盖"
+    },
+    "5b13d071f245c1765bf9c9e45ad2a7e74a84ede7": {
+      "status": "ported",
+      "local": "d52505e27205266e8c00ffdfeccba29a546fc180",
+      "snapshot": "5b13d071f245c1765bf9c9e45ad2a7e74a84ede7",
+      "note": "GDBox 已按 gdbox:// 协议自行实现，含在初始提交里",
+      "verification": "已在 0.1.0 完整门禁中覆盖"
+    },
+    "0371c9821e4b0cea82de10ad6727d51ef8599dee": {
+      "status": "ported",
+      "local": "d52505e27205266e8c00ffdfeccba29a546fc180",
+      "snapshot": "5b13d071f245c1765bf9c9e45ad2a7e74a84ede7",
+      "note": "TagSelector 属性顺序在 GDBox 里已经是这样",
+      "verification": "无需改动"
+    },
+    "1e63e58a90a8e1f1eb5d88d0bf5fd3a4cb406a09": {
+      "status": "skip",
+      "snapshot": "5b13d071f245c1765bf9c9e45ad2a7e74a84ede7",
+      "note": "GDBox 没有 MegaJam 卡片、参赛和 game-jam 技能",
+      "verification": "not-run"
+    },
+    "d3da067e26d0ac6b55ab51f24e5e257a19e6e696": {
+      "status": "skip",
+      "snapshot": "5b13d071f245c1765bf9c9e45ad2a7e74a84ede7",
+      "note": "UEBox 自己的版本号",
+      "verification": "not-run"
+    },
+    "8ec0123dd12121714e289310e07f6961711e5232": {
+      "status": "skip",
+      "snapshot": "5b13d071f245c1765bf9c9e45ad2a7e74a84ede7",
+      "note": "UEBox 自己的 lint 基线，GDBox 基线独立维护",
       "verification": "not-run"
     }
   }
