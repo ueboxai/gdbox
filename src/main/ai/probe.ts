@@ -10,6 +10,7 @@ import {
   type ProviderProtocol
 } from '../../shared/aiProvider'
 import { CODEBUDDY_ORIGIN } from './codebuddy'
+import { chatModel, isChatSpec } from './creatorPlan/apply'
 import { resolveApiKey } from './credentials'
 import { requestEmbeddings } from './embedding'
 import { requestJudgement } from './judge'
@@ -360,6 +361,24 @@ export async function listRemoteModels(
   return fetchModelList(`${provider.baseUrl}/models`, headers)
 }
 
+/**
+ * `/models` 里的一项 → 模型配置。id 是空的回 null。
+ *
+ * 中转站给对话模型带 `box_spec`（和 Box Plan 清单同一份规格：视觉、推理档位、上下文），
+ * 带了就照它填。别的厂商不带，只勾上工具，其余由用户自己标。
+ */
+export function modelFromListItem(
+  item: { id?: unknown; box_spec?: unknown } | null | undefined
+): ModelConfig | null {
+  const id = String(item?.id || '').trim()
+  if (!id) return null
+  if (!isChatSpec(item?.box_spec)) return { id, supportsTools: true }
+  const model: ModelConfig = { ...chatModel(item.box_spec), id }
+  // 规格里的显示名就是模型名。不写：留空时界面本来就显示 id
+  delete model.displayName
+  return model
+}
+
 async function fetchModelList(
   url: string,
   headers: Record<string, string>
@@ -370,12 +389,13 @@ async function fetchModelList(
       return { ok: false, error: { code: 'listHttpError', raw: String(response.status) } }
     }
 
-    const payload = (await response.json()) as { data?: Array<{ id?: unknown }> }
+    const payload = (await response.json()) as {
+      data?: Array<{ id?: unknown; box_spec?: unknown }>
+    }
     const models = (payload.data || [])
-      .map((item) => String(item?.id || '').trim())
-      .filter(Boolean)
-      .sort()
-      .map<ModelConfig>((id) => ({ id, supportsTools: true }))
+      .map(modelFromListItem)
+      .filter((model): model is ModelConfig => model !== null)
+      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
 
     if (models.length === 0) {
       return { ok: false, error: { code: 'listEmpty' } }

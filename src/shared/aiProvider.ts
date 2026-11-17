@@ -380,6 +380,21 @@ export function kindNeedsProtocol(kind: ProviderKind): boolean {
   return kind === 'chat'
 }
 
+/**
+ * 「导入模型」拉回来的一项并进已有的同名模型。
+ *
+ * 服务商给了能力（中转站的 `/models` 带，标志是上下文窗口有值）就照它更新，显示名留用户的；
+ * 没给的那种只有一个 id，原样留着用户手工标的能力位。
+ */
+export function mergeListedModel(
+  existing: ModelConfig | undefined,
+  listed: ModelConfig
+): ModelConfig {
+  if (!existing) return { ...listed }
+  if (listed.contextWindow === undefined) return existing
+  return { ...existing, ...listed, displayName: existing.displayName }
+}
+
 export interface ModelConfig {
   /** 传给厂商的模型 ID，如 'gpt-4o'、'deepseek-chat' */
   id: string

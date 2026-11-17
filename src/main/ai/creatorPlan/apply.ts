@@ -131,7 +131,7 @@ const THINKING_LEVELS = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as 
 /** 清单里一个角色的规格。各类字段不同，公共的只有 model / display_name（见协议 01-plan） */
 export type PlanRoleSpec = { model: string; display_name?: string } & Record<string, unknown>
 
-function isChatSpec(value: unknown): value is CreatorPlanChatSpec {
+export function isChatSpec(value: unknown): value is CreatorPlanChatSpec {
   const spec = value as Partial<CreatorPlanChatSpec> | null
   return (
     !!spec &&
@@ -174,7 +174,7 @@ function bindableRoleSpecs(
   return agent ? { ...specs, chat: agent } : specs
 }
 
-function chatModel(spec: CreatorPlanChatSpec): ModelConfig {
+export function chatModel(spec: CreatorPlanChatSpec): ModelConfig {
   const efforts = new Set(spec.reasoning_efforts ?? [])
   return {
     id: spec.model,

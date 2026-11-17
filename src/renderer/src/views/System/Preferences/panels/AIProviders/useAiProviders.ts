@@ -2,6 +2,7 @@ import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import {
   BUILTIN_BROWSER_PROVIDER_ID,
   ROLE_KIND,
+  mergeListedModel,
   modelAllowsRole,
   type CatalogEntry,
   type ModelConfig,
@@ -504,11 +505,11 @@ export function useAiProviders(): AiProvidersState {
       const result = await window.api.aiProvider.listModels(payload)
       if (!result.ok) return { ok: false, error: result.error }
 
-      // 合并而不是替换：厂商的 /models 不会告诉我们哪个支持视觉/工具，
-      // 直接覆盖会把用户手工标注的能力位抹掉。
+      // 合并而不是替换：多数厂商的 /models 不说哪个支持视觉/工具，直接覆盖会把用户
+      // 手工标注的能力位抹掉。中转站给了能力的那些才照它更新（见 mergeListedModel）
       const existing = new Map(draft.value.models.map((model) => [model.id, model]))
-      const merged: ModelConfig[] = result.models.map(
-        (model) => existing.get(model.id) ?? { ...model }
+      const merged: ModelConfig[] = result.models.map((model) =>
+        mergeListedModel(existing.get(model.id), model)
       )
       for (const [id, model] of existing) {
         if (!merged.some((item) => item.id === id)) merged.push(model)

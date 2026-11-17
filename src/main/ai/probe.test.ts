@@ -212,6 +212,58 @@ describe('testProvider 的探测方式', () => {
     ])
   })
 
+  it('中转站带 box_spec 的模型按规格勾视觉、推理、填上下文；不带的只勾工具', async () => {
+    globalThis.fetch = (async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: [
+          { id: 'plain-model' },
+          {
+            id: 'deepseek-flash',
+            box_spec: {
+              model: 'deepseek-flash',
+              display_name: 'deepseek-flash',
+              context_window: 1048576,
+              max_output_tokens: 393216,
+              supports_vision: true,
+              supports_video: false,
+              supports_tools: true,
+              supports_reasoning: true,
+              reasoning_efforts: ['low', 'high', 'max'],
+              structured_output: 'json-object'
+            }
+          }
+        ]
+      })
+    })) as unknown as typeof fetch
+
+    expect(await listRemoteModels(providerWith([], 'chat'))).toEqual({
+      ok: true,
+      models: [
+        {
+          id: 'deepseek-flash',
+          supportsVision: true,
+          supportsVideo: false,
+          supportsTools: true,
+          supportsReasoning: true,
+          contextWindow: 1048576,
+          maxOutputTokens: 393216,
+          structuredOutputApi: 'json-object',
+          thinkingLevelMap: {
+            minimal: null,
+            low: 'low',
+            medium: null,
+            high: 'high',
+            xhigh: null,
+            max: 'max'
+          }
+        },
+        { id: 'plain-model', supportsTools: true }
+      ]
+    })
+  })
+
   it('anthropic-messages 两种鉴权都拉不到时让用户手填', async () => {
     let calls = 0
     globalThis.fetch = (async () => {

@@ -50,7 +50,21 @@ const relayModels = {
   data: [
     { id: 'claude-opus-5-5', supported_endpoint_types: ['anthropic', 'openai'] },
     { id: 'gpt-6-sol', supported_endpoint_types: ['openai', 'openai-response'] },
-    { id: 'deepseek-flash', supported_endpoint_types: ['openai'] },
+    {
+      id: 'deepseek-flash',
+      supported_endpoint_types: ['openai'],
+      box_spec: {
+        model: 'deepseek-flash',
+        context_window: 1048576,
+        max_output_tokens: 393216,
+        supports_vision: true,
+        supports_video: false,
+        supports_tools: true,
+        supports_reasoning: true,
+        reasoning_efforts: ['low', 'high', 'max'],
+        structured_output: 'json-object'
+      }
+    },
     { id: 'gpt-image-2', supported_endpoint_types: ['image-generation'] },
     { id: 'text-embedding-3-large', supported_endpoint_types: ['embeddings'] }
   ]
@@ -163,7 +177,16 @@ describe('确认写入', () => {
       expect.objectContaining({
         id: 'uebox',
         protocol: 'openai-completions',
-        baseUrl: `${CREATOR_PLAN_ORIGIN}/v1`
+        baseUrl: `${CREATOR_PLAN_ORIGIN}/v1`,
+        models: [
+          expect.objectContaining({
+            id: 'deepseek-flash',
+            supportsVision: true,
+            supportsReasoning: true,
+            contextWindow: 1048576
+          }),
+          { id: 'gpt-6-sol', supportsTools: true }
+        ]
       })
     ])
     expect(settings.roles.chat).toEqual({ providerId: 'uebox-claude', modelId: 'claude-opus-5-5' })
@@ -191,7 +214,10 @@ describe('确认写入', () => {
       protocol: 'openai-completions',
       baseUrl: `${CREATOR_PLAN_ORIGIN}/v1/`,
       apiKey: { kind: 'literal', id: 'old-key-id' },
-      models: [{ id: 'gpt-6-sol', displayName: '我的 GPT' }]
+      models: [
+        { id: 'gpt-6-sol', displayName: '我的 GPT', supportsVision: true },
+        { id: 'deepseek-flash', displayName: '我的 DeepSeek', supportsTools: true }
+      ]
     } as AiProviderSettings['providers'][number]
     settings = {
       version: 3,
@@ -211,7 +237,17 @@ describe('确认写入', () => {
     expect(settings.providers[1]).toMatchObject({
       id: 'my-relay',
       apiKey: { kind: 'literal', id: 'old-key-id' },
-      models: [{ id: 'gpt-6-sol', displayName: '我的 GPT' }, { id: 'deepseek-flash' }]
+      // 中转站没给能力的留着用户标的；给了能力的照它更新，显示名留用户的
+      models: [
+        { id: 'gpt-6-sol', displayName: '我的 GPT', supportsVision: true },
+        {
+          id: 'deepseek-flash',
+          displayName: '我的 DeepSeek',
+          supportsVision: true,
+          supportsReasoning: true,
+          contextWindow: 1048576
+        }
+      ]
     })
     // 已经设过主模型，不动
     expect(settings.roles.chat).toEqual({ providerId: 'my-relay', modelId: 'gpt-6-sol' })

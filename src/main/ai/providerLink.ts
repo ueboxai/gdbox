@@ -12,12 +12,17 @@
  * 已经有了就换 Key、补模型，不再叠一条。冷启动从链接唤起时界面后到，请求先挂着。
  */
 
-import type { ModelConfig, ProbeFailure, ProviderProtocol } from '../../shared/aiProvider'
+import {
+  mergeListedModel,
+  type ModelConfig,
+  type ProbeFailure,
+  type ProviderProtocol
+} from '../../shared/aiProvider'
 import type { ProviderLinkGroup, ProviderLinkPreview } from '../../shared/aiProvider'
 import { findMainWindow } from '../appWindows'
 import { CREATOR_PLAN_ORIGIN } from './creatorPlan/endpoint'
 import { saveLiteralKey } from './credentials'
-import { describeProbeError } from './probe'
+import { describeProbeError, modelFromListItem } from './probe'
 import { readSettings, updateSettings } from './store'
 import type { ProviderConfig } from './types'
 
@@ -41,6 +46,8 @@ const SLOTS: Record<
 let pendingKey: string | null = null
 /** 预览时拉到的分组，确认时直接用 */
 let prepared: ProviderLinkGroup[] | null = null
+/** 预览时拉到的每个模型的配置（带中转站给的能力），确认时按 id 取 */
+let preparedModels = new Map<string, ModelConfig>()
 
 const trimSlash = (url: string): string => url.replace(/\/+$/, '')
 
@@ -56,6 +63,7 @@ export function hasProviderLink(): boolean {
 export function dismissProviderLink(): void {
   pendingKey = null
   prepared = null
+  preparedModels = new Map()
 }
 
 export function handleProviderDeepLink(raw: string): boolean {
@@ -112,7 +120,9 @@ export async function previewProviderLink(): Promise<
 > {
   const key = pendingKey
   if (!key) return null
-  let payload: { data?: Array<{ id?: unknown; supported_endpoint_types?: unknown }> }
+  let payload: {
+    data?: Array<{ id?: unknown; supported_endpoint_types?: unknown; box_spec?: unknown }>
+  }
   try {
     const response = await fetch(`${CREATOR_PLAN_ORIGIN}/v1/models`, {
       headers: { Authorization: `Bearer ${key}` },
@@ -127,10 +137,13 @@ export async function previewProviderLink(): Promise<
   if (pendingKey !== key) return null
 
   const buckets = { anthropic: [] as string[], openai: [] as string[] }
+  const listed = new Map<string, ModelConfig>()
   for (const item of payload.data ?? []) {
-    const id = String(item?.id ?? '').trim()
-    const slot = id ? slotOfModel(id, item.supported_endpoint_types) : null
-    if (slot && !buckets[slot].includes(id)) buckets[slot].push(id)
+    const model = modelFromListItem(item)
+    const slot = model ? slotOfModel(model.id, item.supported_endpoint_types) : null
+    if (!model || !slot || listed.has(model.id)) continue
+    buckets[slot].push(model.id)
+    listed.set(model.id, model)
   }
 
   const providers = (await readSettings()).providers
@@ -153,6 +166,7 @@ export async function previewProviderLink(): Promise<
   }
   if (groups.length === 0) return { ok: false, error: { code: 'listEmpty' } }
   prepared = groups
+  preparedModels = listed
   return { ok: true, data: { groups } }
 }
 
@@ -171,7 +185,10 @@ export async function applyProviderLink(): Promise<string[]> {
     const apiKey = await saveLiteralKey(keyId, key)
     const models: ModelConfig[] = [...(existing?.models ?? [])]
     for (const id of group.models) {
-      if (!models.some((model) => model.id === id)) models.push({ id, supportsTools: true })
+      const listed = preparedModels.get(id) ?? { id, supportsTools: true }
+      const at = models.findIndex((model) => model.id === id)
+      if (at < 0) models.push(listed)
+      else models[at] = mergeListedModel(models[at], listed)
     }
     configs.push(
       existing
