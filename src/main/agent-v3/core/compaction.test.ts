@@ -76,6 +76,12 @@ describe('splitAtRecentBudget', () => {
     expect(head.length + tail.length).toBe(messages.length)
   })
 
+  it('保留本轮超长用户指令，即使它独占整个保留额度', () => {
+    const request = bigMsg('user', 120_000)
+    expect(splitAtRecentBudget([request], 24_000)).toEqual({ head: [], tail: [request] })
+    expect(splitAtRecentBudget([msg('assistant', '历史'), request], 24_000).tail).toEqual([request])
+  })
+
   it('消息很少时全部保留，不做无谓的摘要', () => {
     const messages = [msg('user', '你好'), msg('assistant', '你好')]
 
@@ -103,6 +109,16 @@ describe('compactionThreshold', () => {
   it('大窗口按八成五 —— 1M 窗口不该等到 98% 才压', () => {
     expect(compactionThreshold(1_000_000)).toBe(850_000)
     expect(compactionThreshold(200_000)).toBe(170_000)
+  })
+
+  it('8K 窗口下能压缩超过其保留预算的历史，同时让短会话正常开始', async () => {
+    const compact = createAutoCompact(deps(8192))
+    const short = [msg('user', '继续')]
+    expect(await compact(short)).toBe(short)
+    generateSummary.mockReset().mockResolvedValue({ ok: true, value: '旧任务' })
+    const history = [bigMsg('user', 18_000), msg('assistant', '完成'), ...short]
+    expect((await compact(history)).slice(1)).toEqual(history.slice(1))
+    expect(compactionThreshold(8192)).toBeGreaterThan(0)
   })
 
   it('小窗口退回「窗口 - 保留额度」—— 八成五那条线会把摘要 prompt 自己挤掉', () => {
@@ -525,6 +541,30 @@ describe('createAutoCompact —— 摘要检查点', () => {
   })
 
   // 再压一次就是新一代上下文，缓存键要跟着换（见 compactionCheckpoint.promptCacheKey）
+  it('续写抛错时继续用已验证的检查点', async () => {
+    generateSummary.mockReset().mockRejectedValue(new Error('连接中断'))
+    const messages = longHistory()
+    const { deps: d, saved } = withCheckpoint(8_000, {
+      contextEpoch: 1,
+      summary: '已经完成的任务',
+      cutIndex: 2,
+      sourceHash: hashMessages(messages.slice(0, 2)),
+      createdAt: 0
+    })
+    const result = await createAutoCompact(d)(messages)
+    expect(generateSummary).toHaveBeenCalledOnce()
+    expect(result.slice(1)).toEqual(messages.slice(2))
+    expect(saved).not.toHaveBeenCalled()
+  })
+
+  it('摘要反而更长时保留原历史', async () => {
+    generateSummary.mockReset().mockResolvedValue({ ok: true, value: 'x'.repeat(400_000) })
+    const messages = longHistory()
+    const { deps: d, saved } = withCheckpoint(8_000)
+    expect(await createAutoCompact(d)(messages)).toBe(messages)
+    expect(saved).not.toHaveBeenCalled()
+  })
+
   it('再压一次时代数 +1', async () => {
     generateSummary.mockReset().mockResolvedValue({ ok: true, value: 'S' })
     const messages = longHistory()
@@ -565,6 +605,7 @@ describe('createAutoCompact —— 摘要检查点', () => {
     // 不用 toHaveBeenCalledWith + expect.anything()：signal 那一位是 undefined，
     // anything() 不匹配 undefined，断言会因为一个和本条无关的原因红掉
     expect(generateSummary.mock.calls[0][6]).toBe('上一份摘要')
+    expect(JSON.stringify(generateSummary.mock.calls[0][0])).not.toContain('上一份摘要')
   })
 
   // 没有落盘通道的场景（子 agent、调试入口）同样该在这一轮里复用

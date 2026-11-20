@@ -89,7 +89,7 @@ export function precompactionStep(contextWindow: number): number {
 export function compactionThreshold(contextWindow: number): number {
   return Math.min(
     contextWindow * COMPACT_AT_RATIO,
-    contextWindow - UNREAL_BOX_COMPACTION.reserveTokens
+    Math.max(contextWindow / 3, contextWindow - UNREAL_BOX_COMPACTION.reserveTokens)
   )
 }
 
@@ -200,10 +200,10 @@ export type CompactOutcome =
  */
 export async function compactMessages(
   messages: AgentMessage[],
-  deps: Pick<CompactionDeps, 'models' | 'summaryModel'>,
+  deps: Pick<CompactionDeps, 'models' | 'summaryModel' | 'contextWindow'>,
   options: { previousSummary?: string; signal?: AbortSignal } = {}
 ): Promise<CompactOutcome> {
-  const { head, tail } = splitAtRecentBudget(messages, UNREAL_BOX_COMPACTION.keepRecentTokens)
+  const { head, tail } = splitAtRecentBudget(messages, recentBudget(deps.contextWindow))
   if (head.length === 0) {
     // 最近几轮就已经撑满保留额度了，没有「早期对话」可换
     return { ok: false, reason: 'too-short' }
@@ -501,12 +501,14 @@ function createConversationCompact(deps: CompactionDeps): {
     messages: AgentMessage[],
     signal?: AbortSignal
   ): Promise<AgentMessage[]> => {
+    let fallback = messages
     try {
       validate(messages)
 
       // 有检查点就先投影成模型视图再量 —— 拿全量历史去量，会在明明已经压过的
       // 情况下判定「还要再压」，然后每一次请求都白跑一趟摘要模型。
       const base = checkpoint ? applyCheckpoint(messages, checkpoint) : messages
+      fallback = base
 
       // 用量过期（要发的这份比厂商报账那时大）时改用文字下限，见 `estimateOutgoingTokens`
       const usage = estimateOutgoingTokens(base)
@@ -577,8 +579,8 @@ function createConversationCompact(deps: CompactionDeps): {
 
       return await compactNow(messages, base, tokens, announced, signal)
     } catch {
-      // transformContext 抛异常会中断低层循环且不产生正常事件序列。
-      return messages
+      // 续写失败时仍可使用已经验证过的检查点。
+      return fallback
     }
   }
 
@@ -641,13 +643,15 @@ function createConversationCompact(deps: CompactionDeps): {
     // 代数按**生效中**的检查点算：续写时 previous 是还没换上的那份，
     // 拿它 +1 会跳代，缓存键（见 createAgent 的 promptCacheKey）跟着乱
     const contextEpoch = (checkpoint?.contextEpoch ?? 0) + 1
-    const outcome = await compactMessages(base, deps, {
+    const outcome = await compactMessages(previous ? base.slice(1) : base, deps, {
       // 迭代式摘要：下一次压缩把上一次的摘要一起喂进去更新，
       // 而不是对着已经压过的历史再压一次。
       ...(previous ? { previousSummary: previous.summary } : {}),
       ...(signal ? { signal } : {})
     })
-    if (!outcome.ok) return undefined
+    if (!outcome.ok || estimateMessagesTokens(outcome.messages) >= estimateMessagesTokens(base)) {
+      return undefined
+    }
     // 新切点换算回**原始历史**的下标：outcome.messages 是 [摘要, ...尾巴]，
     // 而那条尾巴永远是 messages 的一个后缀，不管 base 有没有被投影过。
     const cutIndex = total - (outcome.messages.length - 1)
@@ -671,7 +675,7 @@ function createConversationCompact(deps: CompactionDeps): {
   ): Promise<AgentMessage[]> {
     // 切不出头部就别宣布压缩：`compactMessages` 这时只会回 `too-short`，
     // 而 `onCompacting` 已经发出去了，界面上是一次没有下文的「正在压缩」。
-    if (splitAtRecentBudget(base, UNREAL_BOX_COMPACTION.keepRecentTokens).head.length === 0) {
+    if (splitAtRecentBudget(base, recentBudget(deps.contextWindow)).head.length === 0) {
       return base
     }
 
@@ -701,6 +705,10 @@ function toSummaryMessage(summary: string): AgentMessage {
   } as unknown as AgentMessage
 }
 
+function recentBudget(contextWindow: number): number {
+  return Math.min(UNREAL_BOX_COMPACTION.keepRecentTokens, Math.floor(contextWindow / 4))
+}
+
 /**
  * 从尾部往前累加，直到攒够 keepRecentTokens，剩下的头部拿去做摘要。
  *
@@ -723,7 +731,11 @@ export function splitAtRecentBudget(
     // 而 keepRecentTokens 一共才 24000 —— 第一轮就把额度耗光，`cut` 停在末尾，
     // 连用户刚发的那条一起被摘要掉。见 `estimateMessagesTokensByBytes` 的注释。
     budget -= estimateTokens(messages[i])
-    if (budget <= 0) break
+    if (budget <= 0) {
+      // 本轮请求须保留原文，即使它独自超过保留额度。
+      if (i === messages.length - 1 && messages[i].role === 'user') cut = i
+      break
+    }
     cut = i
   }
 

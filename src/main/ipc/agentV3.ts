@@ -3471,7 +3471,7 @@ export function registerAgentV3IPC(): void {
       run.controller.signal.throwIfAborted()
       const outcome = await compactMessages(
         previous,
-        { models, summaryModel },
+        { models, summaryModel, contextWindow: selection.model.contextWindow },
         { signal: run.controller.signal }
       )
       run.controller.signal.throwIfAborted()

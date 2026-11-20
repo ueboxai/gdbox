@@ -4,7 +4,8 @@
  * Copyright (c) 2025 Mario Zechner. MIT License, see ./LICENSE.
  *
  * pi 1.0 removed the harness, compaction included. Only the parts GDBox calls are kept,
- * and their behavior is unchanged:
+ * with the following adaptations:
+ * - Oversized summary inputs are processed in order using the previous chunk summary.
  * - Session-entry helpers, file-operation tracking, and branch summaries are dropped.
  * - The harness-only message roles (bashExecution, custom, branchSummary, compactionSummary)
  *   are dropped from the estimator and converter; GDBox never produces them.
@@ -17,6 +18,7 @@ import {
   type AssistantMessage,
   type Context,
   contentText,
+  isContextOverflow,
   type Message,
   type Model,
   type Models,
@@ -313,54 +315,79 @@ export async function generateSummary(
 ): Promise<Result<string, CompactionError>> {
   const maxTokens = Math.min(
     Math.floor(0.8 * reserveTokens),
+    model.contextWindow > 0 ? Math.max(1, Math.floor(model.contextWindow / 4)) : Infinity,
     model.maxTokens > 0 ? model.maxTokens : Number.POSITIVE_INFINITY
   )
-  let basePrompt = previousSummary ? UPDATE_SUMMARIZATION_PROMPT : SUMMARIZATION_PROMPT
-  if (customInstructions) {
-    basePrompt = `${basePrompt}\n\nAdditional focus: ${customInstructions}`
-  }
-  const llmMessages = convertToLlm(currentMessages)
-  const conversationText = serializeConversation(llmMessages)
-  let promptText = `<conversation>\n${conversationText}\n</conversation>\n\n`
-  if (previousSummary) {
-    promptText += `<previous-summary>\n${previousSummary}\n</previous-summary>\n\n`
-  }
-  promptText += basePrompt
-
-  const summarizationMessages = [
-    {
-      role: 'user' as const,
-      content: [{ type: 'text' as const, text: promptText }],
-      timestamp: Date.now()
-    }
-  ]
-
+  const conversation = serializeConversation(convertToLlm(currentMessages))
+  if (!conversation.trim())
+    return err(new CompactionError('summarization_failed', 'No text to summarize'))
   const completionOptions =
     model.reasoning && thinkingLevel && thinkingLevel !== 'off'
       ? { maxTokens, signal, reasoning: thinkingLevel }
       : { maxTokens, signal }
 
-  const response = await completeSimpleWithRetries(
-    models,
-    model,
-    { systemPrompt: SUMMARIZATION_SYSTEM_PROMPT, messages: summarizationMessages },
-    completionOptions,
-    retry,
-    callbacks
-  )
-  if (response.stopReason === 'aborted') {
-    return err(new CompactionError('aborted', response.errorMessage || 'Summarization aborted'))
-  }
-  if (response.stopReason === 'error') {
-    return err(
-      new CompactionError(
-        'summarization_failed',
-        `Summarization failed: ${response.errorMessage || 'Unknown error'}`
-      )
-    )
-  }
+  let summary = previousSummary ?? ''
+  let offset = 0
+  let chunkLimit = conversation.length
+  do {
+    if (signal?.aborted) return err(new CompactionError('aborted', 'Summarization aborted'))
+    let end = Math.min(offset + chunkLimit, conversation.length)
+    // Keep a UTF-16 surrogate pair together when splitting a large message.
+    if (end < conversation.length && /[\uDC00-\uDFFF]/u.test(conversation.charAt(end))) end++
+    const chunk = conversation.slice(offset, end)
+    let prompt = `<conversation>\n${chunk}\n</conversation>\n\n`
+    if (summary) prompt += `<previous-summary>\n${summary}\n</previous-summary>\n\n`
+    prompt += summary ? UPDATE_SUMMARIZATION_PROMPT : SUMMARIZATION_PROMPT
+    if (customInstructions) prompt += `\n\nAdditional focus: ${customInstructions}`
 
-  return ok(contentText(response.content))
+    const response = await completeSimpleWithRetries(
+      models,
+      model,
+      {
+        systemPrompt: SUMMARIZATION_SYSTEM_PROMPT,
+        messages: [
+          { role: 'user', content: [{ type: 'text', text: prompt }], timestamp: Date.now() }
+        ]
+      },
+      completionOptions,
+      retry,
+      callbacks
+    )
+    if (response.stopReason === 'aborted' || signal?.aborted) {
+      return err(new CompactionError('aborted', response.errorMessage || 'Summarization aborted'))
+    }
+    if (isContextOverflow(response, model.contextWindow)) {
+      // The provider knows its actual window and tokenizer. Retry only the unprocessed
+      // part, stopping if even a short passage plus the running summary cannot fit.
+      if (chunk.length > 1024) {
+        chunkLimit = Math.floor(chunk.length / 2)
+        continue
+      }
+      return err(
+        new CompactionError(
+          'summarization_failed',
+          response.errorMessage || 'Summary exceeds context window'
+        )
+      )
+    }
+    if (response.stopReason !== 'stop') {
+      return err(
+        new CompactionError(
+          'summarization_failed',
+          response.errorMessage || `Incomplete summary: ${response.stopReason}`
+        )
+      )
+    }
+    const next = contentText(response.content)
+    if (!next.trim()) {
+      return err(
+        new CompactionError('summarization_failed', response.errorMessage || 'Empty summary')
+      )
+    }
+    summary = next
+    offset = end
+  } while (offset < conversation.length)
+  return ok(summary)
 }
 
 const TOOL_RESULT_MAX_CHARS = 2000
