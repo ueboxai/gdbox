@@ -21,6 +21,7 @@ import {
   type TrayAction,
   type TrayRecentSession
 } from '../shared/trayActions'
+import type { CapabilityKind, IdleAction } from '../shared/capabilityIdle'
 import type { AgentTurnUsage } from '../shared/agentUsage'
 import type { AgentReviewTarget } from '../shared/agentReview'
 import type { SideQuestionContext } from '../shared/sideQuestion'
@@ -1431,6 +1432,8 @@ const api = {
     reattach: (args: { sessionIds?: string[] }) => ipcRenderer.invoke('agent-v3:reattach', args),
     listSessions: () => ipcRenderer.invoke('agent-v3:list-sessions'),
     /** 技能清单。输入框的 / 菜单和「技能」设置页共用，含来源和开关状态 */
+    manageIdle: (kind: CapabilityKind, action?: IdleAction) =>
+      ipcRenderer.invoke('agent-v3:manage-idle', kind, action),
     listSkills: () => ipcRenderer.invoke('agent-v3:list-skills'),
     /** 详情弹窗：读 SKILL.md 全文（含 frontmatter） */
     readSkill: (name: string) => ipcRenderer.invoke('agent-v3:read-skill', name),

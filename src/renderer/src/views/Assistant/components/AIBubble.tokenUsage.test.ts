@@ -46,6 +46,18 @@ function mountBubble(responseMetadata?: Record<string, unknown>): ReturnType<typ
 }
 
 describe('AIBubble 本轮 token 用量', () => {
+  it('shows the local completion time and restores older timestamps from duration', async () => {
+    const wrapper = mountBubble({ durationMs: 60_000 })
+    const end = new Date(2026, 9, 29, 17, 4)
+    expect(wrapper.find('time.completion-time').exists()).toBe(false)
+    await wrapper.setProps({ startTime: end.getTime() - 60_000 })
+    expect(wrapper.get('time.completion-time').text()).toBe('10月29日 17:04')
+    await wrapper.setProps({ completedAt: end.getTime() + 60_000 })
+    expect(wrapper.get('time.completion-time').text()).toBe('10月29日 17:05')
+    await wrapper.setProps({ status: 'typing' })
+    expect(wrapper.find('time.completion-time').exists()).toBe(false)
+  })
+
   it('显示合计与费用', () => {
     const wrapper = mountBubble({ usage: usage() })
     expect(wrapper.find('.token-usage').text()).toBe('14k tokens · $0.0031')

@@ -54,6 +54,7 @@ import {
   type McpServerFormValue
 } from '@renderer/api/mcp'
 import { startAgentChat } from '@renderer/views/Assistant/composables/handOffToAgent'
+import CapabilityIdle from '../CapabilityIdle.vue'
 import AppSwitch from '@renderer/components/AppSwitch.vue'
 
 const { t } = useI18n()
@@ -956,11 +957,16 @@ async function revealConfig(): Promise<void> {
   }
 }
 
+async function refreshIdleStatuses(): Promise<void> {
+  statuses.value = (await mcpClientAPI.getSettings()).statuses
+}
+
 onMounted(load)
 </script>
 
 <template>
   <div class="settings-content">
+    <CapabilityIdle kind="mcp" @changed="refreshIdleStatuses" />
     <!-- ── 接入第三方 server ─────────────────────────────────── -->
     <!--
       这里不重复标题：页面 Header 已经写着「接入外部 MCP 服务」和同一句描述，

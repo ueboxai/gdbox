@@ -51,7 +51,7 @@ import { oneLine, pickStepTarget } from '../../../shared/stepTarget'
 import {
   ALWAYS_RESIDENT_TOOL_NAMES,
   createToolSearch,
-  TOOL_SEARCH_RULES
+  toolSearchRules
 } from '../tools/builtin/toolSearch'
 import { toolSearchPrefixKey } from './toolSearchCache'
 import { effectiveRisk, type UnrealAgentTool } from '../tools/defineTool'
@@ -147,6 +147,11 @@ export interface SessionContext {
   sessionId: string
   /** Beta 覆盖值；省略读取应用设置。子任务继承父任务本轮的选择。 */
   toolSearchEnabled?: boolean
+  /**
+   * 工具搜索的固定清单模式（原型）：清单整场不变，其余工具经 `call_tool` 调用。
+   * 见 `createToolSearch` 的 `fixed`。省略读取应用设置，子任务继承父任务。
+   */
+  toolListFixed?: boolean
   /**
    * 用户在「设置 → 工具」里关掉的工具名（全量模式）。
    *
@@ -704,6 +709,7 @@ export async function createUnrealAgent(ctx: SessionContext): Promise<CreatedAge
   const settingsManager = (await import('../../appSettingsManager')).appSettingsManager
   const appSettings = settingsManager.getSettings()
   ctx.toolSearchEnabled ??= appSettings.agentToolSearchEnabled === true
+  ctx.toolListFixed ??= appSettings.agentToolListFixed === true
   // `??=` 而不是直接赋值：子任务继承父任务本轮的那份清单，跑到一半改设置
   // 不会让同一条会话的前后两轮拿着两套工具
   ctx.disabledToolNames ??= appSettings.agentDisabledTools
@@ -858,7 +864,9 @@ export async function createUnrealAgent(ctx: SessionContext): Promise<CreatedAge
 
   // 完整池已经过所有权限过滤。搜索只能看见这个池，不能凭名字取回被禁止的工具。
   const search = ctx.toolSearchEnabled
-    ? createToolSearch(onlineTools, () => toolsFor(ctx.ueConnected), ctx.residentTools ?? {})
+    ? createToolSearch(onlineTools, () => toolsFor(ctx.ueConnected), ctx.residentTools ?? {}, {
+        fixed: ctx.toolListFixed === true
+      })
     : undefined
   const tools = search ? search.getTools() : toolsFor(ctx.ueConnected)
   const systemPromptFor = (context: SessionContext): string =>
@@ -867,10 +875,11 @@ export async function createUnrealAgent(ctx: SessionContext): Promise<CreatedAge
       context,
       skills,
       runtime.toolImagesVisible ? { ...selection, model: { input: ['text', 'image'] } } : selection
-    ) + (search ? TOOL_SEARCH_RULES : '')
+    ) + (search ? toolSearchRules(ctx.toolListFixed === true) : '')
 
   const byName = new Map(onlineTools.map((tool) => [tool.name, tool]))
   if (search) byName.set(search.tool.name, search.tool)
+  if (search?.callTool) byName.set(search.callTool.name, search.callTool)
 
   const loopBreaker = createLoopBreaker()
   /*
@@ -1086,7 +1095,11 @@ export async function createUnrealAgent(ctx: SessionContext): Promise<CreatedAge
     // 熔断先于审批：已经判定要拦的调用，不该再去打扰用户确认一次。
     // 熔断不依赖 requestApproval —— 没有审批 UI 的场景（子 agent、无头跑）
     // 恰恰最需要它，因为那里没人能手动打断撞墙的循环。
-    beforeToolCall: async (hookCtx, signal) => {
+    beforeToolCall: async (rawCtx, signal) => {
+      // `call_tool` 还原成真实工具：熔断、执行前提醒、审批都按它本来的名字和参数判断
+      const unwrapped = search ? search.unwrap(rawCtx) : { ok: true as const, ctx: rawCtx }
+      if (!unwrapped.ok) return { block: true, reason: unwrapped.error }
+      const hookCtx = unwrapped.ctx
       const broken = loopBreaker.before(hookCtx)
       if (broken) return broken
       // 执行前提醒先于审批：脚本里用了本工程 / 本引擎已确认会失败的写法，
@@ -1098,7 +1111,11 @@ export async function createUnrealAgent(ctx: SessionContext): Promise<CreatedAge
       if (precheck) return { block: true, reason: precheck }
       return approvalGate(hookCtx, signal)
     },
-    afterToolCall: async (hookCtx) => {
+    afterToolCall: async (rawCtx) => {
+      // 同 beforeToolCall：存档规则、经验记录、清单提醒都认真实工具。参数不对的那次
+      // 在 beforeToolCall 已经拦下，走不到这里；万一走到了就按原样处理
+      const unwrapped = search ? search.unwrap(rawCtx) : undefined
+      const hookCtx = unwrapped?.ok ? unwrapped.ctx : rawCtx
       // 这里曾把「加载区容量不够」伪装成失败喂给熔断。那道容量闸 2026-09-17 删了
       // （理由见 toolSearch.ts 顶部），于是这层包装也一起去掉 —— 熔断照常管
       // 真正的失败和原地打转，不需要为一个不会发生的状态留特例。
@@ -1145,7 +1162,9 @@ export async function createUnrealAgent(ctx: SessionContext): Promise<CreatedAge
     agent,
     selection,
     tools,
-    allTools: search ? [...onlineTools, search.tool] : onlineTools,
+    allTools: search
+      ? [...onlineTools, search.tool, ...(search.callTool ? [search.callTool] : [])]
+      : onlineTools,
     runtime,
     skills,
     toolSearchEnabled: ctx.toolSearchEnabled,

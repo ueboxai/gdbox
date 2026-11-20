@@ -129,7 +129,7 @@ vi.mock('../services', () => ({
     })
   }
 }))
-vi.mock('../agent-v3/capabilities/skills', () => ({}))
+vi.mock('../agent-v3/capabilities/skills', () => ({ recordSkillMentions: vi.fn() }))
 
 import {
   createEngineRefresher,

@@ -651,6 +651,10 @@ appReady?.then(async () => {
       await autoStartMcpServer(() => mcpSessionSource)
     })().catch((e) => logger.warn('[MCP-Server] 自动启动失败:', e))
 
+    void import('./agent-v3/capabilities/idleManagement')
+      .then(({ startIdleChecks }) => startIdleChecks())
+      .catch((error) => logger.warn('[Idle] Startup failed', error))
+
     installOfflineNetworkPolicy({ enforce: false })
 
     // 注册系统信息 IPC

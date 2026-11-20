@@ -129,7 +129,7 @@ vi.mock('./realtimeVoice', () => ({ isVoiceTaskSession: () => false }))
 vi.mock('../services', () => ({
   serviceManager: { getWebSocketService: () => ({ getConnectionCount: () => 0 }) }
 }))
-vi.mock('../agent-v3/capabilities/skills', () => ({}))
+vi.mock('../agent-v3/capabilities/skills', () => ({ recordSkillMentions: vi.fn() }))
 
 import {
   __resetSessionBindingsForTest,

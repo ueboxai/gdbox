@@ -185,6 +185,22 @@ export default {
       unknownError: 'Unknown error'
     }
   },
+  capabilityIdle: {
+    title: 'Idle management',
+    auto: 'Automatically disable MCP servers after 30 idle days',
+    autoOff: 'Automatically disabled after 30 idle days',
+    off: 'Disabled',
+    kept: 'Always kept',
+    unused: 'Idle for at least 14 days',
+    last: 'Last used on {date}',
+    never: 'No recorded use since {date}',
+    restore: 'Restore',
+    unkeep: 'Stop keeping',
+    keep: 'Always keep',
+    disable: 'Disable',
+    failed: 'Idle management failed.',
+    retry: 'Retry'
+  },
   mcp: {
     client: {
       description:
@@ -2492,6 +2508,7 @@ First work out why the install failed from the output above. If you can run comm
       userMessageNotFound: 'Cannot find corresponding user message',
       clearConfirmTitle: 'Clear this chat?',
       clearConfirmContent: 'This cannot be undone. Clear all messages in this chat?',
+      replyCompletedAt: 'Reply ended at {time}',
       replyInterrupted: 'Reply interrupted',
       newMessage: 'New Message',
       emptyMessage: 'Message content cannot be empty',

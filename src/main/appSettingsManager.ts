@@ -115,6 +115,13 @@ interface AppSettings {
    */
   agentToolSearchUserSet: boolean
   /**
+   * 工具搜索的固定清单模式（原型，默认关，暂无设置页开关）。
+   *
+   * 开着时请求顶层的工具清单整场对话不变，其余工具经 `call_tool` 调用，换取 prompt
+   * cache 不因加载工具整段失效。只在工具搜索打开时生效。见 `toolSearch.ts` 的 `fixed`。
+   */
+  agentToolListFixed: boolean
+  /**
    * 自动断点续传：中转不稳时每 60 秒自动续跑，连续失败满 30 分钟才报错。
    * 默认打开，每次开跑时读取。见 `agent-v3/core/autoResume.ts`。
    */
@@ -204,6 +211,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   agentFileAccessScope: 'full',
   agentToolSearchEnabled: true,
   agentToolSearchUserSet: false,
+  agentToolListFixed: false,
   // 默认开：它只在「这次失败重来可能就好」时才动手，关着的代价是任务半路停下等人点
   agentPersistentAutoResume: true,
   agentGoalMaxRounds: DEFAULT_GOAL_MAX_ROUNDS,
@@ -301,6 +309,7 @@ class AppSettingsManager {
                 ? savedSettings.agentToolSearchEnabled === true
                 : DEFAULT_SETTINGS.agentToolSearchEnabled,
           agentToolSearchUserSet: savedSettings.agentToolSearchUserSet === true,
+          agentToolListFixed: savedSettings.agentToolListFixed === true,
           // 只有用户明确关掉才算关：旧配置里没有这个字段的，跟着默认走
           agentPersistentAutoResume: mergedSettings.agentPersistentAutoResume !== false,
           // 手改坏的配置（字符串、负数、9999）夹回范围，不让它变成零轮或者跑一整夜

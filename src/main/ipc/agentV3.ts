@@ -225,6 +225,7 @@ import type { Agent, AgentMessage } from '@earendil-works/pi-agent-core'
 import { estimateContextTokens } from '../agent-v3/vendor/pi-harness'
 import {
   deleteUserSkills,
+  recordSkillMentions,
   discoverSkillsOnDisk,
   listSkillSummaries,
   readDisabledSkills,
@@ -2199,6 +2200,7 @@ export function registerAgentV3IPC(): void {
     // `/team <一句话>`：开启工作室模式。和 `/goal` 并列，同样只吃掉命令词
     const teamObjective = goalObjective ? null : parseTeamCommand(prompt)
     const promptText = goalObjective ?? teamObjective ?? prompt
+    void recordSkillMentions(prompt, scope.connectedProject?.projectPath)
 
     const emit = (channel: string, payload: unknown): void => {
       if (!sender.isDestroyed()) sender.send(channel, payload)
@@ -3664,6 +3666,7 @@ export function registerAgentV3IPC(): void {
          * 留底用的是 `args.message`（用户的原话），不是拼了闪存块和附件块的 `content`。
          * 内核回执投出来的也是剥掉这两块的原话，两边要对得上才销得了号。
          */
+        void recordSkillMentions(args.message, scope?.connectedProject?.projectPath)
         const steerId = queueSteer(entry.pendingSteers, entry.agent, args.message, {
           role: 'user',
           content,
@@ -3756,6 +3759,15 @@ export function registerAgentV3IPC(): void {
   })
 
   // ── MCP 管理 ──────────────────────────────────────────────────────────
+  ipcMain.handle('agent-v3:manage-idle', async (_event, kind, action) => {
+    try {
+      const { manageIdle } = await import('../agent-v3/capabilities/idleManagement')
+      return { success: true, data: await manageIdle(kind, action) }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) }
+    }
+  })
+
   ipcMain.handle('agent-v3:mcp:get-settings', async () => ({
     settings: await readMcpSettings(),
     path: mcpSettingsPath(),
@@ -3784,6 +3796,8 @@ export function registerAgentV3IPC(): void {
     try {
       const { removeMcpServer } = await import('../agent-v3/capabilities/mcp/store')
       await removeMcpServer(args.id)
+      const { resetIdle } = await import('../agent-v3/capabilities/idleStore')
+      await resetIdle('mcp', args.id)
       // 删完立刻重连：那条 server 的工具要当场从会话里消失，
       // 而不是留一个已经不存在的「已连接」胶囊挂在界面上
       return { success: true, settings: await readMcpSettings(), statuses: await reconnectMcp() }
@@ -3811,6 +3825,8 @@ export function registerAgentV3IPC(): void {
         // 先删旧名字再写新的：反过来的话，id 没变时会把刚写的又删掉
         if (args.renamedFrom && args.renamedFrom !== args.id) {
           await removeMcpServer(args.renamedFrom)
+          const { resetIdle } = await import('../agent-v3/capabilities/idleStore')
+          await resetIdle('mcp', args.renamedFrom)
         }
         await upsertMcpServer(args.id, args.config)
         return { success: true, settings: await readMcpSettings(), statuses: await reconnectMcp() }

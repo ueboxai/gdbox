@@ -134,7 +134,7 @@ vi.mock('../services', () => ({
     })
   }
 }))
-vi.mock('../agent-v3/capabilities/skills', () => ({}))
+vi.mock('../agent-v3/capabilities/skills', () => ({ recordSkillMentions: vi.fn() }))
 
 import { __resetSessionBindingsForTest } from '../agent-v3/core/sessionBinding'
 import { registerAgentV3IPC } from './agentV3'

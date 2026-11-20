@@ -13,6 +13,7 @@ vi.mock('electron', () => ({
   }
 }))
 
+import { editIdle } from './idleStore'
 import { discoverSkills } from '../../agent-v3/capabilities/skillsService/SkillsService'
 import {
   applySkillLearningMode,
@@ -24,6 +25,7 @@ import {
   listSkillSummaries,
   readDisabledSkills,
   readSkillDocument,
+  recordSkillMentions,
   setSkillDisabled,
   skillBodyVisible,
   SKILL_CREATOR_NAME,
@@ -190,6 +192,25 @@ describe('load_skill', () => {
 
     expect(text).toContain('# 流程')
     expect(text).toContain('拿真实 node_id')
+  })
+
+  it('counts loading or naming a skill, and ignores management previews', async () => {
+    const name = 'ue-blueprint-graph-wiring'
+    const used = (): Promise<number | undefined> =>
+      editIdle((state) => state.entries['skill/' + name]?.lastUsed)
+    const before = await used()
+    await readSkillDocument(name)
+    expect(await used()).toBe(before)
+    await editIdle((state) => {
+      delete state.entries['skill/' + name]
+    })
+    await recordSkillMentions('请用 $ue-blueprint-graph-wiring 处理')
+    expect(await used()).toBeTypeOf('number')
+    await editIdle((state) => {
+      delete state.entries['skill/' + name]
+    })
+    await loadSkillTool.execute('idle-test', { name })
+    expect(await used()).toBeTypeOf('number')
   })
 
   /**

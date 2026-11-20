@@ -567,6 +567,13 @@
           <PhSpeakerHigh v-else />
         </AppButton>
       </AppTooltip>
+      <time
+        v-if="status === 'done' && completionTime"
+        class="token-usage completion-time"
+        :datetime="completionTime.iso"
+        :title="t('assistant.chat.replyCompletedAt', { time: completionTime.label })"
+        >{{ completionTime.label }}</time
+      >
       <!-- 本轮用时：用户发出到回复完成 -->
       <span v-if="status === 'done' && turnDurationLabel" class="token-usage">
         {{ turnDurationLabel }}
@@ -703,7 +710,7 @@ import {
 } from '../composables/tokenUsageFormat'
 import { formatDuration } from '@renderer/views/System/Preferences/panels/Usage/usageStats'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 /**
  * 工具调用结果接口
@@ -748,6 +755,7 @@ const props = defineProps<{
   toolResults?: ToolResult[] // 工具调用结果
   agentProcess?: AgentProcessItem[] // Agent 思考过程
   thinking?: string // 思考过程内容
+  completedAt?: number
   startTime?: number // 消息开始时间（用于计算duration）
   citations?: Array<{
     id: string
@@ -1310,6 +1318,25 @@ function emitSourceClick(source: any): void {
 }
 
 // ==================== 本轮用时 ====================
+const completionTime = computed(() => {
+  const duration = props.responseMetadata?.durationMs
+  const timestamp =
+    props.completedAt ??
+    (props.startTime !== undefined && duration !== undefined
+      ? props.startTime + duration
+      : undefined)
+  if (timestamp === undefined) return
+  const date = new Date(timestamp)
+  if (!Number.isFinite(date.getTime())) return
+  const day = date.toLocaleDateString(locale.value, { month: 'long', day: 'numeric' })
+  const time = date.toLocaleTimeString(locale.value, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  })
+  return { iso: date.toISOString(), label: `${day} ${time}` }
+})
+
 const turnDurationLabel = computed(() => {
   const ms = props.responseMetadata?.durationMs
   return ms === undefined ? '' : formatDuration(ms)
@@ -2257,14 +2284,14 @@ function toggleChanges(): void {
   }
 }
 
-.tools.hover-done {
+.tools.hover-done > :not(.completion-time) {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
 }
 
-.ai-bubble:hover .tools.hover-done,
-.ai-bubble:focus-within .tools.hover-done {
+.ai-bubble:hover .tools.hover-done > :not(.completion-time),
+.ai-bubble:focus-within .tools.hover-done > :not(.completion-time) {
   opacity: 1;
   pointer-events: auto;
 }

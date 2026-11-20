@@ -26,6 +26,7 @@
             :agent-process="m.agentProcess"
             :thinking="m.thinking"
             :start-time="m.startTime"
+            :completed-at="m.completedAt"
             :citations="m.citations"
             :response-metadata="m.responseMetadata"
             @retry="handleRetry"
@@ -103,6 +104,7 @@ export interface ChatMessage {
   actionButtons?: Array<{ label: string; action: string; data?: any }> // 操作按钮
   agentProcess?: AgentProcessItem[] // Agent 思考过程
   thinking?: string // 思考过程内容
+  completedAt?: number
   startTime?: number // 消息开始时间（用于计算duration）
   citations?: Array<{
     id: string

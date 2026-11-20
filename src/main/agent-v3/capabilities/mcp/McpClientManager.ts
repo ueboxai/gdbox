@@ -253,6 +253,8 @@ interface Connection {
 }
 
 export class McpClientManager {
+  constructor(private readonly onUse?: (id: string) => Promise<void>) {}
+
   private readonly connections = new Map<string, Connection>()
   private readonly statuses = new Map<string, McpServerStatus>()
   private readonly tools = new Map<string, UnrealAgentTool<unknown>[]>()
@@ -444,8 +446,9 @@ export class McpClientManager {
         params: unknown,
         signal?: AbortSignal
       ): Promise<AgentToolResult<unknown>> =>
-        runAbortable(toSafeToolName(serverId, tool.name), signal, () =>
-          runMcpTool(
+        runAbortable(toSafeToolName(serverId, tool.name), signal, async () => {
+          await this.onUse?.(serverId)
+          return runMcpTool(
             tool.name,
             () =>
               withTimeout(
@@ -455,7 +458,7 @@ export class McpClientManager {
               ) as Promise<McpCallResult>,
             ensureBridge
           )
-        ),
+        }),
       // 第三方来源默认按最危险处理（见文件头）。例外两个：配置里点名的纯发现类
       // 工具降成 safe；用户信任了的 server 降成 mutating（「请求批准」档照样问）。见 types.ts
       unrealBox: {
@@ -485,6 +488,11 @@ export class McpClientManager {
     }
     this.connections.delete(id)
     this.tools.delete(id)
+  }
+
+  async disable(id: string): Promise<void> {
+    await this.disconnect(id)
+    this.statuses.set(id, { id, connected: false, toolCount: 0, disabled: true })
   }
 
   async disconnectAll(): Promise<void> {

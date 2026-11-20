@@ -4,11 +4,25 @@
  * 预算按 UTF-8 字节约束，避免中文统一除以字符比例导致的系统性低估。
  */
 import { z } from 'zod'
-import type { AgentMessage } from '@earendil-works/pi-agent-core'
-import { defineTool, type ToolOutcome, type UnrealAgentTool } from '../defineTool'
+import type {
+  AfterToolCallContext,
+  AgentMessage,
+  AgentToolResult,
+  BeforeToolCallContext
+} from '@earendil-works/pi-agent-core'
+import { validateToolArguments } from '@earendil-works/pi-ai'
+import {
+  defineTool,
+  effectiveRisk,
+  toToolSchema,
+  type ToolOutcome,
+  type UnrealAgentTool
+} from '../defineTool'
 import { BROWSER_TOOL_NAMES } from '../toolNames'
 
 export const TOOL_SEARCH_NAME = 'search_tools'
+/** 固定清单模式下转调其余工具的入口。见 `createToolSearch` 的 `fixed` */
+export const CALL_TOOL_NAME = 'call_tool'
 /*
  * 加载区不设容量上限：已加载 + 常驻永远是全库的子集，最坏情况恰好等于全量注入
  * （也就是关掉 Beta 的现状），一道会让任务失败的闸防不住任何事。
@@ -312,6 +326,45 @@ Loading adds original complete tool groups for the NEXT response. Definitions re
 Loaded groups are never evicted, and there is no cap on how many you may load: a cross-domain task should simply load every group it needs. All normal permissions, validation and execution rules still apply.
 </tool_search_beta>`
 
+/**
+ * 固定清单模式的规则。和上面那份的区别只有一件事：工具不「加载」进清单，
+ * 定义随结果回来，经 `call_tool` 调用。
+ */
+export const TOOL_SEARCH_FIXED_RULES = `
+<tool_search_beta>
+Your tool list stays the same for the whole conversation. Every capability not in it (file, shell, web, browser and every engine tool) is reached through call_tool.
+For a task matching a skill, call load_skill first: its result ends with the full definitions (name, description, JSON schema of the arguments) of the tools the skill uses. read_skill_resource does the same for tools named in that resource. search_tools is the fallback: it returns full definitions of the matching tools, and names returns exact definitions for tool names seen in skills or earlier messages. Search before deciding a capability is unavailable or writing a shell/Python workaround.
+To use one of those tools, call call_tool with {"name": "<tool name>", "arguments": {...}} following its schema. A definition that appeared earlier in this conversation stays valid; you do not need to fetch it again. Tool names appearing in system instructions, skills or earlier messages are called the same way.
+Permissions, approval, validation and execution are exactly the same as calling the tool directly. When the arguments do not match, the error returns the tool's schema so you can fix them.
+</tool_search_beta>`
+
+export function toolSearchRules(fixed: boolean): string {
+  return fixed ? TOOL_SEARCH_FIXED_RULES : TOOL_SEARCH_RULES
+}
+
+/** 发给模型的一条完整工具定义，和放在请求顶层 tools 里的那份内容相同 */
+interface ToolDefinition {
+  name: string
+  description: string
+  parameters: unknown
+}
+
+function definitionOf(tool: UnrealAgentTool<never>): ToolDefinition {
+  return { name: tool.name, description: tool.description, parameters: tool.parameters }
+}
+
+const callToolInput = z.object({
+  name: z.string().trim().min(1).describe('要调用的工具名，取自技能、search_tools 或之前的消息'),
+  arguments: z
+    .record(z.string(), z.unknown())
+    .default({})
+    .describe('按该工具定义里的参数 schema 填写')
+})
+
+type CallResolution =
+  | { ok: true; tool: UnrealAgentTool<never>; args: unknown; rawArguments: unknown }
+  | { ok: false; error: string }
+
 export function createToolSearch(
   catalog: UnrealAgentTool<never>[],
   available: () => UnrealAgentTool<never>[],
@@ -320,13 +373,34 @@ export function createToolSearch(
    * `appSettingsManager` 的 `agentResidentTools`：没写的按内置清单走，
    * 所以以后调整内置常驻清单，没点过开关的用户会自动跟上。
    */
-  residentOverrides: Record<string, boolean> = {}
+  residentOverrides: Record<string, boolean> = {},
+  options: {
+    /**
+     * 固定清单：请求顶层的工具清单整场对话不变，搜到 / 技能点名的工具只回定义，
+     * 经 `call_tool` 转调。
+     *
+     * 为的是 prompt cache。加载模式每加载一组就换掉请求开头的 tools，前缀整段重写
+     * （约 1.25×P₀）；上下文到了几十万 token 时，一次加载的钱够常驻全部工具跑几百个请求。
+     * 固定清单下新定义落在对话末尾（工具结果里），前缀永远不动。
+     */
+    fixed?: boolean
+  } = {}
 ): {
   tool: UnrealAgentTool<never>
+  /** 固定清单模式才有 */
+  callTool?: UnrealAgentTool<never>
   getTools: () => UnrealAgentTool<never>[]
   loadFromSkill: (content: string) => ToolOutcome<LoadDetails>
   restore: (messages: AgentMessage[]) => void
+  /**
+   * 把一次 `call_tool` 还原成对真实工具的调用，给 before / after 钩子用：审批、熔断、
+   * 存档、经验都按真实工具名和参数走。不是 `call_tool` 原样返回；参数不对返回错误。
+   */
+  unwrap: <T extends BeforeToolCallContext | AfterToolCallContext>(
+    hookCtx: T
+  ) => { ok: true; ctx: T } | { ok: false; error: string }
 } {
+  const fixed = options.fixed === true
   const entries = catalog.map((tool): Entry => {
     const group = toolSearchGroup(tool)
     const text = [
@@ -354,10 +428,31 @@ export function createToolSearch(
    * 来路。`isDefaultResidentTool` 留给设置页 —— 那条路径手上只有工具，没有 Entry。
    */
   const isResident = (entry: Entry): boolean =>
-    ALWAYS_RESIDENT_TOOL_NAMES.has(entry.tool.name)
+    ALWAYS_RESIDENT_TOOL_NAMES.has(entry.tool.name) ||
+    // 固定清单下大结果存档时没法再「顺手加载」`result_query`，它从一开始就在
+    (fixed && entry.tool.name === 'result_query')
       ? true
       : (residentOverrides[entry.tool.name] ??
         (CORE_NAMES.has(entry.tool.name) || RESIDENT_TOOL_GROUPS.has(entry.group)))
+
+  /**
+   * 固定清单模式下，这一轮已经把定义发过一次的工具。再命中只回名字，不重复贴定义。
+   * agent 每条用户消息重建一次，所以跨轮会再发一遍 —— 上一轮的定义可能已被压进摘要。
+   */
+  const described = new Set<string>()
+  const describe = (selected: Entry[]): { definitions: ToolDefinition[]; seen: string[] } => {
+    const definitions: ToolDefinition[] = []
+    const seen: string[] = []
+    for (const entry of new Set(selected)) {
+      if (isResident(entry)) continue
+      if (described.has(entry.tool.name)) seen.push(entry.tool.name)
+      else {
+        described.add(entry.tool.name)
+        definitions.push(definitionOf(entry.tool))
+      }
+    }
+    return { definitions, seen }
+  }
 
   const allowedEntries = (): Entry[] =>
     available().flatMap((tool) => {
@@ -366,6 +461,15 @@ export function createToolSearch(
     })
 
   const load = (selected: Entry[], allowed: Entry[]): LoadResult => {
+    if (fixed) {
+      // 不进 `active`：清单不变。`loaded` 仍按「这些你现在用得上」回给模型
+      return {
+        addedToolNames: [],
+        details: { loadedToolNames: [], loadedGroups: [] },
+        loaded: selected,
+        hint: '定义见 definitions，用 call_tool 调用；seen 里的定义在本轮前文已给过。'
+      }
+    }
     const groups = [...new Set(selected.filter((entry) => !isResident(entry)).map((e) => e.group))]
     const added: Entry[] = []
     for (const group of groups) {
@@ -395,11 +499,15 @@ export function createToolSearch(
     namespace: 'core',
     risk: 'safe',
     concurrency: 'sequential',
-    description:
-      '技能未覆盖时发现并加载工具组。优先 load_skill，它会同时加载正文涉及的领域工具组。Godot、盒子素材库、生成工具和第三方 MCP 都可检索。' +
-      'query 一次可加载多个相关工具组的完整定义（默认最多 3 组），跨领域任务写一句完整的任务描述即可，不必一组搜一次；' +
-      'names 精确定位，列几个就全加载；空参数浏览目录；namespace + offset 可逐页发现全部工具。' +
-      '首次没找到不等于没有能力，可改词、浏览目录再找。返回后下一轮才能调用新工具，执行权限不变。',
+    description: fixed
+      ? '技能未覆盖时查找工具，返回完整定义，用 call_tool 调用。优先 load_skill，它会同时给出正文用到的工具定义。Godot、盒子素材库、生成工具和第三方 MCP 都可检索。' +
+        'query 一次可覆盖多个相关工具组（默认最多 3 组），跨领域任务写一句完整的任务描述即可；' +
+        'names 按工具名取定义，列几个给几个；空参数浏览目录；namespace + offset 可逐页发现全部工具。' +
+        '首次没找到不等于没有能力，可改词、浏览目录再找。执行权限不变。'
+      : '技能未覆盖时发现并加载工具组。优先 load_skill，它会同时加载正文涉及的领域工具组。Godot、盒子素材库、生成工具和第三方 MCP 都可检索。' +
+        'query 一次可加载多个相关工具组的完整定义（默认最多 3 组），跨领域任务写一句完整的任务描述即可，不必一组搜一次；' +
+        'names 精确定位，列几个就全加载；空参数浏览目录；namespace + offset 可逐页发现全部工具。' +
+        '首次没找到不等于没有能力，可改词、浏览目录再找。返回后下一轮才能调用新工具，执行权限不变。',
     input: searchInput,
     execute: async ({ query, names, namespace, offset, limit }) => {
       const allowed = allowedEntries()
@@ -526,6 +634,37 @@ export function createToolSearch(
       const selected = [...paged.selected, ...residentHits.map(({ entry }) => entry)]
       const outcome = load(selected, allowed)
       const nextOffset = offset + page < paged.groupCount ? offset + page : null
+      if (fixed) {
+        const { definitions, seen } = describe(paged.selected)
+        // 命中组里没贴定义的其余成员：给名字，要用时 names 取定义
+        const shown = new Set(paged.selected.map((entry) => entry.tool.name))
+        const groups = new Set(paged.selected.map((entry) => entry.group))
+        const moreInGroups = groupPaged
+          ? allowed
+              .filter(
+                (entry) =>
+                  groups.has(entry.group) && !shown.has(entry.tool.name) && !isResident(entry)
+              )
+              .map((entry) => entry.tool.name)
+          : []
+        return {
+          details: { toolSearch: outcome.details },
+          text: JSON.stringify({
+            definitions,
+            seen,
+            ...(moreInGroups.length ? { moreInGroups } : {}),
+            alreadyInList: residentHits.map(({ entry }) => entry.tool.name),
+            missing,
+            nextOffset,
+            hint: paged.selected.length
+              ? outcome.hint +
+                (moreInGroups.length ? 'moreInGroups 里的工具要用时用 names 取定义。' : '')
+              : residentHits.length
+                ? '命中的工具已经在你的清单里，直接调用即可。要别的能力就换关键词或浏览目录。'
+                : '未命中。换关键词、用精确 names，或空参数浏览目录后按 namespace 查找。'
+          })
+        }
+      }
       return {
         details: { toolSearch: outcome.details },
         text: JSON.stringify({
@@ -549,18 +688,116 @@ export function createToolSearch(
     }
   }) as unknown as UnrealAgentTool<never>
 
+  /**
+   * `call_tool` 的参数 → 真实工具和校验过的参数。
+   *
+   * 只认 `available()` 里的工具：权限过滤和引擎连没连跟直接调用一致，不能凭名字
+   * 取回被禁的工具。校验走 pi 自己那一套（`prepareArguments` + `validateToolArguments`），
+   * 和直接调用时模型拿到的报错一样；报错后面附上 schema，模型一次就能改对。
+   */
+  const resolveCall = (params: unknown): CallResolution => {
+    const parsed = callToolInput.safeParse(params)
+    if (!parsed.success) return { ok: false, error: `call_tool 参数不对：${parsed.error.message}` }
+    const { name, arguments: rawArguments } = parsed.data
+    if (name === CALL_TOOL_NAME) return { ok: false, error: 'call_tool 不能调用它自己。' }
+    const target = allowedEntries().find((entry) => entry.tool.name === name)?.tool
+    if (!target) {
+      return {
+        ok: false,
+        error: `没有可用的工具 ${name}（不存在、被禁用，或要连上引擎才能用）。用 search_tools 查找。`
+      }
+    }
+    try {
+      const prepared = target.prepareArguments
+        ? target.prepareArguments(rawArguments)
+        : rawArguments
+      const args = validateToolArguments(target, {
+        type: 'toolCall',
+        id: 'call_tool',
+        name,
+        arguments: prepared as never
+      })
+      return { ok: true, tool: target, args, rawArguments }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      return {
+        ok: false,
+        error: `${name} 的参数不对：${message}\n参数 schema：${JSON.stringify(target.parameters)}`
+      }
+    }
+  }
+
+  const callTool = fixed
+    ? ({
+        name: CALL_TOOL_NAME,
+        label: CALL_TOOL_NAME,
+        description:
+          '调用不在清单里的工具。name 是工具名，arguments 按该工具定义里的 schema 填。' +
+          '定义从 load_skill、read_skill_resource 或 search_tools 的结果里拿；权限和审批与直接调用相同。',
+        parameters: toToolSchema(callToolInput),
+        /*
+         * 顺序执行。pi 按工具名判断一批调用能不能并发，它看到的只有 `call_tool`，
+         * 分不出里面是只读查询还是改同一份资产的写操作 —— 只能按最保守的来。
+         */
+        executionMode: 'sequential',
+        execute: async (
+          toolCallId: string,
+          params: unknown,
+          signal?: AbortSignal,
+          onUpdate?: (partial: AgentToolResult<unknown>) => void
+        ) => {
+          const resolved = resolveCall(params)
+          // pi 以抛异常判定失败，见 defineTool 的 ToolFailure
+          if (!resolved.ok) throw new Error(resolved.error)
+          return resolved.tool.execute(toolCallId, resolved.args as never, signal, onUpdate)
+        },
+        unrealBox: {
+          namespace: 'core',
+          // 声明成最坏情况，按这次转调的目标降下来。没走 `unwrap` 的地方（子任务写操作
+          // 台账、目标复核读原样事件）用 `effectiveRisk` 也能算出真实风险
+          risk: 'destructive',
+          riskFor: (params: unknown) => {
+            const resolved = resolveCall(params)
+            return resolved.ok
+              ? effectiveRisk(resolved.tool.unrealBox, resolved.args)
+              : 'destructive'
+          }
+        }
+      } as unknown as UnrealAgentTool<never>)
+    : undefined
+
   return {
     tool,
+    ...(callTool ? { callTool } : {}),
     getTools: () => {
       const allowed = allowedEntries()
       const names = new Set(allowed.map((entry) => entry.tool.name))
       return [
         tool,
+        ...(callTool ? [callTool] : []),
         ...allowed.filter((entry) => isResident(entry)).map((entry) => entry.tool),
         ...[...active.values()]
           .filter((entry) => names.has(entry.tool.name))
           .map((entry) => entry.tool)
       ]
+    },
+    unwrap: (hookCtx) => {
+      if (!callTool || hookCtx.toolCall.name !== CALL_TOOL_NAME) return { ok: true, ctx: hookCtx }
+      const resolved = resolveCall(hookCtx.toolCall.arguments)
+      if (!resolved.ok) return resolved
+      return {
+        ok: true,
+        ctx: {
+          ...hookCtx,
+          // id 不变：审批弹窗、界面卡片、工具结果都按 id 对上这一次调用
+          toolCall: {
+            ...hookCtx.toolCall,
+            name: resolved.tool.name,
+            arguments: resolved.rawArguments as typeof hookCtx.toolCall.arguments
+          },
+          args: resolved.args
+        }
+      }
     },
     loadFromSkill: (content) => {
       const mentioned = new Set(content.match(/[a-zA-Z][a-zA-Z0-9_-]*/g) ?? [])
@@ -570,6 +807,19 @@ export function createToolSearch(
         allowed.filter((entry) => entry.tool.name === name)
       )
       const outcome = load(selected, allowed)
+      if (fixed) {
+        const { definitions, seen } = describe(selected)
+        return {
+          details: outcome.details,
+          text: JSON.stringify({
+            definitions,
+            seen,
+            hint: selected.length
+              ? '技能用到的工具定义见 definitions，用 call_tool 调用；seen 里的定义在本轮前文已给过。'
+              : '正文未引用当前可用的工具名；若任务仍需要其他能力，可用 search_tools 查找。'
+          })
+        }
+      }
       return {
         details: outcome.details,
         text: JSON.stringify({
@@ -582,6 +832,9 @@ export function createToolSearch(
       }
     },
     restore: (messages) => {
+      // 固定清单下没有「已加载」这回事：历史里的加载记录（包括切换模式之前的老会话）
+      // 恢复了就会把清单撑大，那正是这个模式要避免的。那些工具照样能经 call_tool 调
+      if (fixed) return
       // 只回放真实工具结果；删消息/分支自然只恢复保留下来的加载点，不另存可漂移的全局状态。
       const attempted = new Set<string>()
       for (const message of messages) {

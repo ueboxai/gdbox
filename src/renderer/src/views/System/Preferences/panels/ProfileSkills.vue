@@ -33,6 +33,7 @@ import { PhMagnifyingGlass } from '@phosphor-icons/vue'
 
 import AppButton from '@renderer/components/AppButton.vue'
 import AppModal from '@renderer/components/AppModal.vue'
+import CapabilityIdle from './CapabilityIdle.vue'
 import AppSwitch from '@renderer/components/AppSwitch.vue'
 import { agentV3API } from '@renderer/api/agentV3'
 import { useAIConfigStore } from '@renderer/store/modules/aiConfig'
@@ -268,6 +269,7 @@ onMounted(refresh)
 
 <template>
   <div class="settings-content">
+    <CapabilityIdle kind="skill" @changed="refresh" />
     <!-- 自动沉淀 -->
     <section class="settings-section">
       <h4 class="section-title">{{ $t('profile.skills.learningTitle') }}</h4>

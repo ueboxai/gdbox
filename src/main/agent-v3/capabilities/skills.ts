@@ -27,6 +27,7 @@
  * 3. 深挖：agent 调 `read_skill_resource(name, path)` 读 references/ 下的文件
  */
 
+import { recordUse, resetIdle } from './idleStore'
 import { basename, dirname, join, resolve, sep } from 'path'
 import { mkdir, readFile, rm, writeFile } from 'fs/promises'
 import { app } from 'electron'
@@ -150,6 +151,14 @@ export async function discoverEnabledSkills(projectRoot?: string): Promise<Skill
   return skills.filter((skill) => !disabled.has(skill.name))
 }
 
+export async function recordSkillMentions(text: string, projectRoot?: string): Promise<void> {
+  const names = new Set(Array.from(text.matchAll(/(?:^|[^\w$])\$([\w-]+)/g), (match) => match[1]))
+  if (!names.size) return
+  for (const skill of await discoverEnabledSkills(projectRoot)) {
+    if (names.has(skill.name)) await recordUse('skill', skill.name)
+  }
+}
+
 // ── 开关：哪些 skill 不加载 ──────────────────────────────────────────────
 
 const DISABLED_SKILLS_FILE = 'disabled-skills.json'
@@ -190,6 +199,7 @@ export async function setSkillDisabled(name: string, disabled: boolean): Promise
   if (disabled) names.add(name)
   else names.delete(name)
   await writeDisabledSkills(names)
+  await resetIdle('skill', name)
 }
 
 /**
@@ -685,6 +695,7 @@ export function createSkillTools(
         throw new Error(`技能 "${name}" 不存在。可用技能：${skills.map((s) => s.name).join(', ')}`)
       }
 
+      await recordUse('skill', result.name)
       const content = rewriteCrossReferences(result.content)
       const loaded = loadTools?.(content)
       if (hooks.bodyVisible?.(result.name, content)) {

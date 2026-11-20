@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createApp, reactive } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
-import { takeHydratedTypingMessages, useChatMessagesStore } from './chatMessages'
+import { takeHydratedTypingMessages, useChatMessagesStore, type ChatMessage } from './chatMessages'
 import { chatHistoryStorage } from '../../utils/chatHistoryStorage'
 import { createChatMessagesPersistencePlugin } from '../../utils/chatMessagesPersistence'
 import zhCN from '@renderer/i18n/locales/zh-CN'
@@ -30,6 +30,25 @@ describe('chatMessages 的会话删除', () => {
     store.replaceTyping('outcome-test', id, '完成', true)
     expect(store.getMessages('outcome-test')[0]).toMatchObject({ content: '完成', status: 'done' })
     expect(store.getMessages('outcome-test')[0].outcome).toBeUndefined()
+  })
+
+  it('records the first completion, restores it from history and resets it on resume', () => {
+    const store = useChatMessagesStore()
+    const id = store.pushAssistantTyping('clock')
+    const message = (): ChatMessage => store.getMessages('clock')[0]
+    expect(message().completedAt).toBeUndefined()
+    store.stopTyping('clock', id)
+    const stoppedAt = message().completedAt
+    expect(typeof stoppedAt).toBe('number')
+    store.replaceTyping('clock', id, 'stopped', true)
+    const snapshot = JSON.parse(JSON.stringify(store.exportChatMessagesPersistence()))
+    store.dropSession('clock')
+    store.hydrateChatMessagesPersistence(snapshot)
+    expect(message().completedAt).toBe(stoppedAt)
+    store.replaceTyping('clock', id, '', false)
+    expect(message().completedAt).toBeUndefined()
+    store.replaceTyping('clock', id, 'done', true)
+    expect(typeof message().completedAt).toBe('number')
   })
 
   beforeEach(() => {

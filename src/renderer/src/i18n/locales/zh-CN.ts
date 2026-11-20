@@ -186,6 +186,22 @@ export default {
       unknownError: '未知错误'
     }
   },
+  capabilityIdle: {
+    title: '闲置管理',
+    auto: '自动停用闲置满 30 天的 MCP',
+    autoOff: '已因闲置 30 天自动停用',
+    off: '已停用',
+    kept: '始终保留',
+    unused: '已闲置至少 14 天',
+    last: '上次使用于 {date}',
+    never: '自 {date} 起未记录到使用',
+    restore: '恢复',
+    unkeep: '取消保留',
+    keep: '始终保留',
+    disable: '停用',
+    failed: '闲置管理操作失败。',
+    retry: '重试'
+  },
   mcp: {
     client: {
       description: '连接第三方 MCP 服务，扩展助手能力；可粘贴 Claude Desktop 格式的配置。',
@@ -2431,6 +2447,7 @@ export default {
       userMessageNotFound: '找不到对应的用户消息',
       clearConfirmTitle: '确认清空对话',
       clearConfirmContent: '此操作不可撤销，确定要清空当前对话的所有消息吗？',
+      replyCompletedAt: '回复结束于 {time}',
       replyInterrupted: '回复已中断',
       newMessage: '有新消息',
       emptyMessage: '消息内容不能为空',
