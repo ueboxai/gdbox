@@ -8,6 +8,7 @@ import {
   SECTION_PROJECTS_KEY,
   UNASSIGNED_GROUP_KEY,
   collectKnownProjects,
+  libraryProjectRefs,
   listProjectChoices,
   sessionInProjectGroup,
   filterChatSessions,
@@ -336,5 +337,26 @@ describe('chatSessionGrouping', () => {
     expect(sessions.filter((x) => sessionInProjectGroup(x, groups[1])).map((x) => x.id)).toEqual([
       'solo'
     ])
+  })
+})
+
+describe('libraryProjectRefs', () => {
+  it('项目库记录变成候选，没名字的跳过', () => {
+    expect(
+      libraryProjectRefs([
+        { projectName: ' CatBoat ', projectPath: 'D:/CatBoat', EngineAssociation: '4.5' },
+        { projectName: '', projectPath: 'D:/Nameless' },
+        { projectName: 'Bare', projectPath: null }
+      ])
+    ).toEqual([
+      { projectName: 'CatBoat', projectPath: 'D:/CatBoat', engineVersion: '4.5' },
+      { projectName: 'Bare' }
+    ])
+  })
+
+  it('刚新建、没开过 Godot、也没聊过的项目能出现在「归入项目」里', () => {
+    const known = collectKnownProjects([], libraryProjectRefs([{ projectName: 'CatBoat' }]))
+    const choices = listProjectChoices(known, [])
+    expect(choices.map((choice) => choice.project.projectName)).toEqual(['CatBoat'])
   })
 })

@@ -1780,6 +1780,7 @@ export default {
         menu: {
           open: '打开项目',
           playGame: '运行游戏',
+          newChat: '在此项目下新建对话',
           rename: '重命名',
           openLocation: '打开目录',
           openSln: '打开 C++ 项目',

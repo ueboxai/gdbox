@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { chatSessionRoute, newChatRoute } from './chatRoute'
+import { chatSessionRoute, newChatRoute, projectChatRoute } from './chatRoute'
 
 describe('chatSessionRoute', () => {
   it('已经开着这条会话的标签页就复用它', () => {
@@ -65,5 +65,29 @@ describe('newChatRoute', () => {
     const route = newChatRoute(['/dev-assistant?sid=p&project=A'], (sid) => blank.has(sid))
     expect(route).toMatchObject({ name: 'AssistantWelcome' })
     expect((route as { query: { sid: string } }).query.sid).toBeTruthy()
+  })
+})
+
+describe('projectChatRoute', () => {
+  it('带上项目名和路径，对话第一条消息就归到这个项目下', () => {
+    const route = projectChatRoute(' CatBoat ', 'D:/CatBoat') as {
+      name: string
+      query: Record<string, string>
+    }
+    expect(route.name).toBe('AssistantWelcome')
+    expect(route.query.project).toBe('CatBoat')
+    expect(route.query.projectPath).toBe('D:/CatBoat')
+    expect(route.query.sid).toBeTruthy()
+  })
+
+  it('没有路径时不带空的 projectPath', () => {
+    const route = projectChatRoute('CatBoat') as { query: Record<string, string> }
+    expect(route.query).not.toHaveProperty('projectPath')
+  })
+
+  it('每次都是新对话，不复用别的标签', () => {
+    const a = projectChatRoute('CatBoat') as { query: Record<string, string> }
+    const b = projectChatRoute('CatBoat') as { query: Record<string, string> }
+    expect(a.query.sid).not.toBe(b.query.sid)
   })
 })

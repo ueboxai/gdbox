@@ -298,6 +298,7 @@ import { notifyPluginInstallFailure } from '@renderer/hooks/usePluginInstallNoti
 import { confirmDialog } from '@renderer/utils/dialog'
 import {
   PhArrowClockwise,
+  PhChatCircleText,
   PhCode,
   PhFolderMinus,
   PhFolderOpen,
@@ -327,8 +328,11 @@ import CollectionNameModal from './CollectionNameModal.vue'
 import DragOverlay from '@renderer/components/DragOverlay.vue'
 import { h, ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
+import { projectChatRoute } from '@renderer/common/chatRoute'
 
 const { t } = useI18n()
+const router = useRouter()
 
 // 已通过 WebSocket 连接的工程列表
 /**
@@ -1304,7 +1308,8 @@ const buildMenuItems = (
   const items: MenuItem[] = [
     // === 第一区：高频启动与访问 ===
     { key: 'open-project', label: t('page.home.project.menu.open'), icon: PhPlayCircle },
-    { key: 'play-game', label: t('page.home.project.menu.playGame'), icon: PhGameController }
+    { key: 'play-game', label: t('page.home.project.menu.playGame'), icon: PhGameController },
+    { key: 'new-chat', label: t('page.home.project.menu.newChat'), icon: PhChatCircleText }
   ]
 
   // 如果是 C++ 工程（存在 sln 文件），添加"打开 sln"菜单项
@@ -1650,6 +1655,12 @@ const handleMenuClick = async (key: string) => {
     await handleOpenProject(activeProject.value)
   } else if (key === 'play-game') {
     await handlePlayGame(activeProject.value)
+  } else if (key === 'new-chat') {
+    // 新建的项目还没在 Godot 里打开过，侧边栏和对话里的「归入项目」都还没有它；
+    // 从卡片直接开，这条对话一开始就属于它
+    const project = activeProject.value
+    if (!project.projectName) return
+    await router.push(projectChatRoute(project.projectName, project.projectPath || undefined))
   } else if (key === 'open-sln') {
     // 打开 sln 工程（C++ 项目）
     if (!activeSlnPath.value) {

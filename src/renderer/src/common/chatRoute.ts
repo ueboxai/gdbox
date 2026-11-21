@@ -46,6 +46,25 @@ export function generateChatSessionId(): string {
 }
 
 /**
+ * 「在这个项目下新建对话」该跳到哪 —— 侧边栏项目分组的「+」和项目库卡片菜单共用。
+ *
+ * 归属靠 `?project=` 传下去，第一条消息发出时盖到对话上（见 sessionProjectBinding）。
+ * 路径能给就给：主进程凭它直接找到工程目录，不用编辑器开着也能动手。
+ * 每次都是新 id，不复用空白标签 —— 那个标签可能属于别的项目。
+ */
+export function projectChatRoute(projectName: string, projectPath?: string): RouteLocationRaw {
+  const path = projectPath?.trim()
+  return {
+    name: 'AssistantWelcome',
+    query: {
+      sid: generateChatSessionId(),
+      project: projectName.trim(),
+      ...(path ? { projectPath: path } : {})
+    }
+  }
+}
+
+/**
  * 「新对话」该跳到哪 —— 侧边栏、标签页头和托盘共用。
  *
  * 已经开着一个还没发过消息的新对话标签时，切过去，不再新开：连点几下「新对话」

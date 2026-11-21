@@ -5,7 +5,7 @@ import AppMenuDivider from '@renderer/components/AppMenuDivider.vue'
 import AppMenuItem from '@renderer/components/AppMenuItem.vue'
 import AppMenuItemGroup from '@renderer/components/AppMenuItemGroup.vue'
 import AppTooltip from '@renderer/components/AppTooltip.vue'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useConnectedProjects } from '@renderer/composables/useBridgeStatus'
 import { PhCaretDown, PhCheck, PhFolder, PhFolderOpen } from '@phosphor-icons/vue'
 import { useI18n } from 'vue-i18n'
@@ -13,6 +13,7 @@ import { useChatSessionsStore } from '@renderer/store/modules/chatSessions'
 import { useChatSidebarStore } from '@renderer/store/modules/chatSidebarStore'
 import {
   collectKnownProjects,
+  libraryProjectRefs,
   listProjectChoices,
   projectPathKey,
   type ConnectedProjectRef,
@@ -111,10 +112,27 @@ const engineVersion = computed<string>(
   () => matchedConnected.value?.engineVersion || sessionProject.value?.engineVersion || ''
 )
 
+/**
+ * 项目库里登记过的项目。每次展开下拉时重读一遍：刚在项目库里新建的项目要能马上选到。
+ * 读失败就当没有，其余候选照常显示。
+ */
+const libraryProjects = ref<ConnectedProjectRef[]>([])
+async function loadLibraryProjects(): Promise<void> {
+  try {
+    const res = await window.api.database.project.getAll()
+    if (res?.success) libraryProjects.value = libraryProjectRefs(res.data || [])
+  } catch {
+    // 下拉里少几项不影响已有的候选
+  }
+}
+
 /** 已连着编辑器的工程排最前 —— 多数时候要选的就是它；同名工程按路径各占一行 */
 const projectOptions = computed<ProjectChoice[]>(() =>
   listProjectChoices(
-    collectKnownProjects(chatStore.displayableSessions, sidebarStore.manualProjects),
+    collectKnownProjects(chatStore.displayableSessions, [
+      ...sidebarStore.manualProjects,
+      ...libraryProjects.value
+    ]),
     connectedProjects.value
   )
 )
@@ -135,6 +153,10 @@ const currentOptionKey = computed<string>(() => {
 
 /** 下拉开着时不显示提示气泡，不然它正好盖住下拉的第一项 */
 const dropdownOpen = ref(false)
+watch(dropdownOpen, (open) => {
+  if (open) void loadLibraryProjects()
+})
+void loadLibraryProjects()
 
 const tooltip = computed<string>(() => {
   if (dropdownOpen.value) return ''

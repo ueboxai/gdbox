@@ -19,4 +19,10 @@ describe('ProjectSection header actions', () => {
       /id="project-import-entry"[\s\S]*?:title="t\('page\.home\.project\.importExisting'\)"[\s\S]*?<PhPlus\s*\/>/
     )
   })
+
+  // 新建的项目没在 Godot 里打开过时，侧边栏还没有它；卡片菜单是能直接开对话的入口
+  it('offers a project-scoped new chat in the card menu', () => {
+    expect(source).toMatch(/key: 'new-chat', label: t\('page\.home\.project\.menu\.newChat'\)/)
+    expect(source).toMatch(/key === 'new-chat'[\s\S]*?projectChatRoute\(/)
+  })
 })

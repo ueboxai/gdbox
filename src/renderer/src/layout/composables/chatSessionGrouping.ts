@@ -392,6 +392,32 @@ export function groupChatSessions(
   return groups
 }
 
+/**
+ * 项目库里的记录 → 「归入项目」的候选。
+ *
+ * 不收这一份的话，刚新建、还没在 Godot 里打开过的项目哪里都选不到：
+ * 候选原先只来自连着的编辑器、侧边栏手动加的项目和老对话的戳。
+ */
+export function libraryProjectRefs(
+  rows: Array<{
+    projectName?: string | null
+    projectPath?: string | null
+    EngineAssociation?: string | null
+  }>
+): ConnectedProjectRef[] {
+  const refs: ConnectedProjectRef[] = []
+  for (const row of rows) {
+    const projectName = row.projectName?.trim()
+    if (!projectName) continue
+    refs.push({
+      projectName,
+      ...(row.projectPath ? { projectPath: row.projectPath } : {}),
+      ...(row.EngineAssociation ? { engineVersion: row.EngineAssociation } : {})
+    })
+  }
+  return refs
+}
+
 /** 收集所有对话上出现过的工程名（用于「归入工程」菜单） */
 export function collectKnownProjects(
   sessions: ChatSession[],

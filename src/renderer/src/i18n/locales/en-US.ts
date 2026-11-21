@@ -1816,6 +1816,7 @@ First work out why the install failed from the output above. If you can run comm
         menu: {
           open: 'Open Project',
           playGame: 'Play game',
+          newChat: 'New chat in this project',
           rename: 'Rename',
           openLocation: 'Open Location',
           openSln: 'Open VS Solution',

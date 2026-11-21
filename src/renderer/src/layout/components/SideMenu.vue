@@ -20,7 +20,7 @@ import {
   getOpenMenuKeys,
   type MenuItem
 } from '../../common/routeUtils'
-import { chatSessionRoute, generateChatSessionId, newChatRoute } from '../../common/chatRoute'
+import { chatSessionRoute, newChatRoute, projectChatRoute } from '../../common/chatRoute'
 import { useAppInfo } from '@renderer/hooks/useAppInfo'
 import routes from '../../router/modules'
 import { useI18n } from 'vue-i18n'
@@ -402,13 +402,9 @@ const createNewChat = (projectName?: string, projectPath?: string): void => {
     )
     return
   }
-  const sid = generateChatSessionId()
   // 带上工程名时，这条新对话发第一条消息就会归到那个工程下（见 sessionProjectBinding）；
   // 同名工程有好几个时还会带上路径
-  const query = projectName
-    ? { sid, project: projectName, ...(projectPath ? { projectPath } : {}) }
-    : { sid }
-  router.push({ name: 'AssistantWelcome', query })
+  router.push(projectChatRoute(projectName, projectPath))
 }
 
 /**
