@@ -6335,6 +6335,7 @@ First work out why the install failed from the output above. If you can run comm
   // Actions on a local/network path: shared by the chat body context menu and "Open ▾"
   filePathMenu: {
     open: 'Open',
+    openInBrowser: 'Open in built-in browser',
     reveal: 'Show in Explorer',
     copyPath: 'Copy absolute path',
     copyName: 'Copy filename'

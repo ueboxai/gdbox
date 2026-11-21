@@ -369,6 +369,7 @@ import FileReviewPane from './components/FileReviewPane.vue'
 import { conversationToMarkdown } from './composables/devlogMarkdown'
 import { provideFileReview } from './composables/useFileReview'
 import { useSessionBrowser } from './composables/useSessionBrowser'
+import { provideOpenInBrowser } from './composables/useOpenInBrowser'
 import { useChatSessionsStore, type BoundNotebook } from '../../store/modules/chatSessions'
 import TeamBoardPanel from './components/TeamBoardPanel.vue'
 import TeamReportPane from './components/TeamReportPane.vue'
@@ -2745,6 +2746,7 @@ function selectBrowserPage(): void {
   teamTab.blur()
   selectBrowserTab()
 }
+provideOpenInBrowser(browserSessionId, selectBrowserPage)
 </script>
 
 <style scoped lang="less">

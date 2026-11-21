@@ -1,3 +1,6 @@
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { normalizeBrowserAddress } from './address'
 
@@ -17,11 +20,16 @@ describe('手动浏览器地址', () => {
     null,
     {},
     'javascript:alert(1)',
-    'file:///etc/passwd',
     'http://127.0.0.1',
     'localhost:3000'
   ])('拒绝非法或危险地址 %s', (input) => {
     expect(() => normalizeBrowserAddress(input)).toThrow()
+  })
+  it('本机路径和 file:// 地址规整成 file://，交给浏览器授权', () => {
+    const file = join(tmpdir(), '报告 1.html')
+    const url = pathToFileURL(file).href
+    expect(normalizeBrowserAddress(file)).toBe(url)
+    expect(normalizeBrowserAddress(` ${url} `)).toBe(url)
   })
   it.each([
     ['not a url', 'https://www.bing.com/search?q=not%20a%20url'],

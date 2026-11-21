@@ -40,7 +40,16 @@ import {
   type PageAgentResult,
   type PageScanResult
 } from './pageScan'
-import { checkNavigationUrl, checkResolvedAddresses, setLocalNetworkPolicy } from './urlPolicy'
+import { checkResolvedAddresses, setLocalNetworkPolicy } from './urlPolicy'
+import {
+  LOCAL_FILE_SCHEME,
+  LocalFileError,
+  checkBrowserUrl,
+  displayUrl,
+  grantLocalFile,
+  handleLocalFileRequest,
+  localPathFromAddress
+} from './localFiles'
 import { searchUrl } from './address'
 import { buildPageMenu } from './pageMenu'
 import { loadBrowserGroup, saveBrowserGroup, saveBrowserUrl } from './sessionState'
@@ -97,6 +106,9 @@ const ERR_ABORTED = -3
 const ZOOM_LEVELS = [
   0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5
 ]
+
+/** Chromium 内置 PDF 阅读器扩展的源，ID 是 Chromium 写死的 */
+const PDF_VIEWER_ORIGIN = 'chrome-extension://mhjfbmdgcfjbbpaeojofohoefgiehjai/'
 
 /** Ctrl+Shift+T 能找回的最近关闭标签数 */
 const CLOSED_TABS_KEPT = 10
@@ -267,7 +279,8 @@ export class AgentBrowserService {
     const state = {
       urls: surfaces.map(
         (surface) =>
-          (surface.contents.isDestroyed() ? '' : surface.contents.getURL()) || 'about:blank'
+          (surface.contents.isDestroyed() ? '' : displayUrl(surface.contents.getURL())) ||
+          'about:blank'
       ),
       activeIndex: Math.max(0, surfaces.indexOf(this.surface!)),
       mode: this.currentMode()
@@ -374,7 +387,7 @@ export class AgentBrowserService {
 
   currentUrl(): string {
     const contents = this.surface?.contents
-    return contents && !contents.isDestroyed() ? contents.getURL() : ''
+    return contents && !contents.isDestroyed() ? displayUrl(contents.getURL()) : ''
   }
 
   /** 当前用的是哪一档显示方式。没开着时按设置里的值回答 */
@@ -451,7 +464,7 @@ export class AgentBrowserService {
           ? { id, url: '', title: '', loading: false }
           : {
               id,
-              url: contents.getURL(),
+              url: displayUrl(contents.getURL()),
               title: contents.getTitle(),
               loading: contents.isLoading(),
               favicon
@@ -741,7 +754,7 @@ export class AgentBrowserService {
   ): Promise<BrowserPageOverview> {
     return this.exclusive(async () => {
       const generation = this.restoreGeneration
-      const target = this.validateUrl(url)
+      const target = await this.resolveTarget(url)
 
       if (options.resetSession) await this.resetSession()
       await this.assertPublicHost(target)
@@ -820,7 +833,7 @@ export class AgentBrowserService {
 
       return {
         title: extracted.title ?? '',
-        url: page.url,
+        url: displayUrl(page.url),
         content: slice,
         offset,
         nextOffset: end < total ? end : null,
@@ -973,11 +986,30 @@ export class AgentBrowserService {
   }
 
   private validateUrl(raw: string): URL {
-    const checked = checkNavigationUrl(raw)
+    const checked = checkBrowserUrl(raw)
     if (!checked.ok) {
       throw new AgentBrowserError('NAVIGATION_BLOCKED', checked.reason)
     }
     return checked.url
+  }
+
+  /**
+   * `open()` 的目标。本机文件在这里授权（见 `localFiles.ts`），其余照网址策略校验。
+   *
+   * 只有 `open()` 走这里 —— 它的调用方是 Agent、地址栏和会话恢复，
+   * 页面自己发起的导航碰不到授权这一步。
+   */
+  private async resolveTarget(raw: string): Promise<URL> {
+    const local = localPathFromAddress(raw)
+    if (local === null) return this.validateUrl(raw)
+    try {
+      return await grantLocalFile(local)
+    } catch (error) {
+      if (error instanceof LocalFileError) {
+        throw new AgentBrowserError('PAGE_LOAD_FAILED', error.message)
+      }
+      throw error
+    }
   }
 
   private requireContents(): WebContents {
@@ -1045,6 +1077,9 @@ export class AgentBrowserService {
         denyDevice(event, callback)) as never
     )
 
+    // 本机文件只在这个分区里认得出来，主窗口和别的分区里这个协议不存在
+    browserSession.protocol.handle(LOCAL_FILE_SCHEME, handleLocalFileRequest)
+
     // 这一版不做下载：没有保存路径 UI，也没有对下载内容的任何检查
     browserSession.on('will-download', (event) => {
       event.preventDefault()
@@ -1067,6 +1102,8 @@ export class AgentBrowserService {
       webSecurity: true,
       allowRunningInsecureContent: false,
       webviewTag: false,
+      // Chromium 自带的 PDF 阅读器靠它，关着的话 PDF 只会触发下载
+      plugins: true,
       // 后台窗口被节流的话，Agent 在用户切走之后读到的会是一个停住的页面。
       // 隐藏和嵌入两档更依赖这条
       backgroundThrottling: false
@@ -1240,7 +1277,7 @@ export class AgentBrowserService {
     const { contents } = surface
 
     const rememberNavigation = (_event: unknown, url: string): void => {
-      if (!this.tabs.has(surface.id) || !checkNavigationUrl(url).ok) return
+      if (!this.tabs.has(surface.id) || !checkBrowserUrl(url).ok) return
       void this.persistUrl(url).catch(() => undefined)
       this.notifyState()
     }
@@ -1313,7 +1350,7 @@ export class AgentBrowserService {
     })
 
     contents.setWindowOpenHandler((details) => {
-      const checked = checkNavigationUrl(details.url)
+      const checked = checkBrowserUrl(details.url)
       // 中键或 Ctrl+点击：开在后台，和浏览器一样不打断当前页
       if (checked.ok && details.disposition === 'background-tab') {
         void this.openInBackground(checked.url.toString()).catch((error: unknown) => {
@@ -1328,7 +1365,7 @@ export class AgentBrowserService {
     })
 
     const blockUnsafe = (event: { preventDefault: () => void }, url: string): void => {
-      const checked = checkNavigationUrl(url)
+      const checked = checkBrowserUrl(url)
       if (checked.ok) return
       event.preventDefault()
       logger.warn(`[AgentBrowser] 拦截导航：${checked.reason}`)
@@ -1336,7 +1373,12 @@ export class AgentBrowserService {
 
     contents.on('will-navigate', (event, url) => blockUnsafe(event, url))
     contents.on('will-redirect', (event, url) => blockUnsafe(event, url))
-    contents.on('will-frame-navigate', (event) => blockUnsafe(event, event.url))
+    contents.on('will-frame-navigate', (event) => {
+      // PDF 由 Chromium 自带的阅读器显示，它是嵌在页面里的一个扩展子框架。
+      // 只放这个固定 ID 的子框架，主框架照旧不许跳过去
+      if (!event.isMainFrame && event.url.startsWith(PDF_VIEWER_ORIGIN)) return
+      blockUnsafe(event, event.url)
+    })
 
     contents.on('render-process-gone', (_event, details) => {
       logger.warn(`[AgentBrowser] 渲染进程退出：${details.reason}`)
@@ -1589,6 +1631,7 @@ export class AgentBrowserService {
    * 常见情况。解析本身失败不拦 —— 那是网络问题，交给加载流程报真实错误。
    */
   private async assertPublicHost(url: URL): Promise<void> {
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return
     let addresses: string[] = []
     try {
       const resolved = await this.getSession().resolveHost(url.hostname)
@@ -1622,7 +1665,7 @@ export class AgentBrowserService {
     const scan = (await this.runPageAgent({ kind: 'scan' })) as PageScanResult
     return {
       title: scan.title,
-      url: scan.url,
+      url: displayUrl(scan.url),
       snapshot: formatSnapshot(scan),
       hasIframe: scan.hasIframe
     }

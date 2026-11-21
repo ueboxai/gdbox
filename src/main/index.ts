@@ -530,6 +530,16 @@ protocol.registerSchemesAsPrivileged([
       supportFetchAPI: true,
       corsEnabled: true
     }
+  },
+  {
+    // 内置浏览器里看本机文件，只装在浏览器分区上（src/main/services/agentBrowser/localFiles.ts）
+    scheme: 'uebox-file',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true
+    }
   }
 ])
 

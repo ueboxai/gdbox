@@ -6159,6 +6159,7 @@ export default {
   // 对一条本地/网络路径能做什么：对话正文右键、以及「本轮改动」里的「打开 ▾」共用
   filePathMenu: {
     open: '打开',
+    openInBrowser: '在内置浏览器中打开',
     reveal: '资源管理器',
     copyPath: '复制绝对路径',
     copyName: '复制文件名'

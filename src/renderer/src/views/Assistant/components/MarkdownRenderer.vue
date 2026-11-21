@@ -62,6 +62,8 @@ import { buildPathLinkHtml, createPathLinkRule, installLocalLinkSupport } from '
 import ContextMenu from '@renderer/components/ContextMenu/ContextMenu.vue'
 import { openFilePath, useFilePathMenu } from '@renderer/composables/useFilePathMenu'
 import { createLatestValueScheduler } from './latestValueScheduler'
+import { useOpenInBrowser } from '../composables/useOpenInBrowser'
+import { opensInBrowserPane } from '../../../../../shared/localPreview'
 
 const { t } = useI18n()
 
@@ -422,7 +424,11 @@ const activePath = ref('')
 const pathMenuMounted = ref(false)
 const pathMenuRef = ref<{ show: (x: number, y: number) => void } | null>(null)
 
-const { menuItems: pathMenuItems, runFilePathAction } = useFilePathMenu()
+const openInBrowser = useOpenInBrowser()
+const { menuItems: pathMenuItems, runFilePathAction } = useFilePathMenu({
+  path: activePath,
+  openInBrowser
+})
 
 /**
  * 右键正文里的路径时弹出菜单
@@ -460,7 +466,9 @@ function onClick(e: MouseEvent): void {
   if (pathEl?.dataset.fsPath) {
     e.preventDefault()
     e.stopPropagation()
-    void openFilePath(pathEl.dataset.fsPath)
+    const path = pathEl.dataset.fsPath
+    // 网页、PDF、图片、音视频在这条对话的浏览器面板里看，其余交给系统
+    void (openInBrowser && opensInBrowserPane(path) ? openInBrowser(path) : openFilePath(path))
     return
   }
   const isCopy = target && target.classList.contains('copy')

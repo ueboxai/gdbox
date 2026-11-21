@@ -1,4 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * Service 的安全面。
@@ -262,6 +266,7 @@ vi.mock('electron', () => ({
         list.push(handler)
         sessionStub.events.set(event, list)
       },
+      protocol: { handle: vi.fn() },
       resolveHost: async () => ({
         endpoints: [{ address: sessionStub.resolvedAddress, family: 'ipv4' }]
       }),
@@ -567,6 +572,50 @@ describe('DNS 预检', () => {
       settle(new AgentBrowserService().open('https://internal.example.com/'))
     ).rejects.toMatchObject({ code: 'NAVIGATION_BLOCKED' })
     expect(created).toHaveLength(0)
+  })
+})
+
+describe('本机文件', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'browser-open-'))
+  const file = join(dir, '报告.html')
+  writeFileSync(file, '<title>报告</title>')
+  afterAll(() => rmSync(dir, { recursive: true, force: true }))
+
+  it('open() 授权后加载 uebox-file://，界面和存档看到的是 file://', async () => {
+    const instance = new AgentBrowserService('local-session')
+    pageResults.push(SCAN_OK)
+    const opening = instance.open(file)
+    await vi.waitFor(() => expect(created).toHaveLength(1))
+    await settle(opening)
+
+    expect(lastContents().loadedUrls[0]).toMatch(/^uebox-file:\/\/[0-9a-f]{32}\//)
+    expect(instance.groupState().tabs[0].url).toBe(pathToFileURL(file).href)
+    expect(instance.currentUrl()).toBe(pathToFileURL(file).href)
+    expect(savedUrls.get('local-session')).toBe(pathToFileURL(file).href)
+  })
+
+  it('文件不存在时报给调用方，不开窗口', async () => {
+    await expect(new AgentBrowserService().open(join(dir, 'missing.html'))).rejects.toMatchObject({
+      code: 'PAGE_LOAD_FAILED'
+    })
+    expect(created).toHaveLength(0)
+  })
+
+  it('页面里只能跳到已授权的本机地址，伪造的授权号被拦下', async () => {
+    const instance = new AgentBrowserService()
+    pageResults.push(SCAN_OK)
+    const opening = instance.open(file)
+    await vi.waitFor(() => expect(created).toHaveLength(1))
+    await settle(opening)
+    const navigate = lastContents().handlers.get('will-navigate')?.[0]
+
+    const sibling = { preventDefault: vi.fn() }
+    navigate?.(sibling, new URL('other.html', lastContents().loadedUrls[0]).href)
+    expect(sibling.preventDefault).not.toHaveBeenCalled()
+
+    const forged = { preventDefault: vi.fn() }
+    navigate?.(forged, 'uebox-file://0123456789abcdef0123456789abcdef/a.html')
+    expect(forged.preventDefault).toHaveBeenCalled()
   })
 })
 

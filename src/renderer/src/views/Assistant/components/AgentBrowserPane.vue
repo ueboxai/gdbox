@@ -292,6 +292,7 @@ import {
   type BrowserNavigationState,
   type BrowserToolbarAction
 } from '../../../../../shared/agentBrowser'
+import { filePathOfUrl } from '../../../../../shared/localPreview'
 import { useBrowserPaneResize } from '../composables/useBrowserPaneResize'
 import type { TeamReportTab } from '../composables/useTeamTab'
 
@@ -347,8 +348,11 @@ const parsedUrl = computed(() => {
     return null
   }
 })
+/** 本机文件在地址栏里显示成路径，编辑时也是 */
+const localPath = computed(() => filePathOfUrl(currentUrl.value, platform === 'win32'))
 /** 没在编辑时只显示域名和路径，协议和 www 省掉 —— 和现代浏览器一样 */
 const addressDisplay = computed(() => {
+  if (localPath.value !== null) return localPath.value
   const url = parsedUrl.value
   if (!url || !/^https?:$/.test(url.protocol)) return ''
   const path = url.pathname === '/' && !url.search ? '' : `${url.pathname}${url.search}`
@@ -507,7 +511,8 @@ function endTabDrag(): void {
 }
 
 async function editAddress(): Promise<void> {
-  addressDraft.value = currentUrl.value === 'about:blank' ? '' : currentUrl.value
+  addressDraft.value =
+    currentUrl.value === 'about:blank' ? '' : (localPath.value ?? currentUrl.value)
   editingAddress.value = true
   await nextTick()
   addressRef.value?.select()

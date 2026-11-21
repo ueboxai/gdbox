@@ -1,9 +1,10 @@
-import { computed, ref, type ComputedRef } from 'vue'
+import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import type { MenuItem } from '@renderer/components/ContextMenu/types'
 import { message } from '@renderer/utils/messageManager'
 import { describeShellOpenFailure, type ShellOpenResult } from '@renderer/utils/shellOpen'
+import { localPreviewType } from '../../../shared/localPreview'
 
 /**
  * 「对一条本地/网络路径能做什么」的共用菜单。
@@ -98,6 +99,10 @@ export async function openFilePath(path: string): Promise<void> {
 export interface FilePathMenuOptions {
   /** 菜单第一项是不是「打开」。右键正文里的路径要，「打开 ▾」按钮自己就是打开，不要 */
   includeOpen?: boolean
+  /** 菜单指向的路径。浏览器显示得了时多一项「在内置浏览器中打开」 */
+  path?: Ref<string>
+  /** 在对话的浏览器面板里打开。不给就没有这一项 */
+  openInBrowser?: (path: string) => Promise<void>
 }
 
 export interface FilePathMenu {
@@ -118,6 +123,9 @@ export function useFilePathMenu(options: FilePathMenuOptions = {}): FilePathMenu
 
   const menuItems = computed<MenuItem[]>(() => {
     const items: MenuItem[] = []
+    if (options.openInBrowser && options.path && localPreviewType(options.path.value)) {
+      items.push({ key: 'openInBrowser', label: t('filePathMenu.openInBrowser') })
+    }
     if (options.includeOpen !== false) {
       items.push({ key: 'open', label: t('filePathMenu.open') })
     }
@@ -151,6 +159,9 @@ export function useFilePathMenu(options: FilePathMenuOptions = {}): FilePathMenu
     switch (key) {
       case 'open':
         await openFilePath(path)
+        break
+      case 'openInBrowser':
+        await options.openInBrowser?.(path)
         break
       case 'reveal':
         reportOpenFailure(await window.api.shell.showItemInFolder(path), path)

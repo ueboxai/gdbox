@@ -1,3 +1,5 @@
+import { pathToFileURL } from 'node:url'
+import { localPathFromAddress } from './localFiles'
 import { checkNavigationUrl } from './urlPolicy'
 
 /** 地址栏里不是网址的输入拿去搜。必应在国内外都打得开 */
@@ -19,10 +21,15 @@ function looksLikeAddress(input: string): boolean {
   return host.includes('.') || /^localhost(?::\d+)?$/i.test(host) || /:\d+$/.test(host)
 }
 
-/** 地址栏允许省略协议；所有入口仍遵守同一 URL 策略。 */
+/**
+ * 地址栏允许省略协议；所有入口仍遵守同一 URL 策略。
+ * 本机路径和 `file://` 地址规整成 `file://`，交给 `open()` 授权（见 `localFiles.ts`）。
+ */
 export function normalizeBrowserAddress(value: unknown): string {
   if (typeof value !== 'string' || !value.trim()) throw new Error('Invalid browser address')
   const input = value.trim()
+  const local = localPathFromAddress(input)
+  if (local !== null) return pathToFileURL(local).href
   if (!looksLikeAddress(input) && !/^[a-z][a-z\d+.-]*:/i.test(input)) return searchUrl(input)
   const hasScheme = /^[a-z][a-z\d+.-]*:/i.test(input) && !/^[\w.-]+:\d+(?:[/#?]|$)/.test(input)
   const url = hasScheme ? input : input.startsWith('//') ? `https:${input}` : `https://${input}`

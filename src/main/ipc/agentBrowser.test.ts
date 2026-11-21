@@ -84,7 +84,7 @@ it('用户输入按会话导航并补全协议，危险网址不会传给浏览�
   expect(getSessionBrowser).toHaveBeenLastCalledWith('a')
   expect(browser.open).toHaveBeenCalledWith('https://example.com/')
   browser.open.mockClear()
-  expect(await open({}, 'a', 'file:///tmp/private')).toMatchObject({ success: false })
+  expect(await open({}, 'a', 'javascript:alert(1)')).toMatchObject({ success: false })
   expect(browser.open).not.toHaveBeenCalled()
   expect(await open({}, '', 'example.com')).toMatchObject({ success: false })
 })
