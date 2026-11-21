@@ -5,7 +5,8 @@ import type { MarkdownIt, StateCore, Token } from 'markdown-it'
  *
  * AI 回复里经常直接甩一条 `I:/UE Project/xxx/说明.html` 或 `\\nas\share\a.uasset`，
  * 用户只能手动复制到资源管理器里去找。这里把这类路径识别出来包成
- * `<span class="fs-path">`，左键打开、右键出菜单（打开 / 资源管理器 / VS Code / 复制）。
+ * `<span class="fs-path">`，左键打开（网页、PDF、图片、音视频进对话的浏览器面板，其余交给系统默认程序），
+ * 右键出菜单（打开 / 资源管理器 / VS Code / 复制）。
  *
  * 只认盘符路径（`C:\` `C:/`）和 UNC 网络路径（`\\server\share\`）——
  * 裸 POSIX 路径在中文正文里和「和/或」这类写法分不开，认了全是误报。
@@ -195,7 +196,7 @@ export function localPathFromHref(href: string): string | null {
 
 /**
  * 让指向本地文件的 Markdown 链接和正文里的路径一样可点：
- * 链接改成 `.fs-path`，左键用系统默认程序打开、右键出路径菜单。
+ * 链接改成 `.fs-path`，左键怎么打开由 `MarkdownRenderer` 决定、右键出路径菜单。
  * @param md markdown-it 实例；要在其它 link_open 覆写之后调用
  */
 export function installLocalLinkSupport(md: MarkdownIt): void {

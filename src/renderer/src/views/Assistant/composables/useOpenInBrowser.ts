@@ -1,6 +1,8 @@
 import { inject, provide, type InjectionKey, type Ref } from 'vue'
-import { agentBrowserAPI } from '@renderer/api/agentBrowser'
+import i18n from '@renderer/i18n'
+import { AgentBrowserActionError, agentBrowserAPI } from '@renderer/api/agentBrowser'
 import { openFilePath } from '@renderer/composables/useFilePathMenu'
+import { message } from '@renderer/utils/messageManager'
 
 /**
  * 对话里的本地文件在这条对话的浏览器面板里打开。
@@ -30,8 +32,13 @@ export function provideOpenInBrowser(
     try {
       await agentBrowserAPI.openUrl(id, path)
       onOpened()
-    } catch {
-      // 浏览器打不开（文件没了、浏览器正忙）就交给系统，打不开时那边会报原因
+    } catch (error) {
+      // 助手正占着浏览器：说清是在等它，不换别的程序打开
+      if (error instanceof AgentBrowserActionError && error.code === 'BROWSER_BUSY') {
+        message.error(i18n.global.t('assistant.browserPane.busy'))
+        return
+      }
+      // 浏览器打不开这个文件（文件没了之类）就交给系统，打不开时那边会报原因
       await openFilePath(path)
     }
   }

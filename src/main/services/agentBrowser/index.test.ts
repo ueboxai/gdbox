@@ -617,6 +617,22 @@ describe('本机文件', () => {
     navigate?.(forged, 'uebox-file://0123456789abcdef0123456789abcdef/a.html')
     expect(forged.preventDefault).toHaveBeenCalled()
   })
+
+  it('恢复时本机文件没了，那个标签留空，其余照常恢复', async () => {
+    savedGroups.set('gone', {
+      urls: [pathToFileURL(join(dir, 'gone.html')).href, 'https://example.com/'],
+      activeIndex: 0
+    })
+    const instance = new AgentBrowserService('gone')
+    pageResults.push(SCAN_OK)
+    const restoring = instance.restore()
+    // 查文件是真 I/O，等它走完再推假时钟
+    await vi.waitFor(() => expect(created).toHaveLength(2))
+    await settle(restoring)
+    expect(instance.groupState().tabs).toHaveLength(2)
+    expect(lastContents().loadedUrls).toContain('https://example.com/')
+    instance.dispose()
+  })
 })
 
 describe('串行化', () => {

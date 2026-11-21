@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -27,6 +27,10 @@ writeFileSync(join(site, 'model.fbx'), 'binary')
 writeFileSync(join(site, 'gbk.html'), Buffer.from([0x3c, 0x70, 0x3e, 0xc4, 0xe3, 0xba, 0xc3]))
 writeFileSync(join(root, 'secret.txt'), 'outside')
 writeFileSync(join(other, 'b.pdf'), '%PDF-1.4')
+writeFileSync(join(other, 'c.txt'), 'sibling')
+writeFileSync(join(site, 'fresh.html'), Buffer.from([0xc4, 0xe3]))
+// 文件夹里一个指到外面的联接（pnpm 在 Windows 上就这么建 node_modules）
+symlinkSync(other, join(site, 'linked'), 'junction')
 
 afterAll(() => rmSync(root, { recursive: true, force: true }))
 beforeEach(() => resetLocalFileGrants())
@@ -74,6 +78,25 @@ describe('内置浏览器里的本机文件', () => {
     ]) {
       expect((await body(`uebox-file://${page.host}/${path}`)).status, path).toBe(404)
     }
+  })
+
+  it('PDF、图片这类只授权文件本身，旁边的文件读不到', async () => {
+    const pdf = await grantLocalFile(join(other, 'b.pdf'))
+    expect((await body(pdf.href)).status).toBe(200)
+    expect((await body(new URL('c.txt', pdf).href)).status).toBe(404)
+  })
+
+  it('符号链接和联接按真实位置算越界', async () => {
+    const page = await grantLocalFile(join(site, '报告.html'))
+    expect(localPathOf(new URL('linked/c.txt', page))).not.toBeNull()
+    expect((await body(new URL('linked/c.txt', page).href)).status).toBe(404)
+  })
+
+  it('网页改过之后重新判断编码', async () => {
+    const page = await grantLocalFile(join(site, 'fresh.html'))
+    expect((await body(page.href)).type).toBe('text/html')
+    writeFileSync(join(site, 'fresh.html'), '<p>你好</p>')
+    expect((await body(page.href)).type).toBe('text/html; charset=utf-8')
   })
 
   it('没授权过的授权号一律 404，也不算可导航的地址', async () => {

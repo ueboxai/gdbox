@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
-import { readFile, stat } from 'node:fs/promises'
-import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path'
+import { readFile, realpath, stat } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { basename, dirname, extname, isAbsolute, join, parse, relative, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { localPreviewType } from '../../../shared/localPreview'
 import { serveLocalFile } from '../../utils/localResourceServer'
@@ -18,8 +19,10 @@ import { checkNavigationUrl, type UrlCheckResult } from './urlPolicy'
  *
  * - **只有 `open()` 能授权**，也就是 Agent 的 `browser_open`、用户的地址栏和
  *   对话里点路径。页面自己的跳转、`window.open`、跟随链接一律只认已授权的地址。
- * - **授权的是文件所在的文件夹**：网页旁边的 CSS、脚本、图片要能按相对路径加载。
- *   读不到文件夹以外的东西，也不提供以 `.` 开头的文件和目录（`.git`、`.env`）。
+ * - **网页授权它所在的文件夹**：旁边的 CSS、脚本、图片要能按相对路径加载。
+ *   读不到文件夹以外的东西（符号链接、联接按真实位置算），也不提供以 `.` 开头的
+ *   文件和目录（`.git`、`.env`）。文件夹是盘符根目录或用户主目录时只授权网页本身。
+ * - **PDF、图片、音视频、纯文本只授权文件本身**：它们用不到旁边的文件。
  * - **授权号是随机的**，每个文件夹一个、各自一个源：网页猜不到别的文件夹的地址，
  *   一个文件夹里的页面也读不到另一个文件夹的文件。授权只在本次运行里有效；
  *   会话恢复时存的是 `file://` 地址，重新走一遍 `open()` 授权。
@@ -45,13 +48,31 @@ const ASSET_TYPES: Record<string, string> = {
   vtt: 'text/vtt; charset=utf-8'
 }
 
-/** 授权号 → 文件夹 */
-const roots = new Map<string, string>()
-/** 文件夹 → 授权号。同一个文件夹里的几个页面共用一个源，相互的链接才走得通 */
+interface Grant {
+  root: string
+  /** 只授权这一个文件时是它的文件名 */
+  only?: string
+}
+
+/** 授权号 → 授权范围 */
+const grants = new Map<string, Grant>()
+/** 授权范围 → 授权号。同一个文件夹里的几个页面共用一个源，相互的链接才走得通 */
 const grantIds = new Map<string, string>()
+/** 网页是不是合法 UTF-8，按路径记，文件改了重算 */
+const charsets = new Map<string, { mtimeMs: number; size: number; utf8: boolean }>()
 
 function rootKey(dir: string): string {
   return process.platform === 'win32' ? dir.toLowerCase() : dir
+}
+
+/** 盘符根目录和用户主目录：把整个文件夹交给一个网页等于交出整个盘或整个用户资料 */
+function isBroadFolder(dir: string): boolean {
+  return dir === parse(dir).root || rootKey(dir) === rootKey(homedir())
+}
+
+function isInside(root: string, path: string): boolean {
+  const inside = relative(root, path)
+  return !inside.startsWith('..') && !isAbsolute(inside)
 }
 
 export class LocalFileError extends Error {}
@@ -77,7 +98,7 @@ export function localPathFromAddress(raw: string): string | null {
 }
 
 /**
- * 授权一个本地文件所在的文件夹，返回浏览器该加载的地址。
+ * 授权一个本地文件（网页连同它所在的文件夹），返回浏览器该加载的地址。
  *
  * 文件不存在、是文件夹、或者浏览器显示不了这种类型时抛 `LocalFileError`，
  * 文案直接给模型和用户看。
@@ -87,7 +108,8 @@ export async function grantLocalFile(filePath: string): Promise<URL> {
   const info = await stat(full).catch(() => null)
   if (!info) throw new LocalFileError(`文件不存在：${full}`)
   if (!info.isFile()) throw new LocalFileError(`这是文件夹，不是文件：${full}`)
-  if (!localPreviewType(full)) {
+  const type = localPreviewType(full)
+  if (!type) {
     throw new LocalFileError(
       `浏览器显示不了 ${extname(full) || '无扩展名的'} 文件：${full}。` +
         '可以打开网页、PDF、图片、音视频和纯文本。'
@@ -95,17 +117,21 @@ export async function grantLocalFile(filePath: string): Promise<URL> {
   }
 
   const root = dirname(full)
-  let id = grantIds.get(rootKey(root))
+  const name = basename(full)
+  const grant: Grant =
+    type === 'text/html' && !isBroadFolder(root) ? { root } : { root, only: name }
+  const key = grant.only ? `file:${rootKey(full)}` : `dir:${rootKey(root)}`
+  let id = grantIds.get(key)
   if (!id) {
     id = randomBytes(16).toString('hex')
-    grantIds.set(rootKey(root), id)
-    roots.set(id, root)
+    grantIds.set(key, id)
+    grants.set(id, grant)
   }
-  return new URL(`${LOCAL_FILE_SCHEME}://${id}/${encodeURIComponent(basename(full))}`)
+  return new URL(`${LOCAL_FILE_SCHEME}://${id}/${encodeURIComponent(name)}`)
 }
 
-/** 一个已授权的 `uebox-file://` 地址指向哪个文件。不是、没授权或越界都返回 null */
-export function localPathOf(url: string | URL): string | null {
+/** 一个已授权的 `uebox-file://` 地址指向哪个文件、在哪份授权里。不是、没授权或越界都返回 null */
+function resolveGrant(url: string | URL): { grant: Grant; path: string } | null {
   let parsed: URL
   try {
     parsed = new URL(url)
@@ -113,8 +139,8 @@ export function localPathOf(url: string | URL): string | null {
     return null
   }
   if (parsed.protocol !== `${LOCAL_FILE_SCHEME}:`) return null
-  const root = roots.get(parsed.hostname)
-  if (!root) return null
+  const grant = grants.get(parsed.hostname)
+  if (!grant) return null
 
   let segments: string[]
   try {
@@ -125,10 +151,18 @@ export function localPathOf(url: string | URL): string | null {
   // `.` 开头的一律不给：既挡 `..`，也挡 `.git`、`.env` 这类不该被网页读到的东西
   if (segments.some((segment) => /^\.|[\\:\0]/.test(segment))) return null
 
-  const full = join(root, ...segments)
-  const inside = relative(root, full)
-  if (inside.startsWith('..') || isAbsolute(inside)) return null
-  return full
+  if (grant.only && (segments.length !== 1 || rootKey(segments[0]) !== rootKey(grant.only))) {
+    return null
+  }
+
+  const full = join(grant.root, ...segments)
+  if (!isInside(grant.root, full)) return null
+  return { grant, path: full }
+}
+
+/** 一个已授权的 `uebox-file://` 地址指向哪个文件。不是、没授权或越界都返回 null */
+export function localPathOf(url: string | URL): string | null {
+  return resolveGrant(url)?.path ?? null
 }
 
 /** 页面里的跳转、新窗口、跟随链接用的校验：已授权的本机地址放行，其余按网址策略 */
@@ -154,18 +188,38 @@ export function displayUrl(url: string): string {
  */
 async function withHtmlCharset(path: string, type: string): Promise<string> {
   if (type !== 'text/html') return type
-  try {
-    new TextDecoder('utf-8', { fatal: true }).decode(await readFile(path))
-    return 'text/html; charset=utf-8'
-  } catch {
-    return type
+  const info = await stat(path).catch(() => null)
+  if (!info) return type
+  let known = charsets.get(path)
+  if (!known || known.mtimeMs !== info.mtimeMs || known.size !== info.size) {
+    let utf8 = true
+    try {
+      new TextDecoder('utf-8', { fatal: true }).decode(await readFile(path))
+    } catch {
+      utf8 = false
+    }
+    known = { mtimeMs: info.mtimeMs, size: info.size, utf8 }
+    charsets.set(path, known)
   }
+  return known.utf8 ? 'text/html; charset=utf-8' : type
+}
+
+/**
+ * 按真实位置再查一遍越界：文件夹里的符号链接、联接可能指到外面去。
+ * 只授权一个文件时不查 —— 那个文件是用户自己点开的。
+ */
+async function realPathInside(grant: Grant, path: string): Promise<string | null> {
+  const real = await realpath(path).catch(() => null)
+  if (real === null || grant.only) return real
+  const root = await realpath(grant.root).catch(() => null)
+  return root !== null && isInside(root, real) ? real : null
 }
 
 /** `uebox-file://` 的协议处理，只装在浏览器自己的分区上 */
 export async function handleLocalFileRequest(request: Request): Promise<Response> {
-  const path = localPathOf(request.url)
-  if (path === null) return new Response('Not found', { status: 404 })
+  const resolved = resolveGrant(request.url)
+  const path = resolved && (await realPathInside(resolved.grant, resolved.path))
+  if (!path) return new Response('Not found', { status: 404 })
 
   const response = await serveLocalFile(path, request.headers.get('range'))
   if (response.status === 200 || response.status === 206) {
@@ -179,6 +233,7 @@ export async function handleLocalFileRequest(request: Request): Promise<Response
 
 /** 仅供测试：清掉本次运行的授权 */
 export function resetLocalFileGrants(): void {
-  roots.clear()
+  grants.clear()
   grantIds.clear()
+  charsets.clear()
 }

@@ -14,17 +14,12 @@ describe('手动浏览器地址', () => {
   ])('补全地址 %s', (input, expected) => {
     expect(normalizeBrowserAddress(input)).toBe(expected)
   })
-  it.each([
-    '',
-    ' ',
-    null,
-    {},
-    'javascript:alert(1)',
-    'http://127.0.0.1',
-    'localhost:3000'
-  ])('拒绝非法或危险地址 %s', (input) => {
-    expect(() => normalizeBrowserAddress(input)).toThrow()
-  })
+  it.each(['', ' ', null, {}, 'javascript:alert(1)', 'http://127.0.0.1', 'localhost:3000'])(
+    '拒绝非法或危险地址 %s',
+    (input) => {
+      expect(() => normalizeBrowserAddress(input)).toThrow()
+    }
+  )
   it('本机路径和 file:// 地址规整成 file://，交给浏览器授权', () => {
     const file = join(tmpdir(), '报告 1.html')
     const url = pathToFileURL(file).href

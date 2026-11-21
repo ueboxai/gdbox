@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { writeSessionFile } from '../../agent-v3/core/atomicSessionFile'
 import { safeSessionFileBase, sessionsDir } from '../../agent-v3/core/transcriptStore'
+import { localPathFromAddress } from './localFiles'
 import { checkNavigationUrl, type UrlCheckResult } from './urlPolicy'
 
 /**
@@ -9,14 +10,11 @@ import { checkNavigationUrl, type UrlCheckResult } from './urlPolicy'
  * 本机文件的授权不跨运行，恢复时由 `open()` 重新授权（见 `localFiles.ts`）。
  */
 function checkSavedUrl(url: string): UrlCheckResult {
-  if (/^file:\/\//i.test(url)) {
-    try {
-      return { ok: true, url: new URL(url) }
-    } catch {
-      return { ok: false, reason: 'Invalid file URL' }
-    }
-  }
-  return checkNavigationUrl(url)
+  if (!/^file:/i.test(url)) return checkNavigationUrl(url)
+  // 和 `open()` 认同一套本机地址，存得进去的恢复时一定打得开
+  return localPathFromAddress(url) === null
+    ? { ok: false, reason: 'Invalid file URL' }
+    : { ok: true, url: new URL(url) }
 }
 
 function statePath(sessionId: string): string {

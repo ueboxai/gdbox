@@ -50,6 +50,7 @@ import {
   handleLocalFileRequest,
   localPathFromAddress
 } from './localFiles'
+import { localPreviewType } from '../../../shared/localPreview'
 import { searchUrl } from './address'
 import { buildPageMenu } from './pageMenu'
 import { loadBrowserGroup, saveBrowserGroup, saveBrowserUrl } from './sessionState'
@@ -109,6 +110,15 @@ const ZOOM_LEVELS = [
 
 /** Chromium 内置 PDF 阅读器扩展的源，ID 是 Chromium 写死的 */
 const PDF_VIEWER_ORIGIN = 'chrome-extension://mhjfbmdgcfjbbpaeojofohoefgiehjai/'
+
+/** 主框架显示的是不是一份 PDF：按地址的扩展名认，本机和网上的都一样 */
+function isPdfDocument(url: string): boolean {
+  try {
+    return localPreviewType(new URL(url).pathname) === 'application/pdf'
+  } catch {
+    return false
+  }
+}
 
 /** Ctrl+Shift+T 能找回的最近关闭标签数 */
 const CLOSED_TABS_KEPT = 10
@@ -309,7 +319,12 @@ export class AgentBrowserService {
         for (const url of saved.urls) {
           if (generation !== this.restoreGeneration) return
           this.createTab()
-          if (url !== 'about:blank') await this.open(url)
+          if (url !== 'about:blank')
+            await this.open(url).catch((error: unknown) => {
+              // 本机文件删了或挪走了重试也没用，这个标签留空，其余照常恢复
+              if (!(/^file:/i.test(url) && error instanceof AgentBrowserError)) throw error
+              logger.info(`[AgentBrowser] 恢复本机文件失败：${error.message}`)
+            })
         }
         const active = [...this.tabs.keys()][saved.activeIndex]
         if (active) this.selectTab(active)
@@ -505,7 +520,7 @@ export class AgentBrowserService {
   async closeTab(tabId: string): Promise<void> {
     const previous = this.surface?.id
     const closing = this.tabs.get(tabId)?.contents
-    const url = closing && !closing.isDestroyed() ? closing.getURL() : ''
+    const url = closing && !closing.isDestroyed() ? displayUrl(closing.getURL()) : ''
     this.selectTab(tabId)
     if (url && url !== 'about:blank') {
       this.closedUrls = [...this.closedUrls, url].slice(-CLOSED_TABS_KEPT)
@@ -1375,8 +1390,13 @@ export class AgentBrowserService {
     contents.on('will-redirect', (event, url) => blockUnsafe(event, url))
     contents.on('will-frame-navigate', (event) => {
       // PDF 由 Chromium 自带的阅读器显示，它是嵌在页面里的一个扩展子框架。
-      // 只放这个固定 ID 的子框架，主框架照旧不许跳过去
-      if (!event.isMainFrame && event.url.startsWith(PDF_VIEWER_ORIGIN)) return
+      // 阅读器里面还会再开一层自己的子框架。只放这个固定 ID、往上一路都是阅读器、
+      // 最顶上是一份 PDF 的框架；主框架照旧不许跳过去，普通网页自己嵌这个扩展也不放
+      if (!event.isMainFrame && event.url.startsWith(PDF_VIEWER_ORIGIN)) {
+        let host = event.frame?.parent
+        while (host?.url.startsWith(PDF_VIEWER_ORIGIN)) host = host.parent
+        if (host && !host.parent && isPdfDocument(host.url)) return
+      }
       blockUnsafe(event, event.url)
     })
 
