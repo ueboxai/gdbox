@@ -1794,7 +1794,9 @@ export function buildSystemPrompt(
       ? []
       : [
           // 子 agent 默认不带对话（`task.ts` 的 `context_mode`）：带着的话它每一步都重读整段主对话
-          '- `task`: hand a well-scoped subtask to a sub-agent, which starts fresh — put everything it needs in the prompt'
+          // 后半句是子任务拆分设计（docs/子任务拆分设计-2026-11-21.md）：子 agent 做到验收通过再交回，
+          // 主对话只收交接清单，不收施工过程
+          '- `task`: hand a well-scoped subtask to a sub-agent, which starts fresh — put everything it needs in the prompt. It works the step until its acceptance check passes and hands back a handoff, not the process'
         ]),
     // 没有 skill 时 createSkillTools() 返回空数组，这两个工具根本不存在 ——
     // 照样列在能力清单里，模型会去调一个没注册的工具。
@@ -1855,6 +1857,16 @@ export function buildSystemPrompt(
       ? []
       : [
           '- Send exploratory subtasks that take many intermediate steps (sweeping large asset sets, iterating until a scene passes godot_check) to `task`, so the noise stays out of this conversation.',
+          /*
+           * 大任务当工头，不当工人（移植自 UEBox 55d192d4，设计稿在 UEBox docs/子任务拆分设计-2026-11-21.md）。
+           *
+           * 本机 226 个会话里，峰值上下文过 300K 的 31 个，派过 task 的只有 10 个，
+           * 派了的也照样跑到 500–800K：子 agent 被当成偶尔用的外援，截图、整图、
+           * 试玩输出全堆在主对话里。拆的单位按任务形状判断（几件成品、要不要反复
+           * 写-编译-改），不按上下文占比 —— 没有阈值。
+           * 写步骤串行：编辑器只有一个，资产锁挡不住两路互相覆盖。
+           */
+          `- On a big build — two or more deliverables, or one that needs repeated write-check-fix rounds — act as the lead, not the builder. Scout first (yourself or with read-only \`task\`s), ${ctx.requestQuestion && !ctx.externalClient ? 'list the steps with update_plan' : 'write out the steps'}, then give each step its own \`task\` and have it work until its acceptance check passes. A step is one deliverable that can be checked on its own: a scene and its script that pass \`godot_check\`, a mechanic whose \`godot_run\` trace shows the expected values, a sprite set generated and wired to its node, a batch of assets imported and filed, a level layout confirmed by \`godot_screenshot\`. Send steps that write one at a time. Keep this conversation to the steps, the handoffs and the write audits: spot-check with cheap reads (a \`godot_check\` run, the lines of a script the next step depends on) rather than pulling whole scenes back in, and when a step falls short, re-send it once with the reason or ask the user. Work that one tool call finishes, you do directly.`,
           // 只读子任务是 prompt 拦不住的那件事的唯一解法，所以必须在这里说清
           '- Any subtask whose output is a report rather than a change — reviewing, auditing, inventorying, hunting for problems — must be sent with `read_only: true`. Writing "do not modify anything" into the prompt does not stop a sub-agent from "fixing" what it finds; `read_only` takes the write tools out of its hands.'
         ]),
