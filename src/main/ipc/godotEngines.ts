@@ -6,13 +6,14 @@
  */
 
 import { spawn } from 'node:child_process'
-import { statSync } from 'node:fs'
+import { existsSync, statSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { ipcMain } from 'electron'
 
 import { appSettingsManager } from '../appSettingsManager'
 import { exesIn, listGodots, probeGodot, type GodotInfo } from '../godot/locate'
+import { godotProbeOrder } from '../godot/probeOrder'
 import { parseProjectFile } from '../godot/projectFile'
 import { readGodotRecentProjects } from '../godot/recentProjects'
 import { getPublicDatabase } from '../sqliteDataBase'
@@ -61,7 +62,8 @@ async function probeInput(input: string): Promise<GodotInfo | null> {
   } catch {
     return null
   }
-  for (const p of isDir ? exesIn(input) : [input]) {
+  const order = godotProbeOrder(input, isDir, isDir ? exesIn(input) : [])
+  for (const p of order.filter((p) => p === input || existsSync(p))) {
     const info = await probeGodot(p)
     if (info) return info
   }
