@@ -65,6 +65,22 @@ export function markImported(projectDir: string, startedAt: number = Date.now())
   utimesSync(marker, at, at)
 }
 
+/** 大贴图压缩导入很慢，第一次导入几分钟是正常的 */
+export const IMPORT_TIMEOUT_MS = 600_000
+
+/**
+ * 导入没跑完就抛错。没导入的贴图截出来是空的，拿它当画面去判断只会得出错的结论。
+ * 没超时的失败不拦：导入报错常常只是个别资源，画面大体还能看。
+ */
+export function assertImportFinished(result: RunResult | null): void {
+  if (!result?.timedOut) return
+  throw new Error(
+    `Asset import did not finish within ${IMPORT_TIMEOUT_MS / 1000} s, so textures and models are not imported yet ` +
+      'and a rendered frame would be missing them. Large or many textures make import slow; ' +
+      'check .import settings (size limits, compression) or try again — finished files are kept.'
+  )
+}
+
 /** 每个工程一条队尾 */
 const queues = new Map<string, Promise<unknown>>()
 
@@ -88,7 +104,7 @@ export function runImport(
   return serialized(projectDir, async () => {
     const startedAt = Date.now()
     const result = await runGodot(godotPath, ['--headless', '--path', projectDir, '--import'], {
-      timeoutMs: 180_000,
+      timeoutMs: IMPORT_TIMEOUT_MS,
       signal
     })
     if (!result.timedOut && result.code === 0) markImported(projectDir, startedAt)
@@ -107,7 +123,7 @@ export function ensureImported(
     if (!needsImport(projectDir)) return null
     const startedAt = Date.now()
     const result = await runGodot(godotPath, ['--headless', '--path', projectDir, '--import'], {
-      timeoutMs: 180_000,
+      timeoutMs: IMPORT_TIMEOUT_MS,
       signal
     })
     if (!result.timedOut && result.code === 0) markImported(projectDir, startedAt)

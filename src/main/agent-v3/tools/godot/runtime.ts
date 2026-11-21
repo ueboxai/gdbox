@@ -26,7 +26,7 @@ import { z } from 'zod'
 
 import { defineTool, type UnrealAgentTool } from '../defineTool'
 import { digestGodotLog, runGodot, type LogDigest } from '../../../godot/run'
-import { ensureImported, runImport } from '../../../godot/importState'
+import { assertImportFinished, ensureImported, runImport } from '../../../godot/importState'
 import { godotResourcesDir } from '../../../godot/editorLinkAddon'
 import { requireGodot, resolveProjectDir } from './project'
 import { mainSceneProblem } from '../../../godot/mainScene'
@@ -74,6 +74,11 @@ export function summarizeWatch(lines: string[], maxRows = 60): string {
 }
 
 /** 不进加载检查的目录：引擎缓存、GDBox 自己的东西、版本库 */
+/** 起 Godot、加载场景的时间余量。资源多的场景光加载就要几十秒 */
+const STARTUP_ALLOWANCE_S = 90
+/** godot_screenshot 最多跑这么久。录制按固定帧率走、不等真实时间，慢的是加载和逐帧渲染 */
+const SCREENSHOT_TIMEOUT_MS = 180_000
+
 const SKIP_DIRS = new Set(['.godot', '.gdbox', '.git', 'node_modules'])
 
 export interface ProjectScript {
@@ -432,9 +437,10 @@ export function createGodotRunTool(
           `--gdbox-config=${configPath}`
         ]
         // 新写进来的图和声音要先导入，否则运行时加载不出来
-        await ensureImported(godot, dir, signal)
+        assertImportFinished(await ensureImported(godot, dir, signal))
+        // 留给启动和加载场景的余量：资源多的场景光加载就要几十秒
         const ran = await runGodot(godot, runArgs, {
-          timeoutMs: Math.max(30_000, (config.seconds + 20) * 1000),
+          timeoutMs: (config.seconds + STARTUP_ALLOWANCE_S) * 1000,
           signal
         })
         const lines = ran.output.split(/\r?\n/)
@@ -528,16 +534,20 @@ export function createGodotScreenshotTool(
         ]
         if (args.scene) runArgs.push(args.scene)
         // 没导入的贴图截出来是空的（只剩代码画的 HUD）——先确认导入过
-        await ensureImported(godot, dir, signal)
-        const ran = await runGodot(godot, runArgs, { timeoutMs: 90_000, signal })
+        assertImportFinished(await ensureImported(godot, dir, signal))
+        const ran = await runGodot(godot, runArgs, { timeoutMs: SCREENSHOT_TIMEOUT_MS, signal })
         const pngs = readdirSync(work)
           .filter((f) => f.endsWith('.png'))
           .sort()
         const last = pngs.at(-1)
+        // 超时被杀时手里只有半路的帧：场景可能还没加载完，不能当成要的那一帧交出去
+        const cutOff = ran.timedOut
+          ? `Godot was stopped after ${SCREENSHOT_TIMEOUT_MS / 1000} s with ${pngs.length} of ${frames} frames rendered.`
+          : ''
         if (!last) {
           const digest = digestGodotLog(ran.output)
           throw new Error(
-            `No frame was rendered.${digest.errors.length ? `\n\n${digest.errors.slice(0, 10).join('\n\n')}` : ''}`
+            `No frame was rendered.${cutOff ? ` ${cutOff}` : ''}${digest.errors.length ? `\n\n${digest.errors.slice(0, 10).join('\n\n')}` : ''}`
           )
         }
         const outDir = screenshotsDir()
@@ -546,7 +556,9 @@ export function createGodotScreenshotTool(
         copyFileSync(join(work, last), saved)
         return {
           // 存盘路径写进文本：生图工具可以拿它当参考图，而模型只看得到文本
-          text: `Frame ${pngs.length} of ${args.scene ?? 'the main scene'}. Saved to ${saved}`,
+          text: cutOff
+            ? `${cutOff} This is frame ${pngs.length}, not frame ${frames}; the scene may not have finished loading. Saved to ${saved}`
+            : `Frame ${pngs.length} of ${args.scene ?? 'the main scene'}. Saved to ${saved}`,
           images: [{ data: readFileSync(saved), mimeType: 'image/png' }],
           details: { path: saved }
         }

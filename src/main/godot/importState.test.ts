@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { markImported, needsImport } from './importState'
+import { assertImportFinished, markImported, needsImport } from './importState'
 
 describe('needsImport', () => {
   it('没导入过要导入；导入后没改不用；之后有新文件（比如生成的图）又要导入', () => {
@@ -56,5 +56,16 @@ describe('needsImport', () => {
     writeFileSync(join(dir, 'docs', '.gdignore'), '')
     writeFileSync(join(dir, 'docs', 'notes.md'), 'x')
     expect(needsImport(dir)).toBe(false)
+  })
+})
+
+describe('assertImportFinished', () => {
+  it('导入超时要报出来；没导入、导完、导入有报错都放行', () => {
+    expect(() => assertImportFinished({ code: null, output: '', timedOut: true })).toThrow(
+      /did not finish/
+    )
+    expect(() => assertImportFinished(null)).not.toThrow()
+    expect(() => assertImportFinished({ code: 0, output: '', timedOut: false })).not.toThrow()
+    expect(() => assertImportFinished({ code: 1, output: 'ERROR', timedOut: false })).not.toThrow()
   })
 })
