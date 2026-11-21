@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process'
 import { existsSync, readdirSync, realpathSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 
 export interface GodotInfo {
   path: string
@@ -13,8 +13,20 @@ export interface GodotInfo {
  * 找 Godot。它是绿色版单文件，没有注册表可查，只能按常见安装位置挨个试。
  * 每个候选都跑一次 `--version` 确认真能用、而且是 4.x。
  */
-export async function locateGodot(preferred?: string): Promise<GodotInfo | null> {
-  for (const candidate of await candidates(preferred)) {
+export async function locateGodot(
+  preferred?: string,
+  registered: string[] = []
+): Promise<GodotInfo | null> {
+  for (const candidate of [preferred, ...registered]) {
+    if (!candidate || !existsSync(candidate)) continue
+    const info = await probeGodot(candidate)
+    if (info) return info
+  }
+  for (const candidate of await candidates()) {
+    const info = await probeGodot(candidate)
+    if (info) return info
+  }
+  for (const candidate of await portableGodots()) {
     const info = await probeGodot(candidate)
     if (info) return info
   }
@@ -30,7 +42,9 @@ export async function locateGodot(preferred?: string): Promise<GodotInfo | null>
 export async function listGodots(extra: string[] = []): Promise<GodotInfo[]> {
   const seen = new Set<string>()
   const paths: string[] = []
-  const auto = (await candidates()).filter((p) => !isConsoleBuild(p)).map(realPath)
+  const auto = [...(await candidates()), ...(await portableGodots())]
+    .filter((p) => !isConsoleBuild(p))
+    .map(realPath)
   for (const p of [...extra, ...auto]) {
     const key = fileKey(realPath(p))
     if (seen.has(key)) continue
@@ -73,9 +87,8 @@ export async function probeGodot(input: string): Promise<GodotInfo | null> {
   return { path, version }
 }
 
-async function candidates(preferred?: string): Promise<string[]> {
+async function candidates(): Promise<string[]> {
   const list: string[] = []
-  if (preferred) list.push(preferred)
   list.push(...(await onPath()))
 
   const local = process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local')
@@ -89,6 +102,37 @@ async function candidates(preferred?: string): Promise<string[]> {
     list.push(...exesIn(join(steam, 'steamapps', 'common', 'Godot Engine')))
   }
   return [...new Set(list)].filter((p) => existsSync(p))
+}
+
+/** Windows 绿色版常被直接放在数据盘根目录。只枚举本机固定盘的顶层。 */
+async function portableGodots(): Promise<string[]> {
+  if (process.platform !== 'win32') return []
+  const roots = await new Promise<string[]>((resolve) => {
+    execFile(
+      join(
+        process.env.SystemRoot ?? 'C:\\Windows',
+        'System32',
+        'WindowsPowerShell',
+        'v1.0',
+        'powershell.exe'
+      ),
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        '[IO.DriveInfo]::GetDrives() | Where-Object { $_.DriveType -eq "Fixed" -and $_.IsReady } | ForEach-Object { $_.Name }'
+      ],
+      { timeout: 5000, windowsHide: true },
+      (err, stdout) => resolve(err ? [] : stdout.trim().split(/\r?\n/))
+    )
+  })
+  return roots
+    .filter((root) => /^[A-Z]:\\$/i.test(root))
+    .flatMap((root) =>
+      exesIn(root).filter((p) =>
+        /^Godot(?:_v4\.[\w.-]+_win(?:32|64|arm64))?(?:_console)?\.exe$/i.test(basename(p))
+      )
+    )
 }
 
 function onPath(): Promise<string[]> {

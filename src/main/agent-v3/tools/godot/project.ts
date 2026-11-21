@@ -9,7 +9,6 @@
 import { existsSync } from 'fs'
 import { join } from 'path'
 
-import { appSettingsManager } from '../../../appSettingsManager'
 import { locateGodot, type GodotInfo } from '../../../godot/locate'
 import { getWorkingProjectPath } from '../../core/projectTargetContext'
 
@@ -17,15 +16,18 @@ export const NO_GODOT =
   '没有找到 Godot 4。请用户在「设置 → 项目」里指定 Godot 编辑器的位置，然后再试。'
 
 /** 找到的 Godot 缓存一份：每次调工具都跑一遍 `--version` 太慢 */
-let cached: { preferred: string; info: GodotInfo | null } | undefined
+let cached: { preferred: string; info: GodotInfo } | undefined
 
 export async function requireGodot(): Promise<GodotInfo> {
+  const { appSettingsManager } = await import('../../../appSettingsManager')
   const preferred = appSettingsManager.getGodotPath()
-  if (!cached || cached.preferred !== preferred || !cached.info) {
-    cached = { preferred, info: await locateGodot(preferred || undefined) }
-  }
-  if (!cached.info) throw new Error(NO_GODOT)
-  return cached.info
+  if (cached && cached.preferred === preferred && existsSync(cached.info.path)) return cached.info
+  const info = await locateGodot(preferred, appSettingsManager.getGodotEngines())
+  if (!info) throw new Error(NO_GODOT)
+  const adopt = !preferred && !appSettingsManager.getGodotPath()
+  if (adopt) appSettingsManager.setGodotPath(info.path)
+  cached = { preferred: adopt ? info.path : preferred, info }
+  return info
 }
 
 /** 测试用 */
