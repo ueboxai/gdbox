@@ -221,6 +221,7 @@ const buildMenuItems = (
     't',
     'PhPlayCircle',
     'PhGameController',
+    'PhChatCircleText',
     'PhCode',
     'PhFolderOpen',
     'PhPushPin',
@@ -232,7 +233,7 @@ const buildMenuItems = (
     extract('buildMenuItems') + '; return buildMenuItems;'
   )(
     (key: string, params?: Record<string, string>) => (params ? `${key}:${params.name}` : key),
-    ...Array(10).fill(null)
+    ...Array(11).fill(null)
   )(false, null, null, memberships)
 
 describe('removing a project from a group', () => {
