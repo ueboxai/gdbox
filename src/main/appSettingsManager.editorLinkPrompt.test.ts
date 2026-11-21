@@ -57,4 +57,17 @@ describe('连接插件自动安装与首次询问', () => {
     const { appSettingsManager: restarted } = await import('./appSettingsManager')
     expect(restarted.getEditorLinkInstallPromptShown()).toBe(true)
   })
+
+  it('打开工程或盒子里新建工程时：没问过就装，答过不装就不装，单个工程拒绝过也不装', async () => {
+    const { appSettingsManager } = await import('./appSettingsManager')
+    expect(appSettingsManager.shouldInstallEditorLink('D:/Demo')).toBe(true)
+
+    appSettingsManager.setEditorLinkInstallPromptShown(true)
+    expect(appSettingsManager.shouldInstallEditorLink('D:/Demo')).toBe(false)
+
+    appSettingsManager.setAutoEnableEditorLink(true)
+    expect(appSettingsManager.shouldInstallEditorLink('D:/Demo')).toBe(true)
+    appSettingsManager.setEditorLinkOptOut('D:/Demo', true)
+    expect(appSettingsManager.shouldInstallEditorLink('D:/Demo')).toBe(false)
+  })
 })

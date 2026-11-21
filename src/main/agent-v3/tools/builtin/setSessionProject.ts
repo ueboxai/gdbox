@@ -62,7 +62,7 @@ export interface SetSessionProjectDeps {
 
 async function registerViaLibrary(projectDir: string): Promise<SessionProjectCandidate | null> {
   const { registerProjectByUproject } = await import('../../../sqliteDataBase/ipc/project')
-  const result = await registerProjectByUproject(projectDir)
+  const result = await registerProjectByUproject(projectDir, { createdInBox: true })
   const record = result.data as
     | { projectName?: string; projectPath?: string; EngineAssociation?: string }
     | undefined

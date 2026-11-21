@@ -58,8 +58,7 @@ vi.mock('child_process', () => ({
 
 vi.mock('../appSettingsManager', () => ({
   appSettingsManager: {
-    getAutoEnableEditorLink: () => getAutoEnableLink(),
-    isEditorLinkOptedOut: () => false,
+    shouldInstallEditorLink: () => getAutoEnableLink(),
     getGodotPath: () => '',
     getHideWindowOnProjectLaunch: () => getHideWindowOnProjectLaunch()
   }

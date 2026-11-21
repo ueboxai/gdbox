@@ -223,8 +223,13 @@ export interface RegisterProjectResult {
  * 抽成一个函数之后，「怎么算登记好了」只有一个定义。
  *
  * @param filePath 工程目录或 `project.godot` 的绝对路径
+ * @param options.createdInBox 工程是在盒子里新建的（agent 建的、或「新建项目」）：没走导入那一问，
+ *   按 `shouldInstallEditorLink` 决定装不装
  */
-export async function registerProjectByUproject(filePath: string): Promise<RegisterProjectResult> {
+export async function registerProjectByUproject(
+  filePath: string,
+  options: { createdInBox?: boolean } = {}
+): Promise<RegisterProjectResult> {
   try {
     const db = getPublicDatabase()
     // 统一成本机写法再入库：编辑器插件上报的是 `I:/Games/X`，
@@ -266,7 +271,10 @@ export async function registerProjectByUproject(filePath: string): Promise<Regis
 
     // 根据设置决定是否把 GDBox Link 装进工程
     let pluginFailure: string | undefined
-    if (appSettingsManager.getAutoEnableEditorLink()) {
+    const install = options.createdInBox
+      ? appSettingsManager.shouldInstallEditorLink(projectDir)
+      : appSettingsManager.getAutoEnableEditorLink()
+    if (install) {
       pluginFailure = (await ensureEditorLinkPlugin(projectDir)).pluginFailure ?? undefined
     }
 
@@ -332,7 +340,7 @@ export const registerProjectIPC = (): void => {
       const godot = await locateGodot(appSettingsManager.getGodotPath() || undefined)
       const created = createEmptyProject(projectDir, godot?.version)
       if (!created.ok) return { success: false, error: created.error }
-      const result = await registerProjectByUproject(created.projectDir)
+      const result = await registerProjectByUproject(created.projectDir, { createdInBox: true })
       return {
         success: result.success,
         error: result.error,

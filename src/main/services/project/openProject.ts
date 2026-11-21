@@ -83,10 +83,7 @@ export async function openProject(
     // 装不上要回给界面：它不抛异常，只在返回值里写原因。丢掉的话工程照常打开，
     // 用户之后遇到「AI 看不见编辑器」时，早就想不起来跟打开这一步有关
     let pluginFailure: string | undefined
-    if (
-      appSettingsManager.getAutoEnableEditorLink() &&
-      !appSettingsManager.isEditorLinkOptedOut(projectDir)
-    ) {
+    if (appSettingsManager.shouldInstallEditorLink(projectDir)) {
       try {
         installEditorLink(projectDir)
       } catch (error) {

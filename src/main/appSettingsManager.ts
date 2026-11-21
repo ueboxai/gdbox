@@ -696,6 +696,17 @@ class AppSettingsManager {
   }
 
   /**
+   * 用户主动打开工程、或 agent 建了工程时，该不该把 GDBox Link 装上。
+   *
+   * 自动安装开着就装；关着但还没问过（新装的盒子、工程是 agent 建的所以没走导入那一问）也装 ——
+   * 用户从没说过不要，而不装 agent 就碰不到编辑器。只有用户答过「不装」才算关。
+   */
+  shouldInstallEditorLink(projectDir: string): boolean {
+    if (this.isEditorLinkOptedOut(projectDir)) return false
+    return this.settings.autoEnableEditorLink || !this.settings.editorLinkInstallPromptShown
+  }
+
+  /**
    * 这个工程是否明确拒绝过 GDBox Link
    */
   isEditorLinkOptedOut(projectDir: string): boolean {
