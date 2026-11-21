@@ -173,6 +173,27 @@ describe('搜索模式真正进入 Agent 循环', () => {
     expect(plain.tools.map((t) => t.name)).toEqual(['search_tools'])
   })
 
+  it('固定清单下只读、Ask 也折叠，写工具经 call_tool 也拿不到', async () => {
+    settings.agentToolSearchEnabled = true
+    for (const narrowed of [{ readOnly: true }, { mode: 'ask' as const }]) {
+      const created = await createUnrealAgent({ ...base, ...narrowed, toolListFixed: true })
+      expect(created.toolSearchEnabled, JSON.stringify(narrowed)).toBe(true)
+      expect(created.tools.map((t) => t.name)).toEqual(['search_tools', 'call_tool'])
+      const callTool = created.tools.find((t) => t.name === 'call_tool')!
+      await expect(
+        callTool.execute('c1', { name: 'write_state', arguments: {} } as never)
+      ).rejects.toThrow('没有可用的工具 write_state')
+      expect(write).not.toHaveBeenCalled()
+    }
+    // 白名单仍然不折叠
+    const listed = await createUnrealAgent({
+      ...base,
+      toolNames: ['read_state'],
+      toolListFixed: true
+    })
+    expect(listed.toolSearchEnabled).toBe(false)
+  })
+
   it('常驻写工具不用搜索就可请求，但拒绝审批后仍然不能执行', async () => {
     buildTools.mockReturnValue([
       defineTool({

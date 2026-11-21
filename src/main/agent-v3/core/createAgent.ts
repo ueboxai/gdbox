@@ -742,10 +742,14 @@ export async function createUnrealAgent(ctx: SessionContext): Promise<CreatedAge
    * **队员的 `namespaces` 也不算收窄。** 制作人给队员一配就是十来个命名空间，
    * 真机上队员第一个请求 2.2–2.7 万 token，直接对话折叠后只有 1.4 万；
    * 队员一件活几十个请求，每个都多带一万。
+   *
+   * **固定清单模式下只读 / Ask 照样折叠。** 2026-11-21 改。上面那笔「每加载一组重写一次
+   * 前缀」的账只属于加载模式；固定清单的前缀从不变。而只读池并不小：UEBox 连着 UE 时有 90 个
+   * 工具、约 150 KB，正好撞上过上游「系统提示加 90 个工具定义太长」的拒绝。
+   * 写工具照样不在池里，`call_tool` 也只认池里的工具。
    */
   if (
-    ctx.readOnly ||
-    ctx.mode === 'ask' ||
+    ((ctx.readOnly || ctx.mode === 'ask') && !ctx.toolListFixed) ||
     ctx.toolNames?.length ||
     (ctx.namespaces?.length && !ctx.teamMember) ||
     ctx.auditorJudges
