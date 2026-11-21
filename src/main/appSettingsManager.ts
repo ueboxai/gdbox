@@ -115,10 +115,15 @@ interface AppSettings {
    */
   agentToolSearchUserSet: boolean
   /**
-   * 工具搜索的固定清单模式（原型，默认关，暂无设置页开关）。
+   * 工具搜索的固定清单模式（默认开，没有设置页开关）。
    *
    * 开着时请求顶层的工具清单整场对话不变，其余工具经 `call_tool` 调用，换取 prompt
    * cache 不因加载工具整段失效。只在工具搜索打开时生效。见 `toolSearch.ts` 的 `fixed`。
+   *
+   * 2026-11-21 改为默认开（随 UEBox 6310750d 迁入）。UEBox 在 UE 真机上做的 A/B（同一个
+   * 收集小游戏任务，Opus 5.5，各一跑）：验收项相同，按缓存价折算的成本低 13%，
+   * 中途那次整段重写从 12.3 万 token 降到 2 万；请求顶层只剩十来个工具，
+   * 「系统提示加工具定义」不再撞上游的固定部分上限。
    */
   agentToolListFixed: boolean
   /**
@@ -211,7 +216,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   agentFileAccessScope: 'full',
   agentToolSearchEnabled: true,
   agentToolSearchUserSet: false,
-  agentToolListFixed: false,
+  agentToolListFixed: true,
   // 默认开：它只在「这次失败重来可能就好」时才动手，关着的代价是任务半路停下等人点
   agentPersistentAutoResume: true,
   agentGoalMaxRounds: DEFAULT_GOAL_MAX_ROUNDS,
@@ -309,7 +314,8 @@ class AppSettingsManager {
                 ? savedSettings.agentToolSearchEnabled === true
                 : DEFAULT_SETTINGS.agentToolSearchEnabled,
           agentToolSearchUserSet: savedSettings.agentToolSearchUserSet === true,
-          agentToolListFixed: savedSettings.agentToolListFixed === true,
+          // 不读磁盘上的值：这个字段从没有过开关，老文件里的 `false` 只是当年的默认值被整份存了下来
+          agentToolListFixed: DEFAULT_SETTINGS.agentToolListFixed,
           // 只有用户明确关掉才算关：旧配置里没有这个字段的，跟着默认走
           agentPersistentAutoResume: mergedSettings.agentPersistentAutoResume !== false,
           // 手改坏的配置（字符串、负数、9999）夹回范围，不让它变成零轮或者跑一整夜

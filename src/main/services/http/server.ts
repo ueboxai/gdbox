@@ -873,6 +873,10 @@ export class HttpServer {
         ...(typeof req.body.toolSearchEnabled === 'boolean'
           ? { toolSearchEnabled: req.body.toolSearchEnabled }
           : {}),
+        // 工具搜索的固定清单模式。台架拿它和加载模式做 A/B，不改设置文件
+        ...(typeof req.body.toolListFixed === 'boolean'
+          ? { toolListFixed: req.body.toolListFixed }
+          : {}),
         // 推理档位。调试端点原先不透传它，于是台架只能跑模型的默认档，
         // 而「换个推理档还会不会错」正是判断问题出在模型还是工具上的第一问。
         // 端点比 agent 窄，测出来的就不是 agent 的能力。

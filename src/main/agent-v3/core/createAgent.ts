@@ -10,7 +10,12 @@
 import { Agent } from '@earendil-works/pi-agent-core'
 import { existsSync } from 'fs'
 import { join } from 'path'
-import type { AgentLoopTurnUpdate, AgentMessage, AgentTool } from '@earendil-works/pi-agent-core'
+import type {
+  AgentEvent,
+  AgentLoopTurnUpdate,
+  AgentMessage,
+  AgentTool
+} from '@earendil-works/pi-agent-core'
 import type { Message } from '@earendil-works/pi-ai'
 import type { WebContents } from 'electron'
 
@@ -1154,6 +1159,20 @@ export async function createUnrealAgent(ctx: SessionContext): Promise<CreatedAge
   })
 
   if (search) restoreSearchBeforeFirstRun(agent, search)
+  // 固定清单下模型调的都是 `call_tool`。在订阅口统一换回真实工具，所有订阅者
+  // （界面、目标模式、子任务台账、工作室）看到的都是同一份工具名和参数
+  if (search?.callTool) {
+    const subscribe = agent.subscribe.bind(agent)
+    // 每条事件只换一次：结束事件换完就忘掉这次调用，第二个订阅者再换就认不出了
+    const unwrapped = new WeakMap<AgentEvent, AgentEvent>()
+    const unwrapOnce = (event: AgentEvent): AgentEvent => {
+      let result = unwrapped.get(event)
+      if (!result) unwrapped.set(event, (result = search.unwrapEvent(event)))
+      return result
+    }
+    agent.subscribe = (listener) =>
+      subscribe((event, signal) => listener(unwrapOnce(event), signal))
+  }
 
   attachTeamLive(ctx, agent)
   attachProducerUsage(ctx, agent)

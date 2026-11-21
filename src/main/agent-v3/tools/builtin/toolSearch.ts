@@ -6,6 +6,7 @@
 import { z } from 'zod'
 import type {
   AfterToolCallContext,
+  AgentEvent,
   AgentMessage,
   AgentToolResult,
   BeforeToolCallContext
@@ -399,6 +400,11 @@ export function createToolSearch(
   unwrap: <T extends BeforeToolCallContext | AfterToolCallContext>(
     hookCtx: T
   ) => { ok: true; ctx: T } | { ok: false; error: string }
+  /**
+   * 把 `call_tool` 的工具执行事件换成真实工具名和参数，别的事件原样返回。
+   * 界面卡片、目标模式、子任务写操作台账都按事件里的工具名认活，看到 `call_tool` 就认不出来
+   */
+  unwrapEvent: (event: AgentEvent) => AgentEvent
 } {
   const fixed = options.fixed === true
   const entries = catalog.map((tool): Entry => {
@@ -727,6 +733,11 @@ export function createToolSearch(
     }
   }
 
+  /** `call_tool` 这次调用转给了哪个工具。开始事件记下，结束事件删掉（见 `unwrapEvent`） */
+  const unwrappedNames = new Map<string, string>()
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null
+
   const callTool = fixed
     ? ({
         name: CALL_TOOL_NAME,
@@ -780,6 +791,25 @@ export function createToolSearch(
           .filter((entry) => names.has(entry.tool.name))
           .map((entry) => entry.tool)
       ]
+    },
+    unwrapEvent: (event) => {
+      if (!callTool) return event
+      if (event.type === 'tool_execution_start') {
+        if (event.toolName !== CALL_TOOL_NAME) return event
+        const parsed = callToolInput.safeParse(event.args)
+        if (!parsed.success) return event
+        unwrappedNames.set(event.toolCallId, parsed.data.name)
+        return { ...event, toolName: parsed.data.name, args: parsed.data.arguments }
+      }
+      if (event.type === 'tool_execution_update' || event.type === 'tool_execution_end') {
+        const name = unwrappedNames.get(event.toolCallId)
+        if (!name || event.toolName !== CALL_TOOL_NAME) return event
+        if (event.type === 'tool_execution_end') unwrappedNames.delete(event.toolCallId)
+        return event.type === 'tool_execution_update' && isRecord(event.args)
+          ? { ...event, toolName: name, args: event.args.arguments }
+          : { ...event, toolName: name }
+      }
+      return event
     },
     unwrap: (hookCtx) => {
       if (!callTool || hookCtx.toolCall.name !== CALL_TOOL_NAME) return { ok: true, ctx: hookCtx }

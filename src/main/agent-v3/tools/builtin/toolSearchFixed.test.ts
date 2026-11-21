@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import type { AgentMessage, BeforeToolCallContext } from '@earendil-works/pi-agent-core'
+import type { AgentEvent, AgentMessage, BeforeToolCallContext } from '@earendil-works/pi-agent-core'
 import { defineTool, effectiveRisk, type UnrealAgentTool } from '../defineTool'
 import { CALL_TOOL_NAME, createToolSearch } from './toolSearch'
 
@@ -145,6 +145,44 @@ describe('工具搜索：固定清单模式', () => {
 
     const bad = controller.unwrap(beforeCtx(CALL_TOOL_NAME, { name: 'nope', arguments: {} }))
     expect(bad.ok).toBe(false)
+  })
+
+  it('call_tool 的执行事件换成真实工具名和参数，界面和台账认得出来', () => {
+    const color = tool('set_surface_color', 'ue.material', { risk: 'mutating' })
+    const controller = createToolSearch([color], () => [color], {}, { fixed: true })
+    const args = { name: 'set_surface_color', arguments: { value: 2 } }
+    const start = controller.unwrapEvent({
+      type: 'tool_execution_start',
+      toolCallId: 'c1',
+      toolName: CALL_TOOL_NAME,
+      args
+    })
+    expect(start).toMatchObject({ toolName: 'set_surface_color', args: { value: 2 } })
+    const update = controller.unwrapEvent({
+      type: 'tool_execution_update',
+      toolCallId: 'c1',
+      toolName: CALL_TOOL_NAME,
+      args,
+      partialResult: {}
+    })
+    expect(update).toMatchObject({ toolName: 'set_surface_color', args: { value: 2 } })
+    const end: AgentEvent = {
+      type: 'tool_execution_end',
+      toolCallId: 'c1',
+      toolName: CALL_TOOL_NAME,
+      result: {},
+      isError: false
+    }
+    expect(controller.unwrapEvent(end)).toMatchObject({ toolName: 'set_surface_color' })
+    // 结束后忘掉这次调用；别的事件和直接调用的工具原样放行
+    expect(controller.unwrapEvent(end)).toBe(end)
+    const direct: AgentEvent = {
+      type: 'tool_execution_start',
+      toolCallId: 'c2',
+      toolName: 'search_tools',
+      args: {}
+    }
+    expect(controller.unwrapEvent(direct)).toBe(direct)
   })
 
   it('call_tool 的风险跟着目标走，读原样事件的地方也算得对', () => {
