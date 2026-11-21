@@ -17,11 +17,12 @@ config/name="不是这个"
 `
 
 describe('parseProjectFile', () => {
-  it('读出名字、版本、图标，只认 [application] 段', () => {
+  it('读出名字、版本、图标、主场景，只认 [application] 段', () => {
     expect(parseProjectFile(SAMPLE)).toEqual({
       name: 'Echo "Cave"',
       engineVersion: '4.7',
-      icon: 'res://icon.svg'
+      icon: 'res://icon.svg',
+      mainScene: 'uid://b1'
     })
   })
 

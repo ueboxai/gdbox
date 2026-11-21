@@ -29,6 +29,7 @@ import { digestGodotLog, runGodot, type LogDigest } from '../../../godot/run'
 import { ensureImported, runImport } from '../../../godot/importState'
 import { godotResourcesDir } from '../../../godot/editorLinkAddon'
 import { requireGodot, resolveProjectDir } from './project'
+import { mainSceneProblem } from '../../../godot/mainScene'
 import { versionHintsForErrors } from '../../../godot/versionNotes'
 import { describeProbe, parseProbes } from '../../core/regression/assert'
 import { runInputSchema } from '../../core/regression/inputSchema'
@@ -275,14 +276,12 @@ export function createGodotCheckTool(
       })
       // 报错是这个引擎打的，所以按它的版本对，不按 project.godot 里声明的
       const hints = versionHintsForErrors(engine.version, [...report.errors, ...digest.warnings])
+      // 没设主场景时无头运行照样干净跑完，用户点运行却要自己挑场景
+      const mainScene = args.scene ? null : mainSceneProblem(dir)
       return {
-        text: hints
-          ? `${report.text}
-
-${hints}`
-          : report.text,
+        text: [mainScene, report.text, hints].filter(Boolean).join('\n\n'),
         details: {
-          errors: report.errors,
+          errors: mainScene ? [mainScene, ...report.errors] : report.errors,
           warnings: digest.warnings,
           timedOut: ran.timedOut,
           scriptsChecked: loaded.checked,

@@ -2,7 +2,7 @@
  * 读 project.godot。
  *
  * 它是 Godot 自己的 ConfigFile 格式（类 INI）：`[section]` 下面是 `key=value`，
- * 值是 Variant 字面量。这里只取工程库要显示的三项，不做完整解析。
+ * 值是 Variant 字面量。这里只取用得到的几项，不做完整解析。
  */
 
 export interface ProjectFileSummary {
@@ -11,6 +11,8 @@ export interface ProjectFileSummary {
   engineVersion?: string
   /** config/icon，res:// 路径 */
   icon?: string
+  /** run/main_scene，res:// 或 uid:// 路径；没设就是 undefined */
+  mainScene?: string
 }
 
 export function parseProjectFile(text: string): ProjectFileSummary {
@@ -31,6 +33,7 @@ export function parseProjectFile(text: string): ProjectFileSummary {
     const value = line.slice(eq + 1).trim()
     if (key === 'config/name') out.name = readString(value)
     else if (key === 'config/icon') out.icon = readString(value)
+    else if (key === 'run/main_scene') out.mainScene = readString(value) || undefined
     else if (key === 'config/features') {
       const match = /"(\d+\.\d+)"/.exec(value)
       if (match) out.engineVersion = match[1]
