@@ -39,8 +39,8 @@ GDBox 和[虚幻盒子](https://github.com/ueboxai/uebox)出自同一家公司�
 
 ## 快速开始
 
-1. 从 [Releases](https://github.com/ueboxai/gdbox/releases) 下载安装（Windows）
-2. **设置 → 模型 → 添加服务商**，填 API 密钥；**默认模型 → 对话** 选它（模型需支持工具调用）
+1. 从 [Releases](https://github.com/ueboxai/gdbox/releases) 下载 `gdbox-<版本号>-setup.exe` 安装（Windows；Source code 是源码，不是安装包）
+2. **设置 → 模型 → 添加服务商**，填 API 密钥；**默认模型 → 主模型** 选它（模型需支持工具调用）
 3. **设置 → 项目** 确认找到了 Godot 4（没找到就点「指定…」选 Godot 可执行文件）
 4. **项目库 → 导入项目**，选含 `project.godot` 的文件夹，双击打开（自动装上 GDBox Link 插件）
 5. **侧边栏 → AI 对话**，试试「给主角生成一套 8 帧跑步动画，接到 Player 上」

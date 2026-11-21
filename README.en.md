@@ -39,8 +39,8 @@ GDBox comes from the same company as [Unreal Box](https://github.com/ueboxai/ueb
 
 ## Quick start
 
-1. Download from [Releases](https://github.com/ueboxai/gdbox/releases) (Windows)
-2. **Settings → Models → Add provider**, enter your API key; pick it under **Default models → Chat** (it must support tool calling)
+1. Download `gdbox-<version>-setup.exe` from [Releases](https://github.com/ueboxai/gdbox/releases) and run it (Windows; the Source code archives are not installers)
+2. **Settings → Models → Add provider**, enter your API key; pick it under **Default models → Main model** (it must support tool calling)
 3. **Settings → Projects**: check that Godot 4 was found (otherwise click Choose… and pick the Godot executable)
 4. **Projects → Import**, choose a folder with `project.godot`, double-click to open it (installs the GDBox Link addon)
 5. **Sidebar → AI chat**, try "generate an 8-frame run cycle for the hero and hook it up to Player"
