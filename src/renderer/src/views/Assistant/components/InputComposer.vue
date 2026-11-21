@@ -449,8 +449,8 @@
                   :key="opt.value"
                   type="button"
                   class="mode-option"
-                  :class="{ active: thinkingLevel === opt.value }"
-                  :aria-pressed="thinkingLevel === opt.value"
+                  :class="{ active: effectiveThinkingLevel === opt.value }"
+                  :aria-pressed="effectiveThinkingLevel === opt.value"
                   @click="selectThinkingLevel(opt.value, $event)"
                 >
                   <span class="thinking-level-name">
@@ -458,23 +458,10 @@
                     <!-- 厂商给这一档起了别名时跟在后面，和厂商文档对得上 -->
                     <span v-if="opt.alias" class="thinking-alias">({{ opt.alias }})</span>
                   </span>
-                  <div v-if="thinkingLevel === opt.value" class="mode-option-check">
+                  <div v-if="effectiveThinkingLevel === opt.value" class="mode-option-check">
                     <PhCheck />
                   </div>
                 </button>
-                <!--
-                选的档位当前模型没有时，内核会夹到最近的一档。不说出来的话
-                这一行一个勾都没有，用户不知道自己这次到底跑在哪一档。
-              -->
-                <div v-if="thinkingClamped" class="mode-dropdown-note">
-                  {{
-                    t('assistantInputComposer.thinking.clamped', {
-                      chosen: thinkingLevelName(thinkingLevel),
-                      actual: thinkingLevelName(effectiveThinkingLevel),
-                      model: thinkingSupport?.modelId ?? ''
-                    })
-                  }}
-                </div>
                 <!-- 「快速」只有支持的模型才露出来（目前是 ChatGPT 订阅），见主进程 supportsFastMode -->
                 <button
                   v-if="thinkingSupport?.fastMode"
@@ -1345,7 +1332,7 @@ const thinkingOptions = computed(() =>
 const showThinkingDropdown = ref(false)
 const thinkingLevel = computed(() => aiConfigStore.agentThinkingLevel)
 
-/** 选的档位当前模型没有时，内核会夹到最近的一档 —— 界面得说出来 */
+/** 选的档位当前模型没有时，内核会夹到最近的一档；触发器和勾都按这一档显示 */
 const effectiveThinkingLevel = computed(() =>
   resolveEffectiveLevel(thinkingLevel.value, thinkingSupport.value)
 )
@@ -1353,7 +1340,6 @@ const effectiveThinkingLevel = computed(() =>
 const fastModeOn = computed(
   () => aiConfigStore.agentFastMode && thinkingSupport.value?.fastMode === true
 )
-const thinkingClamped = computed(() => effectiveThinkingLevel.value !== thinkingLevel.value)
 
 /** 触发器上那个词。显示实际会用的那一档，不是用户存的那一档 */
 const currentThinkingLabel = computed(() => thinkingLevelName(effectiveThinkingLevel.value))

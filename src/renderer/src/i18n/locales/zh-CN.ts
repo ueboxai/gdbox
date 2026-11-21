@@ -5281,7 +5281,6 @@ export default {
         xhigh: '极高',
         max: '最高'
       },
-      clamped: '{model} 不支持 {chosen} 档位，本次按 {actual} 执行',
       fast: '快速',
       fastDesc: '响应更快，额度消耗约 2 倍'
     },

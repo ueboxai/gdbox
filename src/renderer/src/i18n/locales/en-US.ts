@@ -5438,7 +5438,6 @@ First work out why the install failed from the output above. If you can run comm
         xhigh: 'Extra high',
         max: 'Max'
       },
-      clamped: '{model} has no {chosen} level — this run uses {actual} instead',
       fast: 'Fast',
       fastDesc: 'Faster responses, uses about 2× quota'
     },

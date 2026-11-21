@@ -77,8 +77,7 @@ export function buildThinkingOptions(
  * 用户存的档位，在当前模型上实际会变成哪一档。
  *
  * 与内核的 `clampThinkingLevel` 同一套规则：先往上找更强的，再往下找更弱的。
- * 界面据此提示「你选的这一档这个模型没有，实际用的是 X」——
- * 不说的话用户只会觉得这个开关时灵时不灵。
+ * 界面的触发器和勾都按这一档显示，不然用户只会觉得这个开关时灵时不灵。
  */
 export function resolveEffectiveLevel(
   chosen: AgentV3ThinkingLevel,
