@@ -47,7 +47,7 @@ async function body(url: string): Promise<{ status: number; type: string | null;
 describe('内置浏览器里的本机文件', () => {
   it('授权文件所在的文件夹，网页旁边的样式按相对路径加载得到', async () => {
     const page = await grantLocalFile(join(site, '报告.html'))
-    expect(page.protocol).toBe('uebox-file:')
+    expect(page.protocol).toBe('gdbox-file:')
     expect(await body(page.href)).toMatchObject({
       status: 200,
       type: 'text/html; charset=utf-8'
@@ -76,7 +76,7 @@ describe('内置浏览器里的本机文件', () => {
       '.git/config',
       '..%5csecret.txt'
     ]) {
-      expect((await body(`uebox-file://${page.host}/${path}`)).status, path).toBe(404)
+      expect((await body(`gdbox-file://${page.host}/${path}`)).status, path).toBe(404)
     }
   })
 
@@ -101,7 +101,7 @@ describe('内置浏览器里的本机文件', () => {
 
   it('没授权过的授权号一律 404，也不算可导航的地址', async () => {
     await grantLocalFile(join(site, '报告.html'))
-    const forged = 'uebox-file://0123456789abcdef0123456789abcdef/%E6%8A%A5%E5%91%8A.html'
+    const forged = 'gdbox-file://0123456789abcdef0123456789abcdef/%E6%8A%A5%E5%91%8A.html'
     expect((await body(forged)).status).toBe(404)
     expect(checkBrowserUrl(forged).ok).toBe(false)
   })

@@ -581,14 +581,14 @@ describe('本机文件', () => {
   writeFileSync(file, '<title>报告</title>')
   afterAll(() => rmSync(dir, { recursive: true, force: true }))
 
-  it('open() 授权后加载 uebox-file://，界面和存档看到的是 file://', async () => {
+  it('open() 授权后加载 gdbox-file://，界面和存档看到的是 file://', async () => {
     const instance = new AgentBrowserService('local-session')
     pageResults.push(SCAN_OK)
     const opening = instance.open(file)
     await vi.waitFor(() => expect(created).toHaveLength(1))
     await settle(opening)
 
-    expect(lastContents().loadedUrls[0]).toMatch(/^uebox-file:\/\/[0-9a-f]{32}\//)
+    expect(lastContents().loadedUrls[0]).toMatch(/^gdbox-file:\/\/[0-9a-f]{32}\//)
     expect(instance.groupState().tabs[0].url).toBe(pathToFileURL(file).href)
     expect(instance.currentUrl()).toBe(pathToFileURL(file).href)
     expect(savedUrls.get('local-session')).toBe(pathToFileURL(file).href)
@@ -614,7 +614,7 @@ describe('本机文件', () => {
     expect(sibling.preventDefault).not.toHaveBeenCalled()
 
     const forged = { preventDefault: vi.fn() }
-    navigate?.(forged, 'uebox-file://0123456789abcdef0123456789abcdef/a.html')
+    navigate?.(forged, 'gdbox-file://0123456789abcdef0123456789abcdef/a.html')
     expect(forged.preventDefault).toHaveBeenCalled()
   })
 

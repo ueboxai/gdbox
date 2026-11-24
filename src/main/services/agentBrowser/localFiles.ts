@@ -15,7 +15,7 @@ import { checkNavigationUrl, type UrlCheckResult } from './urlPolicy'
  * 浏览器同样会打开不受信任的网页。放开 `file:`，任何网页都能借一次跳转或
  * `<iframe>` 去读本机文件。所以本机文件走一个只挂在浏览器分区上的专用协议：
  *
- *     uebox-file://<授权号>/<文件名>
+ *     gdbox-file://<授权号>/<文件名>
  *
  * - **只有 `open()` 能授权**，也就是 Agent 的 `browser_open`、用户的地址栏和
  *   对话里点路径。页面自己的跳转、`window.open`、跟随链接一律只认已授权的地址。
@@ -27,10 +27,10 @@ import { checkNavigationUrl, type UrlCheckResult } from './urlPolicy'
  *   一个文件夹里的页面也读不到另一个文件夹的文件。授权只在本次运行里有效；
  *   会话恢复时存的是 `file://` 地址，重新走一遍 `open()` 授权。
  *
- * 界面和模型看到的一律是 `file://` 地址（`displayUrl`），`uebox-file://` 只在页面内部用。
+ * 界面和模型看到的一律是 `file://` 地址（`displayUrl`），`gdbox-file://` 只在页面内部用。
  */
 
-export const LOCAL_FILE_SCHEME = 'uebox-file'
+export const LOCAL_FILE_SCHEME = 'gdbox-file'
 
 /** 网页的附属文件。只用来回 Content-Type，不能单独打开 */
 const ASSET_TYPES: Record<string, string> = {
@@ -130,7 +130,7 @@ export async function grantLocalFile(filePath: string): Promise<URL> {
   return new URL(`${LOCAL_FILE_SCHEME}://${id}/${encodeURIComponent(name)}`)
 }
 
-/** 一个已授权的 `uebox-file://` 地址指向哪个文件、在哪份授权里。不是、没授权或越界都返回 null */
+/** 一个已授权的 `gdbox-file://` 地址指向哪个文件、在哪份授权里。不是、没授权或越界都返回 null */
 function resolveGrant(url: string | URL): { grant: Grant; path: string } | null {
   let parsed: URL
   try {
@@ -160,7 +160,7 @@ function resolveGrant(url: string | URL): { grant: Grant; path: string } | null 
   return { grant, path: full }
 }
 
-/** 一个已授权的 `uebox-file://` 地址指向哪个文件。不是、没授权或越界都返回 null */
+/** 一个已授权的 `gdbox-file://` 地址指向哪个文件。不是、没授权或越界都返回 null */
 export function localPathOf(url: string | URL): string | null {
   return resolveGrant(url)?.path ?? null
 }
@@ -171,7 +171,7 @@ export function checkBrowserUrl(raw: string): UrlCheckResult {
   return checkNavigationUrl(raw)
 }
 
-/** 给界面、模型和会话存档看的地址：`uebox-file://` 换回 `file://`，其余原样 */
+/** 给界面、模型和会话存档看的地址：`gdbox-file://` 换回 `file://`，其余原样 */
 export function displayUrl(url: string): string {
   const path = localPathOf(url)
   if (path === null) return url
@@ -215,7 +215,7 @@ async function realPathInside(grant: Grant, path: string): Promise<string | null
   return root !== null && isInside(root, real) ? real : null
 }
 
-/** `uebox-file://` 的协议处理，只装在浏览器自己的分区上 */
+/** `gdbox-file://` 的协议处理，只装在浏览器自己的分区上 */
 export async function handleLocalFileRequest(request: Request): Promise<Response> {
   const resolved = resolveGrant(request.url)
   const path = resolved && (await realPathInside(resolved.grant, resolved.path))

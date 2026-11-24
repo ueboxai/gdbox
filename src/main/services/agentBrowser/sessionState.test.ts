@@ -30,7 +30,7 @@ describe('会话浏览器持久化', () => {
     for (const content of [
       '{',
       '{}',
-      '{"url":"uebox-file://0123/a.html"}',
+      '{"url":"gdbox-file://0123/a.html"}',
       '{"url":"http://127.0.0.1"}'
     ]) {
       writeFileSync(join(root, 'agent-v3-sessions', 'broken.browser.json'), content)
@@ -53,7 +53,7 @@ it('整组保存全部标签、选中项和显示模式，并兼容旧的单页�
   await saveBrowserGroup('group', { urls: [], activeIndex: 0 })
   expect(await loadBrowserGroup('group')).toBeUndefined()
   await expect(
-    saveBrowserGroup('unsafe-group', { urls: ['uebox-file://0123/a.html'], activeIndex: 0 })
+    saveBrowserGroup('unsafe-group', { urls: ['gdbox-file://0123/a.html'], activeIndex: 0 })
   ).rejects.toThrow()
 })
 
