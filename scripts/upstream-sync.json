@@ -1635,6 +1635,26 @@
       "snapshot": "5b13d071f245c1765bf9c9e45ad2a7e74a84ede7",
       "note": "UEBox 自己的 lint 基线，GDBox 基线独立维护",
       "verification": "not-run"
+    },
+    "6310750de5ebbdef134a430b0f795e9fa4051afd": {
+      "status": "ported",
+      "local": "59170bc4095e544ba695a3c871d88bd27abe7436",
+      "snapshot": "f78f270424a40f965a825307ecb6f56a205efa09",
+      "note": "固定清单默认开、call_tool 事件换回真实工具名；不带 CHANGELOG，注释注明 A/B 数据来自 UEBox 的 UE 测试，Godot 工具集未单独测",
+      "verification": "VERIFY_BASE=a1554cfd pnpm verify:changed 10 步通过（917 个测试文件、10229 项）；未在运行中的应用里手点验收"
+    },
+    "12e5c0333d9f2a3c99b1065d53aaee881173cf3d": {
+      "status": "ported",
+      "local": "17820cc5f6bfe64418accc0703ef5e5416155e17",
+      "snapshot": "f78f270424a40f965a825307ecb6f56a205efa09",
+      "note": "固定清单下只读和 Ask 也折叠；不带 CHANGELOG",
+      "verification": "VERIFY_BASE=a1554cfd pnpm verify:changed 10 步通过（917 个测试文件、10229 项）；未在运行中的应用里手点验收"
+    },
+    "bc31610e41c475f0f826f83149ebdcb4208b5c38": {
+      "status": "todo",
+      "snapshot": "f78f270424a40f965a825307ecb6f56a205efa09",
+      "note": "pi 1.5.0→1.5.2 要和 typebox 一起升，本批未动",
+      "verification": "not-run"
     }
   }
 }
